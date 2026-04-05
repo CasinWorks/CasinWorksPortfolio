@@ -71,7 +71,7 @@ export default function App() {
   ];
 
   return (
-    <div id="top" className="min-h-screen bg-[#fcfcf9] text-[#1a1a1a] font-sans selection:bg-black selection:text-white">
+    <div id="top" className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[#fcfcf9] text-[#1a1a1a] font-sans selection:bg-black selection:text-white">
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 mix-blend-difference text-white">
         <div className="max-w-[1800px] mx-auto px-8 lg:px-16 min-h-32 py-6 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
@@ -90,8 +90,8 @@ export default function App() {
 
       <main>
         {/* Hero Section */}
-        <section className="pt-64 pb-32 lg:pt-80 lg:pb-80 px-8 lg:px-16 overflow-hidden">
-          <div className="max-w-[1800px] mx-auto relative">
+        <section className="pt-64 pb-32 lg:pt-80 lg:pb-80 px-8 lg:px-16 overflow-x-hidden overflow-y-visible">
+          <div className="max-w-[1800px] mx-auto relative overflow-x-hidden">
             <motion.div 
               initial={{ opacity: 0, x: -100 }}
               animate={{ opacity: 1, x: 0 }}
@@ -103,9 +103,9 @@ export default function App() {
               </div>
               
               <div className="relative">
-                <h1 className="text-[12vw] lg:text-[14vw] font-serif font-bold tracking-tighter leading-[0.75] mb-32">
+                <h1 className="max-w-full text-[min(12vw,4.5rem)] sm:text-[min(12vw,8rem)] lg:text-[min(14vw,11rem)] font-serif font-bold tracking-tighter leading-[0.75] mb-32 break-words">
                   High-Stakes <br />
-                  <span className="italic text-slate-200 ml-[10vw]">Engineering.</span>
+                  <span className="italic text-slate-200 ml-[max(0.5rem,6vw)] sm:ml-[10vw] block">Engineering.</span>
                 </h1>
                 
                 <div className="grid lg:grid-cols-12 gap-24 items-start">
@@ -129,43 +129,46 @@ export default function App() {
               </div>
             </motion.div>
             
-            {/* Background Accent */}
-            <div className="absolute -top-64 -right-64 text-[40vw] font-serif font-black italic text-slate-50 pointer-events-none -z-10 select-none opacity-50">
+            {/* Background Accent — sized so it cannot extend past the viewport */}
+            <div
+              className="absolute -top-32 right-0 sm:-top-48 sm:-right-8 md:-right-16 translate-x-[20%] text-[min(40vw,28rem)] sm:text-[min(35vw,24rem)] font-serif font-black italic text-slate-50 pointer-events-none -z-10 select-none opacity-50 whitespace-nowrap"
+              aria-hidden
+            >
               CJC
             </div>
           </div>
         </section>
 
         {/* Philosophy Section */}
-        <section id="approach" className="scroll-mt-36 py-64 px-8 lg:px-16 bg-white">
-          <div className="max-w-[1800px] mx-auto grid lg:grid-cols-12 gap-32">
-            <div className="lg:col-span-4">
+        <section id="approach" className="scroll-mt-36 py-64 px-6 sm:px-8 lg:px-16 bg-white overflow-x-hidden">
+          <div className="max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-12 xl:gap-20 2xl:gap-24">
+            <div className="min-w-0 lg:col-span-4">
               <h2 className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400 mb-16">The Philosophy</h2>
-              <h3 className="text-6xl lg:text-8xl font-serif font-bold leading-[0.8] italic mb-16">
+              <h3 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-serif font-bold leading-[0.85] italic mb-16 max-w-[100%]">
                 Direct. <br />
                 Resilient. <br />
                 Senior.
               </h3>
             </div>
-            <div className="lg:col-span-7 lg:col-start-6 space-y-48">
-              <div className="grid md:grid-cols-2 gap-32">
-                <div className="space-y-12">
-                  <div className="flex items-center gap-4">
-                    <span className="text-5xl font-serif italic text-slate-200 tracking-tighter">01</span>
-                    <div className="h-[1px] flex-grow bg-slate-100" />
+            <div className="min-w-0 lg:col-span-8 lg:col-start-5 xl:col-span-7 xl:col-start-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-16 sm:gap-x-8 md:gap-x-10 lg:gap-x-8 xl:gap-x-12 2xl:gap-x-16 min-w-0">
+                <div className="min-w-0 space-y-12">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <span className="shrink-0 text-4xl sm:text-5xl font-serif italic text-slate-200 tracking-tighter">01</span>
+                    <div className="h-px min-w-0 flex-1 bg-slate-100" />
                   </div>
-                  <h4 className="text-3xl font-bold tracking-tight">Accountability</h4>
-                  <p className="text-2xl text-slate-500 leading-tight tracking-tight">
+                  <h4 className="text-2xl sm:text-3xl font-bold tracking-tight break-words">Accountability</h4>
+                  <p className="text-lg sm:text-xl lg:text-2xl text-slate-500 leading-snug tracking-tight break-words hyphens-auto">
                     You work directly with the engineer. No account managers, no middle-men. This ensures technical decisions are always aligned with your business objectives.
                   </p>
                 </div>
-                <div className="space-y-12">
-                  <div className="flex items-center gap-4">
-                    <span className="text-5xl font-serif italic text-slate-200 tracking-tighter">02</span>
-                    <div className="h-[1px] flex-grow bg-slate-100" />
+                <div className="min-w-0 space-y-12">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <span className="shrink-0 text-4xl sm:text-5xl font-serif italic text-slate-200 tracking-tighter">02</span>
+                    <div className="h-px min-w-0 flex-1 bg-slate-100" />
                   </div>
-                  <h4 className="text-3xl font-bold tracking-tight">Reliability</h4>
-                  <p className="text-2xl text-slate-500 leading-tight tracking-tight">
+                  <h4 className="text-2xl sm:text-3xl font-bold tracking-tight break-words">Reliability</h4>
+                  <p className="text-lg sm:text-xl lg:text-2xl text-slate-500 leading-snug tracking-tight break-words hyphens-auto">
                     My background in industrial software means I build for the long term. I specialize in systems that must remain operational 24/7.
                   </p>
                 </div>
@@ -180,7 +183,7 @@ export default function App() {
             <div className="mb-48 grid lg:grid-cols-12 gap-12">
               <div className="lg:col-span-8">
                 <h2 className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400 mb-16">Core Expertise</h2>
-                <h3 className="text-[8vw] font-serif font-bold tracking-tighter leading-[0.8]">Commercial <br />Growth.</h3>
+                <h3 className="max-w-full text-[min(8vw,5rem)] sm:text-[min(8vw,7rem)] md:text-[min(8vw,9rem)] font-serif font-bold tracking-tighter leading-[0.8] break-words">Commercial <br />Growth.</h3>
               </div>
               <div className="lg:col-span-4 flex items-end">
                 <p className="text-xl text-slate-500 leading-relaxed max-w-sm">
@@ -212,7 +215,7 @@ export default function App() {
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-32 mb-48">
               <div className="max-w-4xl">
                 <h2 className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500 mb-16">Case Studies</h2>
-                <h3 className="text-[8vw] font-serif font-bold italic leading-[0.8]">Proven.</h3>
+                <h3 className="max-w-full text-[min(8vw,5rem)] sm:text-[min(8vw,7rem)] md:text-[min(8vw,9rem)] font-serif font-bold italic leading-[0.8] break-words">Proven.</h3>
               </div>
               <p className="text-slate-500 max-w-xs text-[10px] font-black uppercase tracking-[0.4em] leading-loose border-l border-slate-800 pl-8">
                 Detailed technical documentation and references are available upon request for qualified inquiries.
@@ -249,7 +252,7 @@ export default function App() {
           <div className="max-w-[1800px] mx-auto">
             <div className="grid lg:grid-cols-12 gap-48">
               <div className="lg:col-span-5 space-y-24">
-                <h2 className="text-[10vw] font-serif font-bold tracking-tighter leading-[0.75]">
+                <h2 className="max-w-full text-[min(10vw,3.75rem)] sm:text-[min(10vw,6rem)] lg:text-[min(10vw,8rem)] font-serif font-bold tracking-tighter leading-[0.75] break-words">
                   Start <br />
                   <span className="italic text-slate-200">Inquiry.</span>
                 </h2>

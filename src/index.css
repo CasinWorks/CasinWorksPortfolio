@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+/* Prevent horizontal scroll from vw-sized type and off-canvas decor */
+html {
+  overflow-x: hidden;
+}
+body {
+  overflow-x: hidden;
+}
