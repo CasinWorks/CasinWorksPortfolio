@@ -10,7 +10,7 @@ import {
   Plus,
   ArrowUpRight
 } from "lucide-react";
-import { SITE } from "./site";
+import { PARTNERS, SITE } from "./site";
 
 function handleContactSubmit(e: FormEvent<HTMLFormElement>) {
   e.preventDefault();
@@ -82,6 +82,7 @@ export default function App() {
           <div className="flex flex-wrap items-center gap-x-10 gap-y-3 sm:gap-x-12 md:gap-16 text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em]">
             <a href="#expertise" className="hover:opacity-50 transition-opacity">Expertise</a>
             <a href="#approach" className="hover:opacity-50 transition-opacity">Approach</a>
+            <a href="#partners" className="hover:opacity-50 transition-opacity">Partners</a>
             <a href="#work" className="hover:opacity-50 transition-opacity">Case Studies</a>
             <a href="#contact" className="bg-white text-black px-6 py-3 md:px-8 rounded-full hover:bg-slate-200 transition-all font-bold">Consultation</a>
           </div>
@@ -206,6 +207,81 @@ export default function App() {
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* Strategic Partners */}
+        <section
+          id="partners"
+          className="scroll-mt-36 border-t border-b border-slate-200/90 bg-[#f4f2ec] py-48 px-6 sm:px-8 lg:px-16 overflow-x-hidden"
+        >
+          <div className="max-w-[1800px] mx-auto">
+            <div className="grid lg:grid-cols-12 gap-16 lg:gap-20 items-start mb-20 lg:mb-24">
+              <div className="lg:col-span-5 min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500 mb-8">
+                  Strategic Partners
+                </p>
+                <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold italic leading-[1.05] tracking-tight text-[#1a1a1a]">
+                  Credibility through association.
+                </h2>
+              </div>
+              <p className="lg:col-span-6 lg:col-start-7 text-lg sm:text-xl text-slate-600 leading-relaxed min-w-0">
+                Engagements are delivered in concert with established automation partners — not in isolation.
+                This portfolio reflects senior engineering backed by real industry relationships.
+              </p>
+            </div>
+
+            <motion.article
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+              className="relative mx-auto max-w-5xl"
+            >
+              {/* Bordered lockup: double rule + inset partner badge */}
+              <div className="relative border-2 border-[#1a1a1a] bg-[#fcfcf9] px-8 py-12 sm:px-12 sm:py-16 lg:px-16 lg:py-20 shadow-[8px_8px_0_0_rgba(26,26,26,0.06)]">
+                <div
+                  className="absolute -top-px left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#f4f2ec] px-6 sm:px-10"
+                  aria-hidden
+                >
+                  <span className="block text-[9px] sm:text-[10px] font-black uppercase tracking-[0.55em] text-[#1a1a1a] whitespace-nowrap">
+                    Official partner
+                  </span>
+                </div>
+
+                <div className="mb-10 flex items-center gap-4 sm:gap-6">
+                  <span className="h-px flex-1 bg-[#1a1a1a]/25" aria-hidden />
+                  <span className="shrink-0 font-serif text-xs sm:text-sm italic text-slate-500 tracking-wide">
+                    Industrial automation
+                  </span>
+                  <span className="h-px flex-1 bg-[#1a1a1a]/25" aria-hidden />
+                </div>
+
+                <a
+                  href={PARTNERS.pfs.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1a1a1a]"
+                >
+                  <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <span className="font-serif text-2xl sm:text-3xl lg:text-[2.125rem] font-bold not-italic tracking-tight text-[#1a1a1a] transition-colors duration-300 group-hover:text-slate-700">
+                      {PARTNERS.pfs.name}
+                    </span>
+                    <ArrowUpRight
+                      className="inline-block size-7 sm:size-8 shrink-0 text-[#1a1a1a] opacity-70 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-1 group-hover:-translate-y-0.5"
+                      strokeWidth={1.75}
+                      aria-hidden
+                    />
+                  </span>
+                  <span className="mt-4 block h-0.5 max-w-0 bg-[#1a1a1a] transition-all duration-500 ease-out group-hover:max-w-full" />
+                </a>
+
+                <p className="mt-10 max-w-2xl text-base sm:text-lg lg:text-xl leading-relaxed text-slate-600 tracking-tight">
+                  Strategic partner in industrial automation — jointly delivering factory floor monitoring and PLC
+                  integration solutions for Philippine manufacturing.
+                </p>
+              </div>
+            </motion.article>
           </div>
         </section>
 
