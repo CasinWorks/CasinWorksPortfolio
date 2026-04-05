@@ -91,37 +91,39 @@ export default function App() {
 
       <main>
         {/* Hero Section */}
-        <section className="pt-64 pb-32 lg:pt-80 lg:pb-80 px-8 lg:px-16 overflow-x-hidden overflow-y-visible">
-          <div className="max-w-[1800px] mx-auto relative overflow-x-hidden">
+        <section className="relative px-6 sm:px-8 lg:px-16 pt-48 pb-20 sm:pt-56 sm:pb-24 lg:pt-64 lg:pb-28 xl:pt-52 xl:pb-20 overflow-x-hidden overflow-y-visible">
+          <div className="max-w-[1800px] mx-auto relative min-w-0">
             <motion.div 
               initial={{ opacity: 0, x: -100 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
             >
-              <div className="mb-24 flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">
-                <div className="w-24 h-[1px] bg-slate-200" />
+              <div className="mb-16 sm:mb-20 lg:mb-24 flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">
+                <div className="w-24 h-[1px] bg-slate-200 shrink-0" />
                 Mandaluyong, Philippines
               </div>
               
-              <div className="relative">
-                <h1 className="max-w-full text-[min(12vw,4.5rem)] sm:text-[min(12vw,8rem)] lg:text-[min(14vw,11rem)] font-serif font-bold tracking-tighter leading-[0.75] mb-32 break-words">
+              <div className="relative z-0 min-w-0 max-w-full">
+                <h1 className="max-w-full min-w-0 text-[min(11vw,4rem)] sm:text-[min(11vw,7rem)] lg:text-[min(12vw,10rem)] font-serif font-bold tracking-tighter leading-[0.8] mb-16 sm:mb-20 lg:mb-24 break-words [overflow-wrap:anywhere]">
                   High-Stakes <br />
-                  <span className="italic text-slate-200 ml-[max(0.5rem,6vw)] sm:ml-[10vw] block">Engineering.</span>
+                  <span className="italic text-slate-200 block ps-[clamp(0.5rem,8vw,10rem)] max-w-[100%]">
+                    Engineering.
+                  </span>
                 </h1>
                 
-                <div className="grid lg:grid-cols-12 gap-24 items-start">
-                  <div className="lg:col-span-5 lg:col-start-2">
-                    <p className="text-3xl lg:text-5xl text-slate-600 leading-[1] font-medium tracking-tight">
+                <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 xl:gap-20 items-start min-w-0">
+                  <div className="min-w-0 lg:col-span-5 lg:col-start-2">
+                    <p className="text-2xl sm:text-3xl lg:text-5xl text-slate-600 leading-[1.05] font-medium tracking-tight">
                       Independent software architecture for enterprises that require mission-critical reliability and senior-level accountability.
                     </p>
                   </div>
-                  <div className="lg:col-span-4 lg:col-start-9 flex justify-start lg:justify-end">
+                  <div className="min-w-0 lg:col-span-4 lg:col-start-9 flex justify-start lg:justify-end">
                     <a 
                       href="#contact" 
-                      className="group flex flex-col gap-8 text-2xl font-bold"
+                      className="group flex flex-col gap-6 sm:gap-8 text-xl sm:text-2xl font-bold max-w-full"
                     >
-                      <div className="w-24 h-24 rounded-full border-2 border-black flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all duration-500">
-                        <ArrowRight className="w-10 h-10 group-hover:translate-x-2 transition-transform" />
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-full border-2 border-black flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all duration-500">
+                        <ArrowRight className="w-8 h-8 sm:w-10 sm:h-10 group-hover:translate-x-2 transition-transform" />
                       </div>
                       <span className="border-b-2 border-black pb-2">Start a Consultation</span>
                     </a>
@@ -130,12 +132,14 @@ export default function App() {
               </div>
             </motion.div>
             
-            {/* Background Accent — sized so it cannot extend past the viewport */}
+            {/* Background accent — clipped to hero width so it never widens the page */}
             <div
-              className="absolute -top-32 right-0 sm:-top-48 sm:-right-8 md:-right-16 translate-x-[20%] text-[min(40vw,28rem)] sm:text-[min(35vw,24rem)] font-serif font-black italic text-slate-50 pointer-events-none -z-10 select-none opacity-50 whitespace-nowrap"
+              className="pointer-events-none absolute inset-y-0 right-0 -z-10 w-[min(100%,52rem)] max-w-[100vw] overflow-hidden"
               aria-hidden
             >
-              CJC
+              <div className="absolute -top-24 right-0 sm:-top-32 translate-x-[8%] sm:translate-x-[12%] text-[min(34vw,18rem)] sm:text-[min(32vw,22rem)] lg:text-[min(28vw,26rem)] font-serif font-black italic text-slate-50 select-none opacity-50 whitespace-nowrap">
+                CJC
+              </div>
             </div>
           </div>
         </section>
@@ -324,55 +328,55 @@ export default function App() {
         </section>
 
         {/* Contact Section */}
-        <section id="contact" className="scroll-mt-36 py-64 px-8 lg:px-16 bg-white">
-          <div className="max-w-[1800px] mx-auto">
-            <div className="grid lg:grid-cols-12 gap-48">
-              <div className="lg:col-span-5 space-y-24">
-                <h2 className="max-w-full text-[min(10vw,3.75rem)] sm:text-[min(10vw,6rem)] lg:text-[min(10vw,8rem)] font-serif font-bold tracking-tighter leading-[0.75] break-words">
+        <section id="contact" className="scroll-mt-36 overflow-x-hidden bg-white py-24 sm:py-40 lg:py-64 px-6 sm:px-8 lg:px-16">
+          <div className="max-w-[1800px] mx-auto min-w-0">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-12 xl:gap-20 min-w-0">
+              <div className="min-w-0 lg:col-span-5 space-y-12 sm:space-y-16 lg:space-y-24">
+                <h2 className="max-w-full text-[min(10vw,3.25rem)] sm:text-[min(10vw,5rem)] lg:text-[min(10vw,7rem)] font-serif font-bold tracking-tighter leading-[0.75] break-words">
                   Start <br />
                   <span className="italic text-slate-200">Inquiry.</span>
                 </h2>
-                <p className="text-3xl text-slate-500 leading-tight tracking-tight">
+                <p className="text-xl sm:text-2xl lg:text-3xl text-slate-500 leading-snug tracking-tight">
                   I am currently accepting inquiries for high-stakes software contracts. Let's discuss how my expertise can drive efficiency in your operations.
                 </p>
-                <div className="space-y-16 pt-16">
-                  <div className="flex flex-col">
+                <div className="space-y-16 pt-8 lg:pt-16">
+                  <div className="flex flex-col min-w-0">
                     <span className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400 mb-6">Direct Correspondence</span>
-                    <a href={`mailto:${SITE.email}`} className="group flex items-center gap-4 text-4xl font-bold hover:opacity-50 transition-opacity tracking-tighter break-all">
+                    <a href={`mailto:${SITE.email}`} className="group flex flex-wrap items-center gap-4 text-2xl sm:text-3xl lg:text-4xl font-bold hover:opacity-50 transition-opacity tracking-tighter break-all">
                       {SITE.email}
-                      <ArrowUpRight className="w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ArrowUpRight className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </a>
                   </div>
                 </div>
               </div>
 
-              <div className="lg:col-span-7">
-                <form className="space-y-32" onSubmit={handleContactSubmit}>
-                  <div className="grid md:grid-cols-2 gap-32">
-                    <div className="space-y-8">
+              <div className="min-w-0 lg:col-span-7">
+                <form className="space-y-12 sm:space-y-16 lg:space-y-24 min-w-0" onSubmit={handleContactSubmit}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-12 sm:gap-x-8 lg:gap-x-10 min-w-0">
+                    <div className="min-w-0 space-y-4 sm:space-y-8">
                       <label htmlFor="inquiry-name" className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Name</label>
                       <input 
                         id="inquiry-name"
                         name="name"
                         type="text" 
                         autoComplete="name"
-                        className="w-full bg-transparent border-b-2 border-slate-100 py-8 focus:outline-none focus:border-black transition-colors text-3xl font-medium tracking-tight"
+                        className="w-full min-w-0 max-w-full bg-transparent border-b-2 border-slate-100 py-4 sm:py-6 lg:py-8 focus:outline-none focus:border-black transition-colors text-xl sm:text-2xl lg:text-3xl font-medium tracking-tight"
                         placeholder="Full Name"
                       />
                     </div>
-                    <div className="space-y-8">
+                    <div className="min-w-0 space-y-4 sm:space-y-8">
                       <label htmlFor="inquiry-org" className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Organization</label>
                       <input 
                         id="inquiry-org"
                         name="organization"
                         type="text" 
                         autoComplete="organization"
-                        className="w-full bg-transparent border-b-2 border-slate-100 py-8 focus:outline-none focus:border-black transition-colors text-3xl font-medium tracking-tight"
+                        className="w-full min-w-0 max-w-full bg-transparent border-b-2 border-slate-100 py-4 sm:py-6 lg:py-8 focus:outline-none focus:border-black transition-colors text-xl sm:text-2xl lg:text-3xl font-medium tracking-tight"
                         placeholder="Company Name"
                       />
                     </div>
                   </div>
-                  <div className="space-y-8">
+                  <div className="space-y-4 sm:space-y-8 min-w-0">
                     <label htmlFor="inquiry-email" className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Email</label>
                     <input 
                       id="inquiry-email"
@@ -380,23 +384,23 @@ export default function App() {
                       type="email" 
                       required
                       autoComplete="email"
-                      className="w-full bg-transparent border-b-2 border-slate-100 py-8 focus:outline-none focus:border-black transition-colors text-3xl font-medium tracking-tight"
+                      className="w-full min-w-0 max-w-full bg-transparent border-b-2 border-slate-100 py-4 sm:py-6 lg:py-8 focus:outline-none focus:border-black transition-colors text-xl sm:text-2xl lg:text-3xl font-medium tracking-tight"
                       placeholder="email@organization.com"
                     />
                   </div>
-                  <div className="space-y-8">
+                  <div className="space-y-4 sm:space-y-8 min-w-0">
                     <label htmlFor="inquiry-brief" className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Brief</label>
                     <textarea 
                       id="inquiry-brief"
                       name="brief"
                       rows={4}
-                      className="w-full bg-transparent border-b-2 border-slate-100 py-8 focus:outline-none focus:border-black transition-colors text-3xl font-medium resize-y min-h-[8rem] tracking-tight"
+                      className="w-full min-w-0 max-w-full box-border bg-transparent border-b-2 border-slate-100 py-4 sm:py-6 lg:py-8 focus:outline-none focus:border-black transition-colors text-xl sm:text-2xl lg:text-3xl font-medium resize-y min-h-[7rem] sm:min-h-[8rem] tracking-tight"
                       placeholder="Project scope and objectives"
                     />
                   </div>
-                  <button type="submit" className="group flex items-center gap-12 text-5xl font-bold border-b-8 border-black pb-8 hover:border-slate-200 transition-all duration-500">
+                  <button type="submit" className="group flex flex-wrap items-center gap-6 sm:gap-10 lg:gap-12 text-3xl sm:text-4xl lg:text-5xl font-bold border-b-[6px] sm:border-b-8 border-black pb-6 sm:pb-8 hover:border-slate-200 transition-all duration-500 w-full sm:w-auto justify-start">
                     Submit Inquiry
-                    <ArrowRight className="w-16 h-16 group-hover:translate-x-8 transition-transform duration-500" />
+                    <ArrowRight className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 shrink-0 group-hover:translate-x-4 sm:group-hover:translate-x-8 transition-transform duration-500" />
                   </button>
                 </form>
               </div>
