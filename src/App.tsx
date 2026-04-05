@@ -3,12 +3,35 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { type FormEvent } from "react";
 import { motion } from "motion/react";
 import { 
   ArrowRight, 
   Plus,
   ArrowUpRight
 } from "lucide-react";
+import { SITE } from "./site";
+
+function handleContactSubmit(e: FormEvent<HTMLFormElement>) {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const data = new FormData(form);
+  const name = String(data.get("name") ?? "").trim();
+  const organization = String(data.get("organization") ?? "").trim();
+  const email = String(data.get("email") ?? "").trim();
+  const brief = String(data.get("brief") ?? "").trim();
+  if (!email) {
+    window.alert("Please enter your email so we can reply.");
+    return;
+  }
+  const subject = encodeURIComponent(
+    `Inquiry from ${name || "Website"}${organization ? ` (${organization})` : ""}`
+  );
+  const body = encodeURIComponent(
+    `Name: ${name}\nOrganization: ${organization}\nReply-to: ${email}\n\n---\n\n${brief}`
+  );
+  window.location.href = `mailto:${SITE.email}?subject=${subject}&body=${body}`;
+}
 
 export default function App() {
   const expertise = [
@@ -48,21 +71,19 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#fcfcf9] text-[#1a1a1a] font-sans selection:bg-black selection:text-white">
+    <div id="top" className="min-h-screen bg-[#fcfcf9] text-[#1a1a1a] font-sans selection:bg-black selection:text-white">
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 mix-blend-difference text-white">
-        <div className="max-w-[1800px] mx-auto px-8 lg:px-16 h-32 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col leading-none">
-              <span className="text-3xl font-serif font-bold tracking-tighter italic">C. J. Casin</span>
-              <span className="text-[8px] uppercase tracking-[0.5em] opacity-50 font-black">Independent Engineering</span>
-            </div>
-          </div>
-          <div className="hidden md:flex items-center gap-16 text-[10px] font-black uppercase tracking-[0.4em]">
+        <div className="max-w-[1800px] mx-auto px-8 lg:px-16 min-h-32 py-6 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <a href="#top" className="flex flex-col leading-none w-fit hover:opacity-80 transition-opacity" aria-label="C. J. Casin — top of page">
+            <span className="text-3xl font-serif font-bold tracking-tighter italic">C. J. Casin</span>
+            <span className="text-[8px] uppercase tracking-[0.5em] opacity-50 font-black">Independent Engineering</span>
+          </a>
+          <div className="flex flex-wrap items-center gap-x-10 gap-y-3 sm:gap-x-12 md:gap-16 text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em]">
             <a href="#expertise" className="hover:opacity-50 transition-opacity">Expertise</a>
             <a href="#approach" className="hover:opacity-50 transition-opacity">Approach</a>
             <a href="#work" className="hover:opacity-50 transition-opacity">Case Studies</a>
-            <a href="#contact" className="bg-white text-black px-8 py-3 rounded-full hover:bg-slate-200 transition-all font-bold">Consultation</a>
+            <a href="#contact" className="bg-white text-black px-6 py-3 md:px-8 rounded-full hover:bg-slate-200 transition-all font-bold">Consultation</a>
           </div>
         </div>
       </nav>
@@ -116,7 +137,7 @@ export default function App() {
         </section>
 
         {/* Philosophy Section */}
-        <section id="approach" className="py-64 px-8 lg:px-16 bg-white">
+        <section id="approach" className="scroll-mt-36 py-64 px-8 lg:px-16 bg-white">
           <div className="max-w-[1800px] mx-auto grid lg:grid-cols-12 gap-32">
             <div className="lg:col-span-4">
               <h2 className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400 mb-16">The Philosophy</h2>
@@ -154,7 +175,7 @@ export default function App() {
         </section>
 
         {/* Expertise Section */}
-        <section id="expertise" className="py-64 px-8 lg:px-16">
+        <section id="expertise" className="scroll-mt-36 py-64 px-8 lg:px-16">
           <div className="max-w-[1800px] mx-auto">
             <div className="mb-48 grid lg:grid-cols-12 gap-12">
               <div className="lg:col-span-8">
@@ -186,7 +207,7 @@ export default function App() {
         </section>
 
         {/* Case Studies Section */}
-        <section id="work" className="py-64 px-8 lg:px-16 bg-[#1a1a1a] text-white rounded-t-[5rem]">
+        <section id="work" className="scroll-mt-36 py-64 px-8 lg:px-16 bg-[#1a1a1a] text-white rounded-t-[5rem]">
           <div className="max-w-[1800px] mx-auto">
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-32 mb-48">
               <div className="max-w-4xl">
@@ -224,7 +245,7 @@ export default function App() {
         </section>
 
         {/* Contact Section */}
-        <section id="contact" className="py-64 px-8 lg:px-16 bg-white">
+        <section id="contact" className="scroll-mt-36 py-64 px-8 lg:px-16 bg-white">
           <div className="max-w-[1800px] mx-auto">
             <div className="grid lg:grid-cols-12 gap-48">
               <div className="lg:col-span-5 space-y-24">
@@ -238,15 +259,8 @@ export default function App() {
                 <div className="space-y-16 pt-16">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400 mb-6">Direct Correspondence</span>
-                    <a href="mailto:christianjoshuacasin@gmail.com" className="group flex items-center gap-4 text-4xl font-bold hover:opacity-50 transition-opacity tracking-tighter">
-                      christianjoshuacasin@gmail.com
-                      <ArrowUpRight className="w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </a>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400 mb-6">Professional Network</span>
-                    <a href="#" className="group flex items-center gap-4 text-4xl font-bold hover:opacity-50 transition-opacity tracking-tighter">
-                      linkedin.com/in/cjcasin
+                    <a href={`mailto:${SITE.email}`} className="group flex items-center gap-4 text-4xl font-bold hover:opacity-50 transition-opacity tracking-tighter break-all">
+                      {SITE.email}
                       <ArrowUpRight className="w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </a>
                   </div>
@@ -254,42 +268,54 @@ export default function App() {
               </div>
 
               <div className="lg:col-span-7">
-                <form className="space-y-32" onSubmit={(e) => e.preventDefault()}>
+                <form className="space-y-32" onSubmit={handleContactSubmit}>
                   <div className="grid md:grid-cols-2 gap-32">
                     <div className="space-y-8">
-                      <label className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Name</label>
+                      <label htmlFor="inquiry-name" className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Name</label>
                       <input 
+                        id="inquiry-name"
+                        name="name"
                         type="text" 
+                        autoComplete="name"
                         className="w-full bg-transparent border-b-2 border-slate-100 py-8 focus:outline-none focus:border-black transition-colors text-3xl font-medium tracking-tight"
                         placeholder="Full Name"
                       />
                     </div>
                     <div className="space-y-8">
-                      <label className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Organization</label>
+                      <label htmlFor="inquiry-org" className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Organization</label>
                       <input 
+                        id="inquiry-org"
+                        name="organization"
                         type="text" 
+                        autoComplete="organization"
                         className="w-full bg-transparent border-b-2 border-slate-100 py-8 focus:outline-none focus:border-black transition-colors text-3xl font-medium tracking-tight"
                         placeholder="Company Name"
                       />
                     </div>
                   </div>
                   <div className="space-y-8">
-                    <label className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Email</label>
+                    <label htmlFor="inquiry-email" className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Email</label>
                     <input 
+                      id="inquiry-email"
+                      name="email"
                       type="email" 
+                      required
+                      autoComplete="email"
                       className="w-full bg-transparent border-b-2 border-slate-100 py-8 focus:outline-none focus:border-black transition-colors text-3xl font-medium tracking-tight"
                       placeholder="email@organization.com"
                     />
                   </div>
                   <div className="space-y-8">
-                    <label className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Brief</label>
+                    <label htmlFor="inquiry-brief" className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Brief</label>
                     <textarea 
-                      rows={1}
-                      className="w-full bg-transparent border-b-2 border-slate-100 py-8 focus:outline-none focus:border-black transition-colors text-3xl font-medium resize-none tracking-tight"
+                      id="inquiry-brief"
+                      name="brief"
+                      rows={4}
+                      className="w-full bg-transparent border-b-2 border-slate-100 py-8 focus:outline-none focus:border-black transition-colors text-3xl font-medium resize-y min-h-[8rem] tracking-tight"
                       placeholder="Project scope and objectives"
-                    ></textarea>
+                    />
                   </div>
-                  <button className="group flex items-center gap-12 text-5xl font-bold border-b-8 border-black pb-8 hover:border-slate-200 transition-all duration-500">
+                  <button type="submit" className="group flex items-center gap-12 text-5xl font-bold border-b-8 border-black pb-8 hover:border-slate-200 transition-all duration-500">
                     Submit Inquiry
                     <ArrowRight className="w-16 h-16 group-hover:translate-x-8 transition-transform duration-500" />
                   </button>
@@ -308,9 +334,8 @@ export default function App() {
             <span className="text-[9px] uppercase tracking-[0.6em] text-slate-400 font-black">Independent Engineering</span>
           </div>
           <div className="flex items-center gap-24 text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">
-            <a href="#" className="hover:text-black transition-colors">Privacy</a>
-            <a href="#" className="hover:text-black transition-colors">Terms</a>
-            <a href="#" className="hover:text-black transition-colors">LinkedIn</a>
+            <a href="/privacy.html" className="hover:text-black transition-colors">Privacy</a>
+            <a href="/terms.html" className="hover:text-black transition-colors">Terms</a>
           </div>
           <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.6em]">
             © {new Date().getFullYear()} Mandaluyong, PH.
