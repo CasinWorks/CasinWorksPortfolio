@@ -1,6 +1,7 @@
 /** Site-wide contact */
 export const SITE = {
   email: "christianjoshuacasin@gmail.com",
+  tagline: "We make things work",
 } as const;
 
 /** Strategic partners (not client logos — institutional credibility) */

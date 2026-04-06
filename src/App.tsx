@@ -110,6 +110,10 @@ export default function App() {
                     Engineering.
                   </span>
                 </h1>
+
+                <p className="mb-12 sm:mb-14 lg:mb-16 max-w-full font-serif text-2xl sm:text-3xl lg:text-[2.125rem] font-medium italic leading-snug tracking-tight text-[#1a1a1a]">
+                  {SITE.tagline}
+                </p>
                 
                 <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 xl:gap-20 items-start min-w-0">
                   <div className="min-w-0 lg:col-span-5 lg:col-start-2">
