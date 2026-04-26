@@ -17,7 +17,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const endpoint = process.env.INQUIRY_ENDPOINT;
   if (!endpoint) {
-    return res.status(500).json({ ok: false, error: "INQUIRY_ENDPOINT is not configured" });
+    return res.status(500).json({
+      ok: false,
+      error: "INQUIRY_ENDPOINT is not configured",
+      vercelEnv: process.env.VERCEL_ENV ?? "unknown",
+    });
   }
 
   const body = (typeof req.body === "string" ? safeJsonParse(req.body) : req.body) as InquiryPayload | null;
