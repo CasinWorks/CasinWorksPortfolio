@@ -3,12 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { type FormEvent } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { 
   ArrowRight, 
   Plus,
-  ArrowUpRight
+  ArrowUpRight,
+  Menu,
+  X
 } from "lucide-react";
 import { PARTNERS, SITE } from "./site";
 
@@ -34,6 +36,38 @@ function handleContactSubmit(e: FormEvent<HTMLFormElement>) {
 }
 
 export default function App() {
+  const navLinks = useMemo(
+    () => [
+      { href: "#expertise", label: "Expertise" },
+      { href: "#approach", label: "Approach" },
+      { href: "#partners", label: "Partners" },
+      { href: "#work", label: "Case Studies" },
+    ],
+    []
+  );
+
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  useEffect(() => {
+    // If we cross into desktop width, force-close the mobile panel.
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onChange = () => {
+      if (mq.matches) setMobileNavOpen(false);
+    };
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [mobileNavOpen]);
+
   const expertise = [
     {
       id: "01",
@@ -73,21 +107,102 @@ export default function App() {
   return (
     <div id="top" className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[#fcfcf9] text-[#1a1a1a] font-sans selection:bg-black selection:text-white">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 mix-blend-difference text-white">
-        <div className="max-w-[1800px] mx-auto px-8 lg:px-16 min-h-32 py-6 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+      <nav
+        className={`fixed top-0 w-full z-50 ${
+          mobileNavOpen ? "mix-blend-normal bg-[#fcfcf9] text-[#1a1a1a]" : "mix-blend-difference text-white"
+        }`}
+      >
+        <div className="max-w-[1800px] mx-auto px-6 sm:px-8 lg:px-16 min-h-24 md:min-h-32 py-6 flex items-center justify-between gap-6">
           <a href="#top" className="flex flex-col leading-none w-fit hover:opacity-80 transition-opacity" aria-label="C. J. Casin — top of page">
             <span className="text-3xl font-serif font-bold tracking-tighter italic">C. J. Casin</span>
             <span className="text-[8px] uppercase tracking-[0.5em] opacity-50 font-black">Independent Engineering</span>
           </a>
-          <div className="flex flex-wrap items-center gap-x-10 gap-y-3 sm:gap-x-12 md:gap-16 text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em]">
-            <a href="#expertise" className="hover:opacity-50 transition-opacity">Expertise</a>
-            <a href="#approach" className="hover:opacity-50 transition-opacity">Approach</a>
-            <a href="#partners" className="hover:opacity-50 transition-opacity">Partners</a>
-            <a href="#work" className="hover:opacity-50 transition-opacity">Case Studies</a>
-            <a href="#contact" className="bg-white text-black px-6 py-3 md:px-8 rounded-full hover:bg-slate-200 transition-all font-bold">Consultation</a>
+
+          {/* Desktop nav */}
+          <div className="hidden md:flex flex-wrap items-center gap-x-10 gap-y-3 lg:gap-x-12 xl:gap-16 text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em]">
+            {navLinks.map((l) => (
+              <a key={l.href} href={l.href} className="hover:opacity-50 transition-opacity">
+                {l.label}
+              </a>
+            ))}
+            <a
+              href="#contact"
+              className="bg-white text-black px-6 py-3 md:px-8 rounded-full hover:bg-slate-200 transition-all font-bold"
+            >
+              Consultation
+            </a>
           </div>
+
+          {/* Mobile burger */}
+          <button
+            type="button"
+            className={`md:hidden inline-flex items-center justify-center rounded-full border px-4 py-3 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 ${
+              mobileNavOpen
+                ? "border-black/15 bg-black/5 hover:bg-black/10 focus-visible:outline-black"
+                : "border-white/25 bg-white/10 hover:bg-white/15 backdrop-blur focus-visible:outline-white"
+            }`}
+            aria-label={mobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={mobileNavOpen}
+            aria-controls="mobile-nav-panel"
+            onClick={() => setMobileNavOpen((v) => !v)}
+          >
+            {mobileNavOpen ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
+          </button>
         </div>
       </nav>
+
+      {/* Mobile overlay menu (separate from nav to avoid blending/overlap) */}
+      <motion.div
+        id="mobile-nav-panel"
+        initial={false}
+        animate={mobileNavOpen ? "open" : "closed"}
+        variants={{
+          open: { opacity: 1, pointerEvents: "auto" as const },
+          closed: { opacity: 0, pointerEvents: "none" as const },
+        }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        className="md:hidden fixed inset-0 z-40"
+        aria-hidden={!mobileNavOpen}
+      >
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-black/35"
+          onClick={() => setMobileNavOpen(false)}
+          aria-hidden
+        />
+
+        {/* Panel */}
+        <motion.div
+          initial={false}
+          animate={mobileNavOpen ? { y: 0 } : { y: -12 }}
+          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute inset-x-0 top-0 bg-[#fcfcf9] text-[#1a1a1a] pt-28 sm:pt-32 pb-10"
+        >
+          <div className="max-w-[1800px] mx-auto px-6 sm:px-8 lg:px-16">
+            <div className="rounded-3xl border border-black/10 bg-white px-6 py-8 shadow-[0_20px_80px_rgba(0,0,0,0.12)]">
+              <div className="flex flex-col gap-6 text-[10px] font-black uppercase tracking-[0.4em]">
+                {navLinks.map((l) => (
+                  <a
+                    key={l.href}
+                    href={l.href}
+                    className="hover:opacity-60 transition-opacity"
+                    onClick={() => setMobileNavOpen(false)}
+                  >
+                    {l.label}
+                  </a>
+                ))}
+                <a
+                  href="#contact"
+                  className="mt-2 bg-black text-white px-6 py-3 rounded-full hover:bg-slate-800 transition-all font-bold w-fit"
+                  onClick={() => setMobileNavOpen(false)}
+                >
+                  Consultation
+                </a>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
 
       <main>
         {/* Hero Section */}
