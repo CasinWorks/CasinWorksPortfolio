@@ -89,12 +89,6 @@ export default function App() {
   async function handleInquirySubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (!SITE.inquiryEndpoint) {
-      setInquiryStatus("error");
-      setInquiryError("Inquiry endpoint is not configured yet.");
-      return;
-    }
-
     const form = e.currentTarget;
     const data = new FormData(form);
     const payload = {
@@ -115,13 +109,16 @@ export default function App() {
       setInquiryError("");
       setInquiryStatus("sending");
 
-      const res = await fetch(SITE.inquiryEndpoint, {
+      const res = await fetch("/api/inquiry", {
         method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `Request failed (${res.status})`);
+      }
 
       setInquiryStatus("sent");
       form.reset();
