@@ -14,27 +14,6 @@ import {
 } from "lucide-react";
 import { PARTNERS, SITE } from "./site";
 
-function handleContactSubmit(e: FormEvent<HTMLFormElement>) {
-  e.preventDefault();
-  const form = e.currentTarget;
-  const data = new FormData(form);
-  const name = String(data.get("name") ?? "").trim();
-  const organization = String(data.get("organization") ?? "").trim();
-  const email = String(data.get("email") ?? "").trim();
-  const brief = String(data.get("brief") ?? "").trim();
-  if (!email) {
-    window.alert("Please enter your email so we can reply.");
-    return;
-  }
-  const subject = encodeURIComponent(
-    `Inquiry from ${name || "Website"}${organization ? ` (${organization})` : ""}`
-  );
-  const body = encodeURIComponent(
-    `Name: ${name}\nOrganization: ${organization}\nReply-to: ${email}\n\n---\n\n${brief}`
-  );
-  window.location.href = `mailto:${SITE.email}?subject=${subject}&body=${body}`;
-}
-
 export default function App() {
   const navLinks = useMemo(
     () => [
@@ -103,6 +82,54 @@ export default function App() {
       outcome: "Engineered a secure, high-volume document processing and management system for a residential community association, automating 90% of recurring billing tasks."
     }
   ];
+
+  const [inquiryStatus, setInquiryStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [inquiryError, setInquiryError] = useState<string>("");
+
+  async function handleInquirySubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    if (!SITE.inquiryEndpoint) {
+      setInquiryStatus("error");
+      setInquiryError("Inquiry endpoint is not configured yet.");
+      return;
+    }
+
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    const payload = {
+      name: String(data.get("name") ?? "").trim(),
+      organization: String(data.get("organization") ?? "").trim(),
+      email: String(data.get("email") ?? "").trim(),
+      brief: String(data.get("brief") ?? "").trim(),
+      page: window.location.href,
+      submittedAt: new Date().toISOString(),
+    };
+
+    if (!payload.email) {
+      window.alert("Please enter your email so we can reply.");
+      return;
+    }
+
+    try {
+      setInquiryError("");
+      setInquiryStatus("sending");
+
+      const res = await fetch(SITE.inquiryEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+
+      setInquiryStatus("sent");
+      form.reset();
+    } catch (err) {
+      setInquiryStatus("error");
+      setInquiryError(err instanceof Error ? err.message : "Failed to send inquiry.");
+    }
+  }
 
   return (
     <div id="top" className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[#fcfcf9] text-[#1a1a1a] font-sans selection:bg-black selection:text-white">
@@ -470,7 +497,7 @@ export default function App() {
               </div>
 
               <div className="min-w-0 lg:col-span-7">
-                <form className="space-y-12 sm:space-y-16 lg:space-y-24 min-w-0" onSubmit={handleContactSubmit}>
+                <form className="space-y-12 sm:space-y-16 lg:space-y-24 min-w-0" onSubmit={handleInquirySubmit}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-12 sm:gap-x-8 lg:gap-x-10 min-w-0">
                     <div className="min-w-0 space-y-4 sm:space-y-8">
                       <label htmlFor="inquiry-name" className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Name</label>
@@ -481,6 +508,7 @@ export default function App() {
                         autoComplete="name"
                         className="w-full min-w-0 max-w-full bg-transparent border-b-2 border-slate-100 py-4 sm:py-6 lg:py-8 focus:outline-none focus:border-black transition-colors text-xl sm:text-2xl lg:text-3xl font-medium tracking-tight"
                         placeholder="Full Name"
+                        disabled={inquiryStatus === "sending"}
                       />
                     </div>
                     <div className="min-w-0 space-y-4 sm:space-y-8">
@@ -492,6 +520,7 @@ export default function App() {
                         autoComplete="organization"
                         className="w-full min-w-0 max-w-full bg-transparent border-b-2 border-slate-100 py-4 sm:py-6 lg:py-8 focus:outline-none focus:border-black transition-colors text-xl sm:text-2xl lg:text-3xl font-medium tracking-tight"
                         placeholder="Company Name"
+                        disabled={inquiryStatus === "sending"}
                       />
                     </div>
                   </div>
@@ -505,6 +534,7 @@ export default function App() {
                       autoComplete="email"
                       className="w-full min-w-0 max-w-full bg-transparent border-b-2 border-slate-100 py-4 sm:py-6 lg:py-8 focus:outline-none focus:border-black transition-colors text-xl sm:text-2xl lg:text-3xl font-medium tracking-tight"
                       placeholder="email@organization.com"
+                      disabled={inquiryStatus === "sending"}
                     />
                   </div>
                   <div className="space-y-4 sm:space-y-8 min-w-0">
@@ -515,10 +545,27 @@ export default function App() {
                       rows={4}
                       className="w-full min-w-0 max-w-full box-border bg-transparent border-b-2 border-slate-100 py-4 sm:py-6 lg:py-8 focus:outline-none focus:border-black transition-colors text-xl sm:text-2xl lg:text-3xl font-medium resize-y min-h-[7rem] sm:min-h-[8rem] tracking-tight"
                       placeholder="Project scope and objectives"
+                      disabled={inquiryStatus === "sending"}
                     />
                   </div>
-                  <button type="submit" className="group flex flex-wrap items-center gap-6 sm:gap-10 lg:gap-12 text-3xl sm:text-4xl lg:text-5xl font-bold border-b-[6px] sm:border-b-8 border-black pb-6 sm:pb-8 hover:border-slate-200 transition-all duration-500 w-full sm:w-auto justify-start">
-                    Submit Inquiry
+
+                  {inquiryStatus === "sent" && (
+                    <p className="text-base sm:text-lg text-slate-600">
+                      Sent. I’ll get back to you shortly.
+                    </p>
+                  )}
+                  {inquiryStatus === "error" && (
+                    <p className="text-base sm:text-lg text-red-600">
+                      Couldn’t send your inquiry{inquiryError ? `: ${inquiryError}` : "."}
+                    </p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={inquiryStatus === "sending"}
+                    className="group flex flex-wrap items-center gap-6 sm:gap-10 lg:gap-12 text-3xl sm:text-4xl lg:text-5xl font-bold border-b-[6px] sm:border-b-8 border-black pb-6 sm:pb-8 hover:border-slate-200 transition-all duration-500 w-full sm:w-auto justify-start disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {inquiryStatus === "sending" ? "Sending…" : "Submit Inquiry"}
                     <ArrowRight className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 shrink-0 group-hover:translate-x-4 sm:group-hover:translate-x-8 transition-transform duration-500" />
                   </button>
                 </form>
