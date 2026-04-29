@@ -80,6 +80,7 @@ export default function App() {
       organization: String(data.get("organization") ?? "").trim(),
       email: String(data.get("email") ?? "").trim(),
       brief: String(data.get("brief") ?? "").trim(),
+      website: String(data.get("website") ?? "").trim(),
       page: window.location.href,
       submittedAt: new Date().toISOString(),
     };
@@ -640,6 +641,14 @@ export default function App() {
 
               <div className="min-w-0 lg:col-span-7">
                 <form className="space-y-12 sm:space-y-16 lg:space-y-24 min-w-0" onSubmit={handleInquirySubmit}>
+                  <input
+                    type="text"
+                    name="website"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    className="hidden"
+                    aria-hidden="true"
+                  />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-12 sm:gap-x-8 lg:gap-x-10 min-w-0">
                     <div className="min-w-0 space-y-4 sm:space-y-8">
                       <label htmlFor="inquiry-name" className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Name</label>
