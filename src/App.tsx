@@ -12,6 +12,7 @@ import {
   Menu,
   X
 } from "lucide-react";
+import { Analytics } from "@vercel/analytics/react";
 import { CASE_STUDIES, PARTNERS, SITE } from "./site";
 
 export default function App() {
@@ -733,6 +734,7 @@ export default function App() {
           </div>
         </div>
       </footer>
+      <Analytics />
     </div>
   );
 }
