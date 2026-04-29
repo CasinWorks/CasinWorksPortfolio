@@ -28,9 +28,15 @@ type InquiryPayload = {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader("Cache-Control", "no-store");
+
   // Best-effort abuse protection (per-region / per-instance).
   const ip = getClientIp(req);
-  if (!rateLimit(ip, { limit: 8, windowMs: 60_000 })) {
+  const requestId = cryptoRandomId();
+  const limited = await rateLimitDurable(ip, { limit: 8, windowMs: 60_000 }).catch(() =>
+    rateLimitBestEffort(ip, { limit: 8, windowMs: 60_000 })
+  );
+  if (!limited) {
     return res.status(429).json({ ok: false, error: "Too many requests" });
   }
 
@@ -45,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const endpoint = process.env.INQUIRY_ENDPOINT;
   if (!endpoint) {
-    console.error("[inquiry] missing INQUIRY_ENDPOINT");
+    console.error("[inquiry] missing INQUIRY_ENDPOINT", { requestId });
     return res.status(500).json({ ok: false, error: "Server misconfigured" });
   }
 
@@ -67,14 +73,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     if (!r.ok) {
-      const text = await r.text().catch(() => "");
-      console.error("[inquiry] upstream error", { status: r.status, body: text.slice(0, 2000) });
+      console.error("[inquiry] upstream error", { requestId, status: r.status });
       return res.status(502).json({ ok: false, error: "Upstream request failed" });
     }
 
     return res.status(200).json({ ok: true });
   } catch (err) {
-    console.error("[inquiry] exception", err);
+    console.error("[inquiry] exception", { requestId, err: err instanceof Error ? err.message : String(err) });
     return res.status(500).json({ ok: false, error: "Request failed" });
   }
 }
@@ -151,7 +156,7 @@ const _rl: Map<string, { count: number; resetAt: number }> =
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ((globalThis as any).__inquiryRateLimit ??= new Map());
 
-function rateLimit(key: string, opts: { limit: number; windowMs: number }): boolean {
+function rateLimitBestEffort(key: string, opts: { limit: number; windowMs: number }): boolean {
   const now = Date.now();
   const cur = _rl.get(key);
   if (!cur || cur.resetAt <= now) {
@@ -161,5 +166,43 @@ function rateLimit(key: string, opts: { limit: number; windowMs: number }): bool
   if (cur.count >= opts.limit) return false;
   cur.count += 1;
   return true;
+}
+
+async function rateLimitDurable(key: string, opts: { limit: number; windowMs: number }): Promise<boolean> {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token || key === "unknown") return rateLimitBestEffort(key, opts);
+
+  // Fixed-window counter: INCR + EXPIRE (only on first hit).
+  const bucket = Math.floor(Date.now() / opts.windowMs);
+  const redisKey = `rl:inquiry:${bucket}:${key}`;
+
+  const incr = await upstash<number>(url, token, ["INCR", redisKey]);
+  if (incr === 1) {
+    await upstash(url, token, ["EXPIRE", redisKey, String(Math.ceil(opts.windowMs / 1000))]);
+  }
+  return incr <= opts.limit;
+}
+
+async function upstash<T>(baseUrl: string, token: string, command: string[]): Promise<T> {
+  const res = await fetch(`${baseUrl}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(command),
+  });
+  if (!res.ok) throw new Error(`Upstash error (${res.status})`);
+  const json = (await res.json()) as { result: T; error?: string };
+  if (json.error) throw new Error(json.error);
+  return json.result;
+}
+
+function cryptoRandomId(): string {
+  // Non-PII correlation id for server logs.
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
