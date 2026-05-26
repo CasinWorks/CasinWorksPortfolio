@@ -1,6 +1,7 @@
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import {BrowserRouter, Route, Routes} from 'react-router-dom';
+import { Analytics } from "@vercel/analytics/react";
 import App from './App.tsx';
 import {ScrollToTop} from './components/ScrollToTop.tsx';
 import CaseStudyPage from './pages/CaseStudyPage.tsx';
@@ -18,5 +19,6 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/case-studies/:slug" element={<CaseStudyPage />} />
       </Routes>
     </BrowserRouter>
+    <Analytics />
   </StrictMode>,
 );
