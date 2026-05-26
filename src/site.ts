@@ -19,22 +19,101 @@ export type ConfidentialCaseStudySection = {
   items?: string[];
 };
 
+export type CaseStudySlug =
+  | "semiconductor-data-lifecycle"
+  | "automotive-andon-ecosystem"
+  | "quotation-invoicing"
+  | "kinsenas";
+
+export type ConfidentialCaseStudySlug = Extract<
+  CaseStudySlug,
+  "semiconductor-data-lifecycle" | "automotive-andon-ecosystem"
+>;
+
 export type ConfidentialCaseStudy = {
+  id: ConfidentialCaseStudySlug;
   label: string;
   sector: string;
   title: string;
+  snippet: string;
   role: string;
   coreStack: string[];
   sections: ConfidentialCaseStudySection[];
   results: string[];
 };
 
-/** NDA engagement — client identity withheld; technical scope approved for portfolio */
-export const CONFIDENTIAL_CASE_STUDY: ConfidentialCaseStudy = {
+/** NDA engagements — client identity withheld; technical scope approved for portfolio */
+export const CONFIDENTIAL_CASE_STUDIES: ConfidentialCaseStudy[] = [
+  {
+    id: "automotive-andon-ecosystem",
+    label: "Confidential work (NDA)",
+    sector: "Automotive Manufacturing",
+    title: "Industrial IoT & Real-Time Andon Ecosystem for a Global Automotive Giant",
+    snippet:
+      "Replaced analog shouting and paper logs on high-volume welding lines with a real-time digital Andon command center — instant triage, factory telemetry, and 365+ days of flawless floor execution.",
+    role: "Lead Software Architect & Systems Integrator (Independent Contractor)",
+    coreStack: [
+      "React.js",
+      "Node.js",
+      "PostgreSQL",
+      "Industrial Hardware Interfacing",
+      "Ultra-Low Latency Telemetry",
+      "RBAC",
+    ],
+    sections: [
+      {
+        title: "The Challenge: Chaos on the Factory Floor",
+        intro:
+          "Within the high-volume welding assembly lines of a premier global automotive manufacturer, critical incident management was completely analog. When an operational bottleneck or mechanical fault occurred, operators literally had to shout across a roaring factory floor to catch a manager's attention.",
+        bullets: [
+          {
+            heading: "Downtime Latency",
+            text: "Response times were entirely dependent on human sight and sound, leaking critical minutes per incident.",
+          },
+          {
+            heading: "The Paperwork Bottleneck",
+            text: "Operational metrics—line stops, Takt time variances, and machine downtime—were tracked by hand on whiteboards and clipboards, leaving leadership completely blind to real-time manufacturing data.",
+          },
+        ],
+      },
+      {
+        title: "The Engineering: Building the Factory's Digital Nervous System",
+        intro:
+          "Collaborating with a specialized hardware partner, I architected a standalone, bare-metal industrial software engine from scratch. We wired physical factory lines directly into a high-visibility, digital command center:",
+        items: [
+          "Hardware-to-Software Event Streaming: Interfaced physical line-side buttons, industrial sirens, and tower lights directly with a high-performance web layer.",
+          "Dynamic, Color-Coded Triaging: Engineered a command dashboard that instantly flashes localized, color-coded visual overrides—Amber for immediate maintenance dispatch, Blue for leadership intervention—pinpointing the exact physical coordinate of the failure.",
+          "Autonomous Factory Telemetry: Deployed edge-sensor integrations to automatically compute and record ruthless manufacturing metrics in real-time.",
+          "Takt Time Deviations: Microsecond-accurate cycle monitoring against production targets.",
+          "Automated Line-Stop Aggregation: Instantaneous tracking of total cumulative downtime per shift.",
+          "Shift Variance Telemetry: Automated tracking of overtime and production volume.",
+          "Unalterable Incident Auditing: Every single mechanical trigger, leadership acknowledgement, and final resolution is cryptographically timestamped, giving management an unassailable data audit trail.",
+        ],
+      },
+      {
+        title: "The Architecture: Built for Severe Environments",
+        intro:
+          "Industrial software cannot afford to crash. I designed a redundant, standalone infrastructure engineered for 100% data integrity:",
+        items: [
+          "The Engine: An ultra-fast React.js interface paired with a high-throughput Node.js backend and a highly optimized PostgreSQL database built to withstand relentless transactional write streams.",
+          "Zero-Packet-Drop Streaming: Implemented rock-solid real-time data flows to ensure factory-wide monitors update instantly without dropped frames.",
+          "Granular Governance: A rigorous Role-Based Access Control (RBAC) framework ensures operators see only their localized line controls, while plant executives get full analytical access.",
+        ],
+      },
+    ],
+    results: [
+      "Instantaneous MTTR: Eradicated manual shouting and paper logs, cutting Mean Time to Resolution down to the absolute minimum through instantaneous digital dispatching.",
+      "100% Production Stability: This custom ecosystem has operated continuously on the production floor for over a year with zero downtime, zero software bugs, and zero defects — proving that custom-built, independent software can carry the weight of a world-class automotive assembly line.",
+    ],
+  },
+  {
+  id: "semiconductor-data-lifecycle",
   label: "Confidential work (NDA)",
   sector: "Semiconductor Manufacturing",
   title:
     "High-Throughput Data Lifecycle Automation for a Multi-Billion Dollar Semiconductor Manufacturer",
+  snippet:
+    "Orchestrated 2TB/day machine-vision data lifecycles across 400TB of localized NAS — decoupling heavy offloads from live inspection lines with a custom automation engine.",
   role: "Lead Infrastructure & Software Architect (Independent Contractor)",
   coreStack: [
     "Multi-Array Enterprise NAS",
@@ -60,12 +139,22 @@ export const CONFIDENTIAL_CASE_STUDY: ConfidentialCaseStudy = {
       ],
     },
     {
-      title: "The Infrastructure Engineering",
+      title: "The Infrastructure Engineering & Cleanroom Deployment",
       intro:
         "To handle the high data velocity without impacting the facility’s broader corporate network, I designed and deployed an isolated, high-throughput hardware architecture:",
-      items: [
-        "Provisioned and integrated dual enterprise-grade NAS arrays, injecting 400TB of localized storage (split into 160TB and 240TB nodes) directly into the production environment.",
-        "Engineered dedicated, direct-attach CAT6 network pipelines directly from the processing machines to guarantee maximum transfer speed.",
+      bullets: [
+        {
+          heading: "Ultra-Restricted Environment Execution",
+          text: "Personally executed the physical site integration and hardware deployment inside a strict Class 1,000 (ISO 6) cleanroom environment, adhering to rigorous multi-stage decontamination, airlock protocols, and full static-dissipative cleanroom attire (bunny suits).",
+        },
+        {
+          heading: "Isolated Network Topologies",
+          text: "Provisioned and integrated dual enterprise-grade NAS arrays, injecting 400TB of localized storage directly into active production cells.",
+        },
+        {
+          heading: "Direct-Attach Pipelines",
+          text: "Engineered dedicated CAT6 network pipelines directly from the processing machines to guarantee maximum transfer speed.",
+        },
       ],
     },
     {
@@ -86,13 +175,15 @@ export const CONFIDENTIAL_CASE_STUDY: ConfidentialCaseStudy = {
     "Zero-Downtime Resource Isolation: Completely decoupled heavy data transfer payloads from active machine vision processing, allowing files to offload seamlessly without compromising system performance.",
     "Continuous Operations: Fully automated local storage reclamation, unlocking 24/7 continuous uptime and total data availability across all manufacturing shifts.",
   ],
-};
+  },
+];
 
 export type CaseStudy = {
-  id: "quotation-invoicing" | "kinsenas";
+  id: Extract<CaseStudySlug, "quotation-invoicing" | "kinsenas">;
   sector: string;
   title: string;
   subtitle: string;
+  snippet: string;
   liveUrl: string;
   primaryOutcome: string;
   problem: string[];
@@ -109,6 +200,8 @@ export const CASE_STUDIES: CaseStudy[] = [
     title: "Quotation & Invoice Workspace",
     subtitle:
       "A contractor-first workflow that turns quoting and invoicing into clean, trackable income records — without spreadsheets.",
+    snippet:
+      "Turns quoting and invoicing into a repeatable workflow with reusable client profiles, issued-value tracking, and exports — without spreadsheets.",
     liveUrl: "https://bills-quote.vercel.app/login",
     primaryOutcome:
       "Faster document creation, fewer errors through reusable defaults, and a clearer picture of issued value over time.",
@@ -150,6 +243,8 @@ export const CASE_STUDIES: CaseStudy[] = [
     title: "KinsenasApp",
     subtitle:
       "A cutoff-based personal finance tracker for everyday Filipinos — with an AI-ready briefing prompt for guidance.",
+    snippet:
+      "Cutoff-based budgeting (15th/30th) for everyday Filipinos — bills, savings, loans, and investments, plus AI-ready briefing prompts for guidance.",
     liveUrl: "https://kinsenas-app-virid.vercel.app",
     primaryOutcome:
       "A simpler, more realistic money workflow (15th/30th cutoff) that people can actually maintain — plus clearer next-step guidance.",
@@ -186,3 +281,41 @@ export const CASE_STUDIES: CaseStudy[] = [
     ],
   },
 ];
+
+export type CaseStudyListItem = {
+  slug: CaseStudySlug;
+  sector: string;
+  title: string;
+  snippet: string;
+  liveUrl?: string;
+  confidential?: boolean;
+};
+
+export const CASE_STUDY_LIST: CaseStudyListItem[] = [
+  ...CONFIDENTIAL_CASE_STUDIES.map((s) => ({
+    slug: s.id,
+    sector: s.sector,
+    title: s.title,
+    snippet: s.snippet,
+    confidential: true as const,
+  })),
+  ...CASE_STUDIES.map((s) => ({
+    slug: s.id,
+    sector: s.sector,
+    title: s.title,
+    snippet: s.snippet,
+    liveUrl: s.liveUrl,
+  })),
+];
+
+export function caseStudyPath(slug: CaseStudySlug) {
+  return `/case-studies/${slug}`;
+}
+
+export function resolveCaseStudy(slug: string) {
+  const confidential = CONFIDENTIAL_CASE_STUDIES.find((s) => s.id === slug);
+  if (confidential) return { kind: "confidential" as const, study: confidential };
+  const study = CASE_STUDIES.find((s) => s.id === slug);
+  if (study) return { kind: "public" as const, study };
+  return null;
+}

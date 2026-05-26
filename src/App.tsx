@@ -12,7 +12,8 @@ import {
   Menu,
   X
 } from "lucide-react";
-import { CASE_STUDIES, CONFIDENTIAL_CASE_STUDY, PARTNERS, SITE } from "./site";
+import { CaseStudySnippetList } from "./components/CaseStudySnippetList";
+import { PARTNERS, SITE } from "./site";
 
 export default function App() {
   const navLinks = useMemo(
@@ -64,8 +65,6 @@ export default function App() {
       description: "Custom software architecture designed to centralize fragmented business processes and eliminate operational bottlenecks.",
     }
   ];
-
-  const caseStudies = CASE_STUDIES;
 
   const [inquiryStatus, setInquiryStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [inquiryError, setInquiryError] = useState<string>("");
@@ -425,257 +424,11 @@ export default function App() {
                 <h3 className="max-w-full text-[min(8vw,5rem)] sm:text-[min(8vw,7rem)] md:text-[min(8vw,9rem)] font-serif font-bold italic leading-[0.8] break-words">Proven.</h3>
               </div>
               <p className="text-slate-500 max-w-xs text-[10px] font-black uppercase tracking-[0.4em] leading-loose border-l border-slate-800 pl-8">
-                Shipped systems across industrial and consumer domains. Client names withheld where required by NDA.
+                Summaries below. Full technical write-ups available via Read more.
               </p>
             </div>
             
-            <motion.article
-              id="case-confidential"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-              className="mb-24 rounded-[2.5rem] border border-slate-800 bg-[#111111] p-10 sm:p-14 lg:p-16"
-            >
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-                <span className="inline-flex items-center rounded-full border border-slate-700 bg-black/25 px-4 py-2 text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">
-                  {CONFIDENTIAL_CASE_STUDY.sector}
-                </span>
-                <span className="inline-flex items-center rounded-full border border-slate-600 bg-slate-800/50 px-4 py-2 text-[10px] font-black uppercase tracking-[0.35em] text-slate-300">
-                  {CONFIDENTIAL_CASE_STUDY.label}
-                </span>
-              </div>
-
-              <h4 className="mt-10 max-w-5xl text-4xl sm:text-5xl lg:text-6xl font-serif font-bold leading-[0.95] tracking-tighter">
-                {CONFIDENTIAL_CASE_STUDY.title}
-              </h4>
-
-              <p className="mt-8 text-lg sm:text-xl text-slate-300 leading-snug tracking-tight">
-                <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-500 block mb-3">
-                  Role
-                </span>
-                {CONFIDENTIAL_CASE_STUDY.role}
-              </p>
-
-              <div className="mt-10">
-                <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500 mb-4">
-                  Core infrastructure
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  {CONFIDENTIAL_CASE_STUDY.coreStack.map((t) => (
-                    <span
-                      key={t}
-                      className="inline-flex items-center rounded-full border border-slate-700 bg-black/25 px-4 py-2 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-16 space-y-14">
-                {CONFIDENTIAL_CASE_STUDY.sections.map((section, index) => (
-                  <div
-                    key={section.title}
-                    className="border-t border-slate-800 pt-14 first:border-t-0 first:pt-0"
-                  >
-                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-600 mb-4">
-                      {String(index + 1).padStart(2, "0")}
-                    </p>
-                    <h5 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-slate-100">
-                      {section.title}
-                    </h5>
-                    {section.intro && (
-                      <p className="mt-6 text-lg sm:text-xl text-slate-400 leading-snug tracking-tight max-w-4xl">
-                        {section.intro}
-                      </p>
-                    )}
-                    {section.bullets && (
-                      <ul className="mt-8 space-y-6 max-w-4xl">
-                        {section.bullets.map((b) => (
-                          <li key={b.heading} className="flex gap-4">
-                            <span className="mt-2 h-1.5 w-1.5 rounded-full bg-slate-500 shrink-0" aria-hidden />
-                            <div>
-                              <span className="font-semibold text-slate-200">{b.heading}: </span>
-                              <span className="text-lg sm:text-xl text-slate-400 leading-snug">{b.text}</span>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {section.items && (
-                      <ul className="mt-8 space-y-4 max-w-4xl">
-                        {section.items.map((item) => (
-                          <li key={item} className="flex gap-4">
-                            <span className="mt-2 h-1.5 w-1.5 rounded-full bg-slate-500 shrink-0" aria-hidden />
-                            <span className="text-lg sm:text-xl text-slate-400 leading-snug tracking-tight">{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-16 rounded-3xl border border-slate-800 bg-black/25 p-8 sm:p-10">
-                <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500">
-                  The outcome
-                </p>
-                <ul className="mt-8 space-y-6">
-                  {CONFIDENTIAL_CASE_STUDY.results.map((r) => (
-                    <li key={r} className="text-xl sm:text-2xl text-slate-200 leading-snug tracking-tight">
-                      {r}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <p className="mt-10 text-sm text-slate-500 leading-relaxed max-w-3xl">
-                Client identity, facility details, and internal metrics are withheld per NDA. Additional
-                automotive and semiconductor engagements are available for qualified inquiries.
-              </p>
-            </motion.article>
-
-            <div className="grid gap-24">
-              {caseStudies.map((study) => (
-                <motion.article
-                  key={study.id}
-                  id={`case-${study.id}`}
-                  initial={{ opacity: 0, y: 36 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-60px" }}
-                  transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-                  className="rounded-[2.5rem] border border-slate-800 bg-[#141414] p-10 sm:p-14 lg:p-16 shadow-[0_40px_120px_rgba(0,0,0,0.35)]"
-                >
-                  <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-start">
-                    <div className="lg:col-span-5">
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-                        <span className="inline-flex items-center rounded-full border border-slate-700 bg-black/25 px-4 py-2 text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">
-                          {study.sector}
-                        </span>
-                        <a
-                          href={study.liveUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group inline-flex items-center gap-3 rounded-full bg-white text-black px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.35em] hover:bg-slate-200 transition-colors"
-                        >
-                          Live demo
-                          <ArrowUpRight className="size-4 opacity-70 group-hover:opacity-100" aria-hidden />
-                        </a>
-                      </div>
-
-                      <h4 className="mt-10 text-5xl sm:text-6xl font-serif font-bold leading-[0.9] tracking-tighter">
-                        {study.title}
-                      </h4>
-                      <p className="mt-8 text-xl sm:text-2xl text-slate-400 leading-snug tracking-tight">
-                        {study.subtitle}
-                      </p>
-
-                      <div className="mt-10 rounded-3xl border border-slate-800 bg-black/25 p-8">
-                        <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500">
-                          Primary outcome
-                        </p>
-                        <p className="mt-6 text-2xl sm:text-3xl text-slate-200 leading-tight tracking-tight">
-                          {study.primaryOutcome}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="lg:col-span-7">
-                      <div className="grid sm:grid-cols-2 gap-10">
-                        <div className="space-y-6">
-                          <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500">
-                            The problem
-                          </p>
-                          <ul className="space-y-4 text-lg sm:text-xl text-slate-400 leading-snug tracking-tight">
-                            {study.problem.map((p) => (
-                              <li key={p} className="flex gap-4">
-                                <span className="mt-2 h-1.5 w-1.5 rounded-full bg-slate-500 shrink-0" aria-hidden />
-                                <span>{p}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-
-                        <div className="space-y-6">
-                          <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500">
-                            The solution
-                          </p>
-                          <ul className="space-y-4 text-lg sm:text-xl text-slate-400 leading-snug tracking-tight">
-                            {study.solution.map((s) => (
-                              <li key={s} className="flex gap-4">
-                                <span className="mt-2 h-1.5 w-1.5 rounded-full bg-slate-500 shrink-0" aria-hidden />
-                                <span>{s}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-
-                      <div className="mt-12 grid lg:grid-cols-3 gap-10">
-                        <div className="space-y-6">
-                          <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500">
-                            Key features
-                          </p>
-                          <ul className="space-y-3 text-base sm:text-lg text-slate-400 leading-snug">
-                            {study.keyFeatures.map((f) => (
-                              <li key={f} className="flex gap-3">
-                                <span className="mt-2 h-1 w-1 rounded-full bg-slate-600 shrink-0" aria-hidden />
-                                <span>{f}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div className="space-y-6">
-                          <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500">
-                            Feasibility
-                          </p>
-                          <ul className="space-y-3 text-base sm:text-lg text-slate-400 leading-snug">
-                            {study.feasibility.map((f) => (
-                              <li key={f} className="flex gap-3">
-                                <span className="mt-2 h-1 w-1 rounded-full bg-slate-600 shrink-0" aria-hidden />
-                                <span>{f}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div className="space-y-6">
-                          <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500">
-                            Next steps
-                          </p>
-                          <ul className="space-y-3 text-base sm:text-lg text-slate-400 leading-snug">
-                            {study.roadmap.map((r) => (
-                              <li key={r} className="flex gap-3">
-                                <span className="mt-2 h-1 w-1 rounded-full bg-slate-600 shrink-0" aria-hidden />
-                                <span>{r}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-
-                      <div className="mt-14 flex flex-wrap items-center gap-6">
-                        <a
-                          href="#contact"
-                          className="group inline-flex items-center gap-4 rounded-full border border-white/15 bg-white/10 px-8 py-4 text-[10px] font-black uppercase tracking-[0.4em] hover:bg-white/15 transition-colors"
-                        >
-                          Build something similar
-                          <ArrowRight className="size-5 group-hover:translate-x-1 transition-transform" aria-hidden />
-                        </a>
-                        <a
-                          href={study.liveUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 hover:text-white transition-colors"
-                        >
-                          View live demo <ArrowUpRight className="size-5" aria-hidden />
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                </motion.article>
-              ))}
-            </div>
+            <CaseStudySnippetList />
           </div>
         </section>
 
