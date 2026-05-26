@@ -12,6 +12,82 @@ export const PARTNERS = {
   },
 } as const;
 
+export type ConfidentialCaseStudySection = {
+  title: string;
+  intro?: string;
+  bullets?: { heading: string; text: string }[];
+  items?: string[];
+};
+
+export type ConfidentialCaseStudy = {
+  label: string;
+  sector: string;
+  title: string;
+  role: string;
+  coreStack: string[];
+  sections: ConfidentialCaseStudySection[];
+  results: string[];
+};
+
+/** NDA engagement — client identity withheld; technical scope approved for portfolio */
+export const CONFIDENTIAL_CASE_STUDY: ConfidentialCaseStudy = {
+  label: "Confidential work (NDA)",
+  sector: "Semiconductor Manufacturing",
+  title:
+    "High-Throughput Data Lifecycle Automation for a Multi-Billion Dollar Semiconductor Manufacturer",
+  role: "Lead Infrastructure & Software Architect (Independent Contractor)",
+  coreStack: [
+    "Multi-Array Enterprise NAS",
+    "Dedicated High-Speed Topologies",
+    "Custom Automation Architecture",
+    "Role-Based Access Control (RBAC)",
+    "Cryptographic Logging",
+  ],
+  sections: [
+    {
+      title: "The Challenge: Extreme Data Velocity & Hardware Saturation",
+      intro:
+        "At a global, multi-billion dollar semiconductor packaging facility, advanced machine vision inspection lines were generating over 2TB of high-resolution production data every single day. This extreme volume created a critical operational bottleneck:",
+      bullets: [
+        {
+          heading: "Storage Exhaustion",
+          text: "Local inspection workstations frequently hit 100% storage capacity, threatening costly line stoppages.",
+        },
+        {
+          heading: "Compute Overhead",
+          text: "Standard network file transfer protocols heavily drained machine resources, spiking CPU utilization to critical limits and risking real-time processing delays during active manufacturing.",
+        },
+      ],
+    },
+    {
+      title: "The Infrastructure Engineering",
+      intro:
+        "To handle the high data velocity without impacting the facility’s broader corporate network, I designed and deployed an isolated, high-throughput hardware architecture:",
+      items: [
+        "Provisioned and integrated dual enterprise-grade NAS arrays, injecting 400TB of localized storage (split into 160TB and 240TB nodes) directly into the production environment.",
+        "Engineered dedicated, direct-attach CAT6 network pipelines directly from the processing machines to guarantee maximum transfer speed.",
+      ],
+    },
+    {
+      title: "The Custom Software Solution: SynoCommand Engine",
+      intro:
+        "Because off-the-shelf backup software lacked the granular safety features needed for a live manufacturing line, I engineered a specialized desktop automation application to orchestrate the entire data lifecycle:",
+      items: [
+        "Intelligent Automation Pipeline: Configured with advanced conditional logic to run automated, scheduled, or real-time live backups filtered strictly by file extensions and precise file age (e.g., targeting files older than 3 days).",
+        "System Concurrency Protection: Built-in state logic blocks conflicting processes (Scan, Backup, Purge) from running simultaneously, ensuring total software stability.",
+        "Fail-Safe Storage Reclamation: Implemented a secure, dual-authenticated verification mechanism that cross-references backup integrity before safely purging local machine files to reclaim space.",
+        "Enterprise Security & Audit Readiness: Integrated strict Role-Based Access Control (RBAC) separating Manager overrides from Operator functions.",
+        "Immutable, local audit logging utilizing cryptographic hash chains to guarantee log integrity, allowing seamless CSV exports for strict corporate compliance reviews.",
+        "Embedded live telemetry to monitor NAS hardware health, drive arrays, CPU load, and RAM consumption.",
+      ],
+    },
+  ],
+  results: [
+    "Zero-Downtime Resource Isolation: Completely decoupled heavy data transfer payloads from active machine vision processing, allowing files to offload seamlessly without compromising system performance.",
+    "Continuous Operations: Fully automated local storage reclamation, unlocking 24/7 continuous uptime and total data availability across all manufacturing shifts.",
+  ],
+};
+
 export type CaseStudy = {
   id: "quotation-invoicing" | "kinsenas";
   sector: string;
