@@ -21,17 +21,10 @@ export type ConfidentialCaseStudySection = {
 
 export type CaseStudySlug =
   | "semiconductor-data-lifecycle"
-  | "automotive-andon-ecosystem"
-  | "quotation-invoicing"
-  | "kinsenas";
-
-export type ConfidentialCaseStudySlug = Extract<
-  CaseStudySlug,
-  "semiconductor-data-lifecycle" | "automotive-andon-ecosystem"
->;
+  | "automotive-andon-ecosystem";
 
 export type ConfidentialCaseStudy = {
-  id: ConfidentialCaseStudySlug;
+  id: CaseStudySlug;
   label: string;
   sector: string;
   title: string;
@@ -178,110 +171,6 @@ export const CONFIDENTIAL_CASE_STUDIES: ConfidentialCaseStudy[] = [
   },
 ];
 
-export type CaseStudy = {
-  id: Extract<CaseStudySlug, "quotation-invoicing" | "kinsenas">;
-  sector: string;
-  title: string;
-  subtitle: string;
-  snippet: string;
-  liveUrl: string;
-  primaryOutcome: string;
-  problem: string[];
-  solution: string[];
-  keyFeatures: string[];
-  feasibility: string[];
-  roadmap: string[];
-};
-
-export const CASE_STUDIES: CaseStudy[] = [
-  {
-    id: "quotation-invoicing",
-    sector: "Professional Services",
-    title: "Quotation & Invoice Workspace",
-    subtitle:
-      "A contractor-first workflow that turns quoting and invoicing into clean, trackable income records — without spreadsheets.",
-    snippet:
-      "Turns quoting and invoicing into a repeatable workflow with reusable client profiles, issued-value tracking, and exports — without spreadsheets.",
-    liveUrl: "https://bills-quote.vercel.app/login",
-    primaryOutcome:
-      "Faster document creation, fewer errors through reusable defaults, and a clearer picture of issued value over time.",
-    problem: [
-      "Quoting and invoicing starts in templates/spreadsheets, then slowly becomes inconsistent and error-prone.",
-      "Client details, payment instructions, and terms drift across documents over time.",
-      "There’s no reliable month-to-month view of issued work (quoted vs invoiced) for cashflow planning.",
-    ],
-    solution: [
-      "A single contractor workspace to manage clients, quotes, invoices, and defaults in one place.",
-      "A dashboard that summarizes issued value and visualizes money flow to support forward planning.",
-      "Exports to simplify record-keeping and reporting.",
-    ],
-    keyFeatures: [
-      "Clients directory with reusable profiles",
-      "Quotes list with statuses and totals",
-      "Invoices aligned to the quoting workflow",
-      "Dashboard summarizing YTD and monthly issued value",
-      "Numbering and defaults (terms, validity, due dates)",
-      "Bank details stored for consistent payment instructions",
-      "CSV export for quotes/invoices",
-    ],
-    feasibility: [
-      "Built around the core flow first (create → track → export) so it stays simple and shippable.",
-      "Designed for speed and clarity: minimal steps, predictable layouts, and strong defaults.",
-      "Structured data to allow future upgrades like PDF templates, reminders, and multi-user workspaces.",
-    ],
-    roadmap: [
-      "PDF generation + branded templates",
-      "Payment status tracking + reminders",
-      "Tax/VAT + multi-currency support",
-      "Role-based access for small teams",
-      "Cloud sync + audit history (optional)",
-    ],
-  },
-  {
-    id: "kinsenas",
-    sector: "Consumer Finance",
-    title: "KinsenasApp",
-    subtitle:
-      "A cutoff-based personal finance tracker for everyday Filipinos — with an AI-ready briefing prompt for guidance.",
-    snippet:
-      "Cutoff-based budgeting (15th/30th) for everyday Filipinos — bills, savings, loans, and investments, plus AI-ready briefing prompts for guidance.",
-    liveUrl: "https://kinsenas-app-virid.vercel.app",
-    primaryOutcome:
-      "A simpler, more realistic money workflow (15th/30th cutoff) that people can actually maintain — plus clearer next-step guidance.",
-    problem: [
-      "Many finance apps feel too complex: too many categories, charts, and jargon.",
-      "Tracking alone doesn’t help; users still ask “so what should I do next?”",
-      "Real-life budgeting often follows 15th/30th payroll cutoffs, but most tools don’t model this well.",
-    ],
-    solution: [
-      "A mobile-first workspace with cutoff-based budgeting and essential trackers (bills, savings, loans, investments).",
-      "Clear progress views per cutoff so users quickly see what’s due, paid, and left.",
-      "A structured “AI briefing prompt” generator that summarizes finances for any AI assistant to analyze.",
-    ],
-    keyFeatures: [
-      "Bills & payments tracker by cutoff (15th / 30th)",
-      "Monthly income and net savings overview",
-      "Savings goals + monthly history",
-      "Loans snapshot with payment-aware tracking",
-      "Investments overview + PH-focused investment guide",
-      "Backup & restore via export/import",
-      "AI briefing prompt generator for financial guidance",
-    ],
-    feasibility: [
-      "Optimized for consistency: minimal friction so users keep tracking.",
-      "Local-first by default to build trust with sensitive finance data.",
-      "Portable data so users can move devices without being trapped.",
-    ],
-    roadmap: [
-      "Automated insights (risk alerts, cutoff shortfalls, habit trends)",
-      "Recurring bills + smart templates",
-      "Opt-in multi-device sync",
-      "Explainable financial health score",
-      "Exports for planning and personal records",
-    ],
-  },
-];
-
 export type CaseStudyListItem = {
   slug: CaseStudySlug;
   sector: string;
@@ -291,31 +180,22 @@ export type CaseStudyListItem = {
   confidential?: boolean;
 };
 
-export const CASE_STUDY_LIST: CaseStudyListItem[] = [
-  ...CONFIDENTIAL_CASE_STUDIES.map((s) => ({
-    slug: s.id,
-    sector: s.sector,
-    title: s.title,
-    snippet: s.snippet,
-    confidential: true as const,
-  })),
-  ...CASE_STUDIES.map((s) => ({
-    slug: s.id,
-    sector: s.sector,
-    title: s.title,
-    snippet: s.snippet,
-    liveUrl: s.liveUrl,
-  })),
-];
+export const CASE_STUDY_LIST: CaseStudyListItem[] = CONFIDENTIAL_CASE_STUDIES.map((s) => ({
+  slug: s.id,
+  sector: s.sector,
+  title: s.title,
+  snippet: s.snippet,
+  confidential: true as const,
+}));
 
 export function caseStudyPath(slug: CaseStudySlug) {
   return `/case-studies/${slug}`;
 }
 
 export function resolveCaseStudy(slug: string) {
-  const confidential = CONFIDENTIAL_CASE_STUDIES.find((s) => s.id === slug);
-  if (confidential) return { kind: "confidential" as const, study: confidential };
-  const study = CASE_STUDIES.find((s) => s.id === slug);
-  if (study) return { kind: "public" as const, study };
-  return null;
+  const study = CONFIDENTIAL_CASE_STUDIES.find((s) => s.id === slug);
+  return study ?? null;
 }
+
+/** Integrated app directory — same origin as main portfolio */
+export const APPS_FOR_EVERYONE_PATH = "/AppsForEveryone";

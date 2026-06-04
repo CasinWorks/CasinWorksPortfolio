@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/react";
 import App from './App.tsx';
 import {ScrollToTop} from './components/ScrollToTop.tsx';
 import CaseStudyPage from './pages/CaseStudyPage.tsx';
+import AppsForEveryonePage from './pages/AppsForEveryonePage.tsx';
 import './index.css';
 
 const SITE_TITLE = 'C.J. Casin — Independent Engineering';
@@ -16,6 +17,7 @@ createRoot(document.getElementById('root')!).render(
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<App />} />
+        <Route path="/AppsForEveryone" element={<AppsForEveryonePage />} />
         <Route path="/case-studies/:slug" element={<CaseStudyPage />} />
       </Routes>
     </BrowserRouter>

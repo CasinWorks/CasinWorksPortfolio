@@ -4,6 +4,7 @@
  */
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { 
   ArrowRight, 
@@ -12,6 +13,7 @@ import {
   Menu,
   X
 } from "lucide-react";
+import { AppsForEveryoneSection } from "./components/AppsForEveryoneSection";
 import { CaseStudySnippetList } from "./components/CaseStudySnippetList";
 import { PARTNERS, SITE } from "./site";
 
@@ -22,6 +24,7 @@ export default function App() {
       { href: "#approach", label: "Approach" },
       { href: "#partners", label: "Partners" },
       { href: "#work", label: "Case Studies" },
+      { href: "#apps-for-everyone", label: "Apps For Everyone" },
     ],
     []
   );
@@ -128,11 +131,17 @@ export default function App() {
 
           {/* Desktop nav */}
           <div className="hidden md:flex flex-wrap items-center gap-x-10 gap-y-3 lg:gap-x-12 xl:gap-16 text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em]">
-            {navLinks.map((l) => (
-              <a key={l.href} href={l.href} className="hover:opacity-50 transition-opacity">
-                {l.label}
-              </a>
-            ))}
+            {navLinks.map((l) =>
+              l.href.startsWith("/") ? (
+                <Link key={l.href} to={l.href} className="hover:opacity-50 transition-opacity">
+                  {l.label}
+                </Link>
+              ) : (
+                <a key={l.href} href={l.href} className="hover:opacity-50 transition-opacity">
+                  {l.label}
+                </a>
+              )
+            )}
             <a
               href="#contact"
               className="bg-white text-black px-6 py-3 md:px-8 rounded-full hover:bg-slate-200 transition-all font-bold"
@@ -189,16 +198,27 @@ export default function App() {
           <div className="max-w-[1800px] mx-auto px-6 sm:px-8 lg:px-16">
             <div className="rounded-3xl border border-black/10 bg-white px-6 py-8 shadow-[0_20px_80px_rgba(0,0,0,0.12)]">
               <div className="flex flex-col gap-6 text-[10px] font-black uppercase tracking-[0.4em]">
-                {navLinks.map((l) => (
-                  <a
-                    key={l.href}
-                    href={l.href}
-                    className="hover:opacity-60 transition-opacity"
-                    onClick={() => setMobileNavOpen(false)}
-                  >
-                    {l.label}
-                  </a>
-                ))}
+                {navLinks.map((l) =>
+                  l.href.startsWith("/") ? (
+                    <Link
+                      key={l.href}
+                      to={l.href}
+                      className="hover:opacity-60 transition-opacity"
+                      onClick={() => setMobileNavOpen(false)}
+                    >
+                      {l.label}
+                    </Link>
+                  ) : (
+                    <a
+                      key={l.href}
+                      href={l.href}
+                      className="hover:opacity-60 transition-opacity"
+                      onClick={() => setMobileNavOpen(false)}
+                    >
+                      {l.label}
+                    </a>
+                  )
+                )}
                 <a
                   href="#contact"
                   className="mt-2 bg-black text-white px-6 py-3 rounded-full hover:bg-slate-800 transition-all font-bold w-fit"
@@ -425,11 +445,12 @@ export default function App() {
                 <h3 className="max-w-full text-[min(8vw,5rem)] sm:text-[min(8vw,7rem)] md:text-[min(8vw,9rem)] font-serif font-bold italic leading-[0.8] break-words">Proven.</h3>
               </div>
               <p className="text-slate-500 max-w-xs text-[10px] font-black uppercase tracking-[0.4em] leading-loose border-l border-slate-800 pl-8">
-                Summaries below. Full technical write-ups available via Read more.
+                Enterprise NDA engagements below. Shipped consumer tools in Apps For Everyone.
               </p>
             </div>
-            
+
             <CaseStudySnippetList />
+            <AppsForEveryoneSection />
           </div>
         </section>
 
