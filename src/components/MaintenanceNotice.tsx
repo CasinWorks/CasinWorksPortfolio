@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
 /** Set to false or remove this component when maintenance is over. */
-const MAINTENANCE_ENABLED = true;
+const MAINTENANCE_ENABLED = false;
 
 const MANILA_TZ = "Asia/Manila";
 const DISMISS_KEY = "casinworks-maintenance-dismissed";
