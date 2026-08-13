@@ -1,27 +1,26 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { ConfidentialCaseStudyDetail } from "../components/ConfidentialCaseStudyDetail";
-import { resolveCaseStudy } from "../site";
+import { usePageMeta } from "../hooks/usePageMeta";
+import { caseStudyPath, resolveCaseStudy, SITE } from "../site";
+import NotFoundPage from "./NotFoundPage";
 
 export default function CaseStudyPage() {
   const { slug } = useParams<{ slug: string }>();
   const study = slug ? resolveCaseStudy(slug) : null;
 
+  usePageMeta({
+    title: study
+      ? `${study.title} — Case Study | ${SITE.name}`
+      : `Case study not found — ${SITE.name}`,
+    description: study?.snippet ?? SITE.description,
+    path: study && slug ? caseStudyPath(study.id) : `/case-studies/${slug ?? ""}`,
+    type: "article",
+    noIndex: !study,
+  });
+
   if (!study) {
-    return (
-      <div className="min-h-screen bg-[#1a1a1a] text-white px-8 py-32">
-        <div className="max-w-[1800px] mx-auto">
-          <p className="text-2xl font-serif font-bold italic mb-8">Case study not found.</p>
-          <Link
-            to="/#work"
-            className="inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="size-4" aria-hidden />
-            Back to case studies
-          </Link>
-        </div>
-      </div>
-    );
+    return <NotFoundPage />;
   }
 
   return (

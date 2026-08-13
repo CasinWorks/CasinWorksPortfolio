@@ -1,8 +1,50 @@
-/** Site-wide contact */
+/** Site-wide contact & SEO defaults */
 export const SITE = {
   email: "christianjoshuacasin@gmail.com",
   tagline: "We make things work",
+  url: "https://www.casinworks.com",
+  name: "C. J. Casin",
+  title: "C.J. Casin — Independent Engineering",
+  description:
+    "We make things work. C.J. Casin — independent engineering for mission-critical software, SCADA, and industrial systems.",
+  location: "Mandaluyong, Philippines",
+  /** Client reply SLA shown near contact */
+  responseTimePromise: "I reply within 1 business day.",
+  ogImagePath: "/og-image.jpg",
 } as const;
+
+export type FaqItem = {
+  question: string;
+  answer: string;
+};
+
+export const FAQS: FaqItem[] = [
+  {
+    question: "What kinds of projects do you take on?",
+    answer:
+      "Mission-critical software for manufacturing, industrial operations, and enterprises that need senior engineering accountability — SCADA-adjacent systems, factory-floor tooling, operational dashboards, and custom architecture where downtime or weak delivery has real cost.",
+  },
+  {
+    question: "Do you work under NDA?",
+    answer:
+      "Yes. Most enterprise engagements are confidential. Portfolio case studies describe technical scope with client identity withheld where required.",
+  },
+  {
+    question: "How do engagements usually start?",
+    answer:
+      "Send a short brief via the inquiry form or email. We clarify scope, constraints, and success criteria, then agree on a focused first phase before any larger commitment.",
+  },
+  {
+    question: "How quickly will I hear back?",
+    answer:
+      "I reply to new consultation inquiries within 1 business day. Complex scopes may need a short follow-up call before a written proposal.",
+  },
+  {
+    question: "Where are you based, and do you work remotely?",
+    answer:
+      "I’m based in Mandaluyong, Philippines, and work with local manufacturing partners as well as remote enterprise clients. On-site work is available when the engagement requires it.",
+  },
+];
 
 /** Strategic partners (not client logos — institutional credibility) */
 export const PARTNERS = {
@@ -43,7 +85,7 @@ export const CONFIDENTIAL_CASE_STUDIES: ConfidentialCaseStudy[] = [
     sector: "Automotive Manufacturing",
     title: "Industrial IoT & Real-Time Andon Ecosystem for a Global Automotive Giant",
     snippet:
-      "Replaced analog shouting and paper logs on high-volume welding lines with a real-time digital Andon command center — instant triage, factory telemetry, and 365+ days of flawless floor execution.",
+      "Replaced analog shouting and paper logs on high-volume welding lines with a real-time digital Andon command center — instant triage, factory telemetry, and 24/7 floor execution.",
     role: "Lead Software Architect & Systems Integrator (Independent Contractor)",
     coreStack: [
       "React.js",

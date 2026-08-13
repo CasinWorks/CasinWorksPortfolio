@@ -1,9 +1,45 @@
 @import "tailwindcss";
 
+:root {
+  /* Sheet color — same cream as Strategic Partners */
+  --page-cream: #f4f2ec;
+  /*
+    Drawing-sheet margins: enough frame to read as a border,
+    not so much that the drawing floats in empty space.
+    ~1/16–1/20 of a laptop width; content fills the rest.
+  */
+  --page-gutter: clamp(1.25rem, 3vw, 3.25rem);
+  --page-max: 108rem;
+}
+
 /* Prevent horizontal scroll from vw-sized type and off-canvas decor */
 html {
   overflow-x: hidden;
+  scroll-padding-top: var(--header-h, 6rem);
 }
 body {
   overflow-x: hidden;
+}
+
+/*
+  Optical section padding: bottom heavier than top.
+  Dead-center math reads low; eyes look up on the subject.
+*/
+@layer utilities {
+  .section-y {
+    padding-top: 3.75rem;
+    padding-bottom: 5.25rem;
+  }
+  @media (min-width: 640px) {
+    .section-y {
+      padding-top: 5rem;
+      padding-bottom: 7rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .section-y {
+      padding-top: 6rem;
+      padding-bottom: 8.5rem;
+    }
+  }
 }

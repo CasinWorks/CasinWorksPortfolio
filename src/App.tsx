@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { 
   ArrowRight, 
@@ -15,9 +15,20 @@ import {
 } from "lucide-react";
 import { AppsForEveryoneSection } from "./components/AppsForEveryoneSection";
 import { CaseStudySnippetList } from "./components/CaseStudySnippetList";
+import { FaqSection } from "./components/FaqSection";
+import { StickyMobileCta } from "./components/StickyMobileCta";
+import { usePageMeta } from "./hooks/usePageMeta";
 import { PARTNERS, SITE } from "./site";
 
 export default function App() {
+  usePageMeta({
+    title: SITE.title,
+    description: SITE.description,
+    path: "/",
+  });
+
+  const navigate = useNavigate();
+
   const navLinks = useMemo(
     () => [
       { href: "#expertise", label: "Expertise" },
@@ -25,11 +36,13 @@ export default function App() {
       { href: "#partners", label: "Partners" },
       { href: "#work", label: "Case Studies" },
       { href: "#apps-for-everyone", label: "Apps For Everyone" },
+      { href: "#faq", label: "FAQ" },
     ],
     []
   );
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     // If we cross into desktop width, force-close the mobile panel.
@@ -41,6 +54,26 @@ export default function App() {
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, []);
+
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+
+    const syncHeaderHeight = () => {
+      document.documentElement.style.setProperty(
+        "--header-h",
+        `${el.offsetHeight + 12}px`,
+      );
+    };
+
+    syncHeaderHeight();
+    const ro = new ResizeObserver(syncHeaderHeight);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      document.documentElement.style.removeProperty("--header-h");
+    };
+  }, [mobileNavOpen]);
 
   useEffect(() => {
     if (!mobileNavOpen) return;
@@ -69,7 +102,7 @@ export default function App() {
     }
   ];
 
-  const [inquiryStatus, setInquiryStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [inquiryStatus, setInquiryStatus] = useState<"idle" | "sending" | "error">("idle");
   const [inquiryError, setInquiryError] = useState<string>("");
 
   async function handleInquirySubmit(e: FormEvent<HTMLFormElement>) {
@@ -107,8 +140,8 @@ export default function App() {
         throw new Error(text || `Request failed (${res.status})`);
       }
 
-      setInquiryStatus("sent");
       form.reset();
+      navigate("/thank-you");
     } catch (err) {
       setInquiryStatus("error");
       setInquiryError(err instanceof Error ? err.message : "Failed to send inquiry.");
@@ -116,35 +149,34 @@ export default function App() {
   }
 
   return (
-    <div id="top" className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[#fcfcf9] text-[#1a1a1a] font-sans selection:bg-black selection:text-white">
+    <div id="top" className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[var(--page-cream)] text-[#1a1a1a] font-sans selection:bg-black selection:text-white">
       {/* Navigation */}
       <nav
-        className={`fixed top-0 w-full z-50 ${
-          mobileNavOpen ? "mix-blend-normal bg-[#fcfcf9] text-[#1a1a1a]" : "mix-blend-difference text-white"
-        }`}
+        ref={navRef}
+        className="fixed top-0 w-full z-50 bg-[var(--page-cream)] text-[#1a1a1a] border-b border-black/10"
       >
-        <div className="max-w-[1800px] mx-auto px-6 sm:px-8 lg:px-16 min-h-24 md:min-h-32 py-6 flex items-center justify-between gap-6">
-          <a href="#top" className="flex flex-col leading-none w-fit hover:opacity-80 transition-opacity" aria-label="C. J. Casin — top of page">
-            <span className="text-3xl font-serif font-bold tracking-tighter italic">C. J. Casin</span>
-            <span className="text-[8px] uppercase tracking-[0.5em] opacity-50 font-black">Independent Engineering</span>
+        <div className="max-w-[var(--page-max)] mx-auto px-[var(--page-gutter)] min-h-16 md:min-h-[4.25rem] py-3 flex items-center justify-between gap-6">
+          <a href="#top" className="flex flex-col leading-tight w-fit hover:opacity-70 transition-opacity" aria-label="C. J. Casin — top of page">
+            <span className="text-lg font-semibold tracking-tight">C. J. Casin</span>
+            <span className="text-xs text-current/55">Independent Engineering</span>
           </a>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex flex-wrap items-center gap-x-10 gap-y-3 lg:gap-x-12 xl:gap-16 text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em]">
+          <div className="hidden md:flex flex-wrap items-center gap-x-5 lg:gap-x-7 text-[15px] font-medium">
             {navLinks.map((l) =>
               l.href.startsWith("/") ? (
-                <Link key={l.href} to={l.href} className="hover:opacity-50 transition-opacity">
+                <Link key={l.href} to={l.href} className="hover:opacity-55 transition-opacity">
                   {l.label}
                 </Link>
               ) : (
-                <a key={l.href} href={l.href} className="hover:opacity-50 transition-opacity">
+                <a key={l.href} href={l.href} className="hover:opacity-55 transition-opacity">
                   {l.label}
                 </a>
               )
             )}
             <a
               href="#contact"
-              className="bg-white text-black px-6 py-3 md:px-8 rounded-full hover:bg-slate-200 transition-all font-bold"
+              className="px-4 py-2 rounded-full transition-colors text-[15px] font-medium bg-black text-white hover:bg-slate-800"
             >
               Consultation
             </a>
@@ -153,11 +185,7 @@ export default function App() {
           {/* Mobile burger */}
           <button
             type="button"
-            className={`md:hidden inline-flex items-center justify-center rounded-full border px-4 py-3 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 ${
-              mobileNavOpen
-                ? "border-black/15 bg-black/5 hover:bg-black/10 focus-visible:outline-black"
-                : "border-white/25 bg-white/10 hover:bg-white/15 backdrop-blur focus-visible:outline-white"
-            }`}
+            className="md:hidden inline-flex items-center justify-center rounded-full border border-black/15 bg-black/5 px-4 py-3 hover:bg-black/10 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black"
             aria-label={mobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={mobileNavOpen}
             aria-controls="mobile-nav-panel"
@@ -193,11 +221,11 @@ export default function App() {
           initial={false}
           animate={mobileNavOpen ? { y: 0 } : { y: -12 }}
           transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute inset-x-0 top-0 bg-[#fcfcf9] text-[#1a1a1a] pt-28 sm:pt-32 pb-10"
+          className="absolute inset-x-0 top-0 bg-[var(--page-cream)] text-[#1a1a1a] pt-28 sm:pt-32 pb-10"
         >
-          <div className="max-w-[1800px] mx-auto px-6 sm:px-8 lg:px-16">
+          <div className="max-w-[var(--page-max)] mx-auto px-[var(--page-gutter)]">
             <div className="rounded-3xl border border-black/10 bg-white px-6 py-8 shadow-[0_20px_80px_rgba(0,0,0,0.12)]">
-              <div className="flex flex-col gap-6 text-[10px] font-black uppercase tracking-[0.4em]">
+              <div className="flex flex-col gap-4 text-[17px] font-medium">
                 {navLinks.map((l) =>
                   l.href.startsWith("/") ? (
                     <Link
@@ -221,7 +249,7 @@ export default function App() {
                 )}
                 <a
                   href="#contact"
-                  className="mt-2 bg-black text-white px-6 py-3 rounded-full hover:bg-slate-800 transition-all font-bold w-fit"
+                  className="mt-2 bg-black text-white px-5 py-2.5 rounded-full hover:bg-slate-800 transition-colors font-medium w-fit text-[15px]"
                   onClick={() => setMobileNavOpen(false)}
                 >
                   Consultation
@@ -234,45 +262,43 @@ export default function App() {
 
       <main>
         {/* Hero Section */}
-        <section className="relative px-6 sm:px-8 lg:px-16 pt-48 pb-20 sm:pt-56 sm:pb-24 lg:pt-64 lg:pb-28 xl:pt-52 xl:pb-20 overflow-x-hidden overflow-y-visible">
-          <div className="max-w-[1800px] mx-auto relative min-w-0">
+        <section className="relative px-[var(--page-gutter)] pt-28 sm:pt-32 lg:pt-36 pb-20 sm:pb-24 lg:pb-28 overflow-x-hidden overflow-y-visible">
+          <div className="max-w-[var(--page-max)] mx-auto relative min-w-0">
             <motion.div 
               initial={{ opacity: 0, x: -100 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
             >
-              <div className="mb-16 sm:mb-20 lg:mb-24 flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">
-                <div className="w-24 h-[1px] bg-slate-200 shrink-0" />
+              <div className="mb-8 sm:mb-10 flex items-center gap-5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <div className="w-12 h-px bg-slate-300 shrink-0" />
                 Mandaluyong, Philippines
               </div>
               
               <div className="relative z-0 min-w-0 max-w-full">
-                <h1 className="max-w-full min-w-0 text-[min(11vw,4rem)] sm:text-[min(11vw,7rem)] lg:text-[min(12vw,10rem)] font-serif font-bold tracking-tighter leading-[0.8] mb-16 sm:mb-20 lg:mb-24 break-words [overflow-wrap:anywhere]">
+                <h1 className="max-w-full min-w-0 text-5xl sm:text-7xl lg:text-8xl font-serif font-semibold tracking-tight leading-[0.9] mb-6 sm:mb-8 break-words [overflow-wrap:anywhere]">
                   High-Stakes <br />
-                  <span className="italic text-slate-200 block ps-[clamp(0.5rem,8vw,10rem)] max-w-[100%]">
+                  <span className="italic text-slate-400 block">
                     Engineering.
                   </span>
                 </h1>
 
-                <p className="mb-12 sm:mb-14 lg:mb-16 max-w-full font-serif text-2xl sm:text-3xl lg:text-[2.125rem] font-medium italic leading-snug tracking-tight text-[#1a1a1a]">
+                <p className="mb-8 max-w-full font-serif text-xl sm:text-2xl italic leading-snug tracking-tight text-[#1a1a1a]">
                   {SITE.tagline}
                 </p>
                 
-                <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 xl:gap-20 items-start min-w-0">
-                  <div className="min-w-0 lg:col-span-5 lg:col-start-2">
-                    <p className="text-2xl sm:text-3xl lg:text-5xl text-slate-600 leading-[1.05] font-medium tracking-tight">
+                <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-start min-w-0">
+                  <div className="min-w-0 lg:col-span-7">
+                    <p className="text-base sm:text-lg lg:text-xl text-slate-600 leading-relaxed max-w-2xl">
                       Independent software architecture for enterprises that require mission-critical reliability and senior-level accountability.
                     </p>
                   </div>
-                  <div className="min-w-0 lg:col-span-4 lg:col-start-9 flex justify-start lg:justify-end">
+                  <div className="min-w-0 lg:col-span-5 flex justify-start lg:justify-end">
                     <a 
                       href="#contact" 
-                      className="group flex flex-col gap-6 sm:gap-8 text-xl sm:text-2xl font-bold max-w-full"
+                      className="group inline-flex items-center gap-3 text-base sm:text-lg font-semibold"
                     >
-                      <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-full border-2 border-black flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all duration-500">
-                        <ArrowRight className="w-8 h-8 sm:w-10 sm:h-10 group-hover:translate-x-2 transition-transform" />
-                      </div>
-                      <span className="border-b-2 border-black pb-2">Start a Consultation</span>
+                      <span className="border-b-2 border-black pb-0.5">Start a Consultation</span>
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </a>
                   </div>
                 </div>
@@ -284,7 +310,7 @@ export default function App() {
               className="pointer-events-none absolute inset-y-0 right-0 -z-10 w-[min(100%,52rem)] max-w-[100vw] overflow-hidden"
               aria-hidden
             >
-              <div className="absolute -top-24 right-0 sm:-top-32 translate-x-[8%] sm:translate-x-[12%] text-[min(34vw,18rem)] sm:text-[min(32vw,22rem)] lg:text-[min(28vw,26rem)] font-serif font-black italic text-slate-50 select-none opacity-50 whitespace-nowrap">
+              <div className="absolute -top-16 right-0 sm:-top-20 translate-x-[8%] text-[min(28vw,12rem)] font-serif font-semibold italic text-[#e5dfd4] select-none whitespace-nowrap">
                 CJC
               </div>
             </div>
@@ -292,35 +318,29 @@ export default function App() {
         </section>
 
         {/* Philosophy Section */}
-        <section id="approach" className="scroll-mt-36 py-64 px-6 sm:px-8 lg:px-16 bg-white overflow-x-hidden">
-          <div className="max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-12 xl:gap-20 2xl:gap-24">
+        <section id="approach" className="section-y px-[var(--page-gutter)] overflow-x-hidden">
+          <div className="max-w-[var(--page-max)] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
             <div className="min-w-0 lg:col-span-4">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400 mb-16">The Philosophy</h2>
-              <h3 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-serif font-bold leading-[0.85] italic mb-16 max-w-[100%]">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 mb-5">The Philosophy</h2>
+              <h3 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-semibold leading-[1.05] italic max-w-[100%]">
                 Direct. <br />
                 Resilient. <br />
                 Senior.
               </h3>
             </div>
-            <div className="min-w-0 lg:col-span-8 lg:col-start-5 xl:col-span-7 xl:col-start-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-16 sm:gap-x-8 md:gap-x-10 lg:gap-x-8 xl:gap-x-12 2xl:gap-x-16 min-w-0">
-                <div className="min-w-0 space-y-12">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <span className="shrink-0 text-4xl sm:text-5xl font-serif italic text-slate-200 tracking-tighter">01</span>
-                    <div className="h-px min-w-0 flex-1 bg-slate-100" />
-                  </div>
-                  <h4 className="text-2xl sm:text-3xl font-bold tracking-tight break-words">Accountability</h4>
-                  <p className="text-lg sm:text-xl lg:text-2xl text-slate-500 leading-snug tracking-tight break-words hyphens-auto">
+            <div className="min-w-0 lg:col-span-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 lg:gap-12 min-w-0">
+                <div className="min-w-0 space-y-3">
+                  <span className="block text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">01</span>
+                  <h4 className="text-xl font-semibold tracking-tight">Accountability</h4>
+                  <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
                     You work directly with the engineer. No account managers, no middle-men. This ensures technical decisions are always aligned with your business objectives.
                   </p>
                 </div>
-                <div className="min-w-0 space-y-12">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <span className="shrink-0 text-4xl sm:text-5xl font-serif italic text-slate-200 tracking-tighter">02</span>
-                    <div className="h-px min-w-0 flex-1 bg-slate-100" />
-                  </div>
-                  <h4 className="text-2xl sm:text-3xl font-bold tracking-tight break-words">Reliability</h4>
-                  <p className="text-lg sm:text-xl lg:text-2xl text-slate-500 leading-snug tracking-tight break-words hyphens-auto">
+                <div className="min-w-0 space-y-3">
+                  <span className="block text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">02</span>
+                  <h4 className="text-xl font-semibold tracking-tight">Reliability</h4>
+                  <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
                     My background in industrial software means I build for the long term. I specialize in systems that must remain operational 24/7.
                   </p>
                 </div>
@@ -330,31 +350,31 @@ export default function App() {
         </section>
 
         {/* Expertise Section */}
-        <section id="expertise" className="scroll-mt-36 py-64 px-8 lg:px-16">
-          <div className="max-w-[1800px] mx-auto">
-            <div className="mb-48 grid lg:grid-cols-12 gap-12">
-              <div className="lg:col-span-8">
-                <h2 className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400 mb-16">Core Expertise</h2>
-                <h3 className="max-w-full text-[min(8vw,5rem)] sm:text-[min(8vw,7rem)] md:text-[min(8vw,9rem)] font-serif font-bold tracking-tighter leading-[0.8] break-words">Commercial <br />Growth.</h3>
+        <section id="expertise" className="section-y px-[var(--page-gutter)]">
+          <div className="max-w-[var(--page-max)] mx-auto">
+            <div className="mb-10 sm:mb-14 grid lg:grid-cols-12 gap-6 lg:gap-12">
+              <div className="lg:col-span-7">
+                <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 mb-5">Core Expertise</h2>
+                <h3 className="max-w-full text-4xl sm:text-5xl lg:text-6xl font-serif font-semibold tracking-tight leading-[1.05] break-words">Commercial Growth.</h3>
               </div>
-              <div className="lg:col-span-4 flex items-end">
-                <p className="text-xl text-slate-500 leading-relaxed max-w-sm">
+              <div className="lg:col-span-5 flex items-end">
+                <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-md">
                   Technical solutions engineered to scale with your business while maintaining absolute operational integrity.
                 </p>
               </div>
             </div>
             
-            <div className="grid lg:grid-cols-3 gap-px bg-slate-200">
+            <div className="grid lg:grid-cols-3 gap-px bg-slate-200 border border-slate-200">
               {expertise.map((item, index) => (
-                <div key={index} className="bg-[#fcfcf9] py-32 pr-16 space-y-16 hover:bg-white transition-all duration-700 group">
+                <div key={index} className="bg-[#faf8f3] p-6 sm:p-8 space-y-4 hover:bg-white/80 transition-colors duration-300 group">
                   <div className="flex items-center justify-between">
-                    <span className="text-6xl font-serif italic text-slate-200 group-hover:text-black transition-colors duration-700">
+                    <span className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400 group-hover:text-black transition-colors">
                       {item.id}
                     </span>
-                    <Plus className="w-8 h-8 text-slate-200 group-hover:rotate-90 group-hover:text-black transition-all duration-700" />
+                    <Plus className="w-4 h-4 text-slate-300 group-hover:rotate-90 group-hover:text-black transition-all duration-300" />
                   </div>
-                  <h4 className="text-4xl font-bold tracking-tight leading-none">{item.title}</h4>
-                  <p className="text-2xl text-slate-500 leading-tight tracking-tight">{item.description}</p>
+                  <h4 className="text-xl font-semibold tracking-tight leading-snug">{item.title}</h4>
+                  <p className="text-base text-slate-600 leading-relaxed">{item.description}</p>
                 </div>
               ))}
             </div>
@@ -364,88 +384,67 @@ export default function App() {
         {/* Strategic Partners */}
         <section
           id="partners"
-          className="scroll-mt-36 border-t border-b border-slate-200/90 bg-[#f4f2ec] py-48 px-6 sm:px-8 lg:px-16 overflow-x-hidden"
+          className="border-t border-b border-black/10 section-y px-[var(--page-gutter)] overflow-x-hidden"
         >
-          <div className="max-w-[1800px] mx-auto">
-            <div className="grid lg:grid-cols-12 gap-16 lg:gap-20 items-start mb-20 lg:mb-24">
+          <div className="max-w-[var(--page-max)] mx-auto border border-[#1a1a1a]/20 bg-[#faf8f3] p-6 sm:p-10 lg:p-12">
+            <div className="grid lg:grid-cols-12 gap-6 lg:gap-12 items-start mb-8 lg:mb-10">
               <div className="lg:col-span-5 min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500 mb-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 mb-3">
                   Strategic Partners
                 </p>
-                <h2 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold italic leading-[1.05] tracking-tight text-[#1a1a1a]">
+                <h2 className="font-serif text-3xl sm:text-4xl font-semibold italic leading-snug tracking-tight text-[#1a1a1a]">
                   Credibility through association.
                 </h2>
               </div>
-              <p className="lg:col-span-6 lg:col-start-7 text-lg sm:text-xl text-slate-600 leading-relaxed min-w-0">
+              <p className="lg:col-span-7 text-base sm:text-lg text-slate-600 leading-relaxed min-w-0">
                 Engagements are delivered in concert with established automation partners — not in isolation.
                 This portfolio reflects senior engineering backed by real industry relationships.
               </p>
             </div>
 
             <motion.article
-              initial={{ opacity: 0, y: 28 }}
+              initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-              className="relative mx-auto max-w-5xl"
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              className="border border-[#1a1a1a] bg-white p-6 sm:p-8"
             >
-              {/* Bordered lockup: double rule + inset partner badge */}
-              <div className="relative border-2 border-[#1a1a1a] bg-[#fcfcf9] px-8 py-12 sm:px-12 sm:py-16 lg:px-16 lg:py-20 shadow-[8px_8px_0_0_rgba(26,26,26,0.06)]">
-                <div
-                  className="absolute -top-px left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#f4f2ec] px-6 sm:px-10"
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 mb-4">
+                Official partner · Industrial automation
+              </p>
+              <a
+                href={PARTNERS.pfs.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex flex-wrap items-baseline gap-x-2 gap-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1a1a1a]"
+              >
+                <span className="text-xl sm:text-2xl font-semibold tracking-tight text-[#1a1a1a] group-hover:text-slate-700 transition-colors">
+                  {PARTNERS.pfs.name}
+                </span>
+                <ArrowUpRight
+                  className="inline-block size-5 shrink-0 text-[#1a1a1a] opacity-70 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                  strokeWidth={1.75}
                   aria-hidden
-                >
-                  <span className="block text-[9px] sm:text-[10px] font-black uppercase tracking-[0.55em] text-[#1a1a1a] whitespace-nowrap">
-                    Official partner
-                  </span>
-                </div>
-
-                <div className="mb-10 flex items-center gap-4 sm:gap-6">
-                  <span className="h-px flex-1 bg-[#1a1a1a]/25" aria-hidden />
-                  <span className="shrink-0 font-serif text-xs sm:text-sm italic text-slate-500 tracking-wide">
-                    Industrial automation
-                  </span>
-                  <span className="h-px flex-1 bg-[#1a1a1a]/25" aria-hidden />
-                </div>
-
-                <a
-                  href={PARTNERS.pfs.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1a1a1a]"
-                >
-                  <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="font-serif text-2xl sm:text-3xl lg:text-[2.125rem] font-bold not-italic tracking-tight text-[#1a1a1a] transition-colors duration-300 group-hover:text-slate-700">
-                      {PARTNERS.pfs.name}
-                    </span>
-                    <ArrowUpRight
-                      className="inline-block size-7 sm:size-8 shrink-0 text-[#1a1a1a] opacity-70 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-1 group-hover:-translate-y-0.5"
-                      strokeWidth={1.75}
-                      aria-hidden
-                    />
-                  </span>
-                  <span className="mt-4 block h-0.5 max-w-0 bg-[#1a1a1a] transition-all duration-500 ease-out group-hover:max-w-full" />
-                </a>
-
-                <p className="mt-10 max-w-2xl text-base sm:text-lg lg:text-xl leading-relaxed text-slate-600 tracking-tight">
-                  Strategic partner in industrial automation — jointly delivering factory floor monitoring and PLC
-                  integration solutions for Philippine manufacturing.
-                </p>
-              </div>
+                />
+              </a>
+              <p className="mt-4 max-w-2xl text-base text-slate-600 leading-relaxed">
+                Strategic partner in industrial automation — jointly delivering factory floor monitoring and PLC
+                integration solutions for Philippine manufacturing.
+              </p>
             </motion.article>
           </div>
         </section>
 
         {/* Case Studies Section */}
-        <section id="work" className="scroll-mt-36 py-64 px-8 lg:px-16 bg-[#1a1a1a] text-white rounded-t-[5rem]">
-          <div className="max-w-[1800px] mx-auto">
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-32 mb-48">
-              <div className="max-w-4xl">
-                <h2 className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500 mb-16">Case Studies</h2>
-                <h3 className="max-w-full text-[min(8vw,5rem)] sm:text-[min(8vw,7rem)] md:text-[min(8vw,9rem)] font-serif font-bold italic leading-[0.8] break-words">Proven.</h3>
+        <section id="work" className="section-y px-[var(--page-gutter)] bg-[#1a1a1a] text-white rounded-t-[2rem]">
+          <div className="max-w-[var(--page-max)] mx-auto">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 lg:gap-16 mb-10 sm:mb-14">
+              <div className="max-w-xl">
+                <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300 mb-4">Case Studies</h2>
+                <h3 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-semibold italic leading-[1.05] tracking-tight">Proven.</h3>
               </div>
-              <p className="text-slate-500 max-w-xs text-[10px] font-black uppercase tracking-[0.4em] leading-loose border-l border-slate-800 pl-8">
-                Enterprise NDA engagements below. Shipped consumer tools in Apps For Everyone.
+              <p className="text-slate-300 max-w-sm text-sm sm:text-base leading-relaxed border-l border-slate-600 pl-5">
+                Enterprise NDA engagements below. Consumer tools live in Apps For Everyone.
               </p>
             </div>
 
@@ -454,31 +453,34 @@ export default function App() {
           </div>
         </section>
 
+        <FaqSection />
+
         {/* Contact Section */}
-        <section id="contact" className="scroll-mt-36 overflow-x-hidden bg-white py-24 sm:py-40 lg:py-64 px-6 sm:px-8 lg:px-16">
-          <div className="max-w-[1800px] mx-auto min-w-0">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-12 xl:gap-20 min-w-0">
-              <div className="min-w-0 lg:col-span-5 space-y-12 sm:space-y-16 lg:space-y-24">
-                <h2 className="max-w-full text-[min(10vw,3.25rem)] sm:text-[min(10vw,5rem)] lg:text-[min(10vw,7rem)] font-serif font-bold tracking-tighter leading-[0.75] break-words">
+        <section id="contact" className="overflow-x-hidden bg-[#1a1a1a] text-white section-y px-[var(--page-gutter)]">
+          <div className="max-w-[var(--page-max)] mx-auto min-w-0">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 xl:gap-16 min-w-0">
+              <div className="min-w-0 lg:col-span-5 space-y-6 sm:space-y-8">
+                <h2 className="max-w-full text-4xl sm:text-5xl lg:text-6xl font-serif font-semibold tracking-tight leading-[1.05] break-words">
                   Start <br />
-                  <span className="italic text-slate-200">Inquiry.</span>
+                  <span className="italic">Inquiry.</span>
                 </h2>
-                <p className="text-xl sm:text-2xl lg:text-3xl text-slate-500 leading-snug tracking-tight">
+                <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
                   I am currently accepting inquiries for high-stakes software contracts. Let's discuss how my expertise can drive efficiency in your operations.
                 </p>
-                <div className="space-y-16 pt-8 lg:pt-16">
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400 mb-6">Direct Correspondence</span>
-                    <a href={`mailto:${SITE.email}`} className="group flex flex-wrap items-center gap-4 text-2xl sm:text-3xl lg:text-4xl font-bold hover:opacity-50 transition-opacity tracking-tighter break-all">
-                      {SITE.email}
-                      <ArrowUpRight className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </a>
-                  </div>
+                <p className="text-sm sm:text-base font-medium text-white">
+                  {SITE.responseTimePromise}
+                </p>
+                <div className="flex flex-col min-w-0 pt-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 mb-3">Direct Correspondence</span>
+                  <a href={`mailto:${SITE.email}`} className="group flex flex-wrap items-center gap-3 text-lg sm:text-xl lg:text-2xl font-semibold hover:text-slate-300 transition-colors tracking-tight break-all">
+                    {SITE.email}
+                    <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </a>
                 </div>
               </div>
 
               <div className="min-w-0 lg:col-span-7">
-                <form className="space-y-12 sm:space-y-16 lg:space-y-24 min-w-0" onSubmit={handleInquirySubmit}>
+                <form className="space-y-6 sm:space-y-8 min-w-0" onSubmit={handleInquirySubmit}>
                   <input
                     type="text"
                     name="website"
@@ -487,64 +489,59 @@ export default function App() {
                     className="hidden"
                     aria-hidden="true"
                   />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-12 sm:gap-x-8 lg:gap-x-10 min-w-0">
-                    <div className="min-w-0 space-y-4 sm:space-y-8">
-                      <label htmlFor="inquiry-name" className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Name</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6 min-w-0">
+                    <div className="min-w-0 space-y-2">
+                      <label htmlFor="inquiry-name" className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Name</label>
                       <input 
                         id="inquiry-name"
                         name="name"
                         type="text" 
                         autoComplete="name"
-                        className="w-full min-w-0 max-w-full bg-transparent border-b-2 border-slate-100 py-4 sm:py-6 lg:py-8 focus:outline-none focus:border-black transition-colors text-xl sm:text-2xl lg:text-3xl font-medium tracking-tight"
+                        className="w-full min-w-0 max-w-full bg-transparent border-b border-slate-600 py-2 sm:py-2.5 focus:outline-none focus:border-white transition-colors text-base sm:text-lg font-medium tracking-tight text-white placeholder:text-slate-500"
                         placeholder="Full Name"
                         disabled={inquiryStatus === "sending"}
                       />
                     </div>
-                    <div className="min-w-0 space-y-4 sm:space-y-8">
-                      <label htmlFor="inquiry-org" className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Organization</label>
+                    <div className="min-w-0 space-y-2">
+                      <label htmlFor="inquiry-org" className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Organization</label>
                       <input 
                         id="inquiry-org"
                         name="organization"
                         type="text" 
                         autoComplete="organization"
-                        className="w-full min-w-0 max-w-full bg-transparent border-b-2 border-slate-100 py-4 sm:py-6 lg:py-8 focus:outline-none focus:border-black transition-colors text-xl sm:text-2xl lg:text-3xl font-medium tracking-tight"
+                        className="w-full min-w-0 max-w-full bg-transparent border-b border-slate-600 py-2 sm:py-2.5 focus:outline-none focus:border-white transition-colors text-base sm:text-lg font-medium tracking-tight text-white placeholder:text-slate-500"
                         placeholder="Company Name"
                         disabled={inquiryStatus === "sending"}
                       />
                     </div>
                   </div>
-                  <div className="space-y-4 sm:space-y-8 min-w-0">
-                    <label htmlFor="inquiry-email" className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Email</label>
+                  <div className="space-y-2 min-w-0">
+                    <label htmlFor="inquiry-email" className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Email</label>
                     <input 
                       id="inquiry-email"
                       name="email"
                       type="email" 
                       required
                       autoComplete="email"
-                      className="w-full min-w-0 max-w-full bg-transparent border-b-2 border-slate-100 py-4 sm:py-6 lg:py-8 focus:outline-none focus:border-black transition-colors text-xl sm:text-2xl lg:text-3xl font-medium tracking-tight"
+                      className="w-full min-w-0 max-w-full bg-transparent border-b border-slate-600 py-2 sm:py-2.5 focus:outline-none focus:border-white transition-colors text-base sm:text-lg font-medium tracking-tight text-white placeholder:text-slate-500"
                       placeholder="email@organization.com"
                       disabled={inquiryStatus === "sending"}
                     />
                   </div>
-                  <div className="space-y-4 sm:space-y-8 min-w-0">
-                    <label htmlFor="inquiry-brief" className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400">Brief</label>
+                  <div className="space-y-2 min-w-0">
+                    <label htmlFor="inquiry-brief" className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Brief</label>
                     <textarea 
                       id="inquiry-brief"
                       name="brief"
-                      rows={4}
-                      className="w-full min-w-0 max-w-full box-border bg-transparent border-b-2 border-slate-100 py-4 sm:py-6 lg:py-8 focus:outline-none focus:border-black transition-colors text-xl sm:text-2xl lg:text-3xl font-medium resize-y min-h-[7rem] sm:min-h-[8rem] tracking-tight"
+                      rows={3}
+                      className="w-full min-w-0 max-w-full box-border bg-transparent border-b border-slate-600 py-2 sm:py-2.5 focus:outline-none focus:border-white transition-colors text-base sm:text-lg font-medium resize-y min-h-[5rem] tracking-tight text-white placeholder:text-slate-500"
                       placeholder="Project scope and objectives"
                       disabled={inquiryStatus === "sending"}
                     />
                   </div>
 
-                  {inquiryStatus === "sent" && (
-                    <p className="text-base sm:text-lg text-slate-600">
-                      Sent. I’ll get back to you shortly.
-                    </p>
-                  )}
                   {inquiryStatus === "error" && (
-                    <p className="text-base sm:text-lg text-red-600">
+                    <p className="text-sm sm:text-base text-red-400">
                       Couldn’t send your inquiry{inquiryError ? `: ${inquiryError}` : "."}
                     </p>
                   )}
@@ -552,10 +549,10 @@ export default function App() {
                   <button
                     type="submit"
                     disabled={inquiryStatus === "sending"}
-                    className="group flex flex-wrap items-center gap-6 sm:gap-10 lg:gap-12 text-3xl sm:text-4xl lg:text-5xl font-bold border-b-[6px] sm:border-b-8 border-black pb-6 sm:pb-8 hover:border-slate-200 transition-all duration-500 w-full sm:w-auto justify-start disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="group flex flex-wrap items-center gap-4 text-xl sm:text-2xl font-semibold border-b-2 border-white pb-2 hover:border-slate-500 transition-all duration-300 w-full sm:w-auto justify-start disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {inquiryStatus === "sending" ? "Sending…" : "Submit Inquiry"}
-                    <ArrowRight className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 shrink-0 group-hover:translate-x-4 sm:group-hover:translate-x-8 transition-transform duration-500" />
+                    <ArrowRight className="w-6 h-6 sm:w-7 sm:h-7 shrink-0 group-hover:translate-x-1.5 transition-transform duration-300" />
                   </button>
                 </form>
               </div>
@@ -565,21 +562,46 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="py-48 px-8 lg:px-16 border-t border-slate-200 bg-white">
-        <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row items-center justify-between gap-24">
-          <div className="flex flex-col">
-            <span className="text-3xl font-serif font-bold italic tracking-tighter">C. J. Casin</span>
-            <span className="text-[9px] uppercase tracking-[0.6em] text-slate-400 font-black">Independent Engineering</span>
+      <footer className="border-t border-slate-700/80 bg-[#141414] text-white px-[var(--page-gutter)] pt-10 sm:pt-12 pb-28 md:pb-14">
+        <div className="max-w-[var(--page-max)] mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-8">
+          <div className="lg:col-span-4">
+            <span className="block text-2xl font-serif font-semibold italic tracking-tight">C. J. Casin</span>
+            <span className="mt-1 block text-[9px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Independent Engineering</span>
+            <p className="mt-4 max-w-xs text-sm text-slate-400 leading-relaxed">
+              {SITE.tagline}. Mission-critical software from {SITE.location}.
+            </p>
           </div>
-          <div className="flex items-center gap-24 text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">
-            <a href="/privacy.html" className="hover:text-black transition-colors">Privacy</a>
-            <a href="/terms.html" className="hover:text-black transition-colors">Terms</a>
+
+          <div className="lg:col-span-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 mb-4">Site</p>
+            <nav className="flex flex-col gap-2 text-sm font-medium text-slate-300">
+              <a href="#expertise" className="hover:text-white transition-colors w-fit">Expertise</a>
+              <a href="#work" className="hover:text-white transition-colors w-fit">Case Studies</a>
+              <a href="#faq" className="hover:text-white transition-colors w-fit">FAQ</a>
+              <a href="#contact" className="hover:text-white transition-colors w-fit">Consultation</a>
+            </nav>
           </div>
-          <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.6em]">
-            © {new Date().getFullYear()} Mandaluyong, PH.
+
+          <div className="lg:col-span-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 mb-4">Contact</p>
+            <a href={`mailto:${SITE.email}`} className="block text-sm font-medium text-slate-300 hover:text-white transition-colors break-all">
+              {SITE.email}
+            </a>
+            <p className="mt-2 text-sm text-slate-400">{SITE.location}</p>
+            <p className="mt-1 text-sm text-slate-400">{SITE.responseTimePromise}</p>
+            <div className="mt-4 flex items-center gap-6 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+              <a href="/privacy.html" className="hover:text-white transition-colors">Privacy</a>
+              <a href="/terms.html" className="hover:text-white transition-colors">Terms</a>
+            </div>
           </div>
         </div>
+
+        <div className="max-w-[var(--page-max)] mx-auto mt-8 pt-5 border-t border-slate-700/80 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+          © {new Date().getFullYear()} C. J. Casin · Mandaluyong, PH
+        </div>
       </footer>
+
+      <StickyMobileCta hidden={mobileNavOpen} />
     </div>
   );
 }

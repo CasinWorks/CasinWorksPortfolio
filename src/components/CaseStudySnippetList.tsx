@@ -5,49 +5,43 @@ import { CASE_STUDY_LIST, caseStudyPath } from "../site";
 
 export function CaseStudySnippetList() {
   return (
-    <div className="divide-y divide-slate-800">
+    <div className="divide-y divide-slate-700/80 border-y border-slate-700/80">
       {CASE_STUDY_LIST.map((item, index) => (
         <motion.div
           key={item.slug}
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.8, delay: index * 0.05 }}
-          className="py-20 sm:py-28 lg:py-32 grid lg:grid-cols-12 gap-10 lg:gap-16 items-start group"
+          transition={{ duration: 0.6, delay: index * 0.05 }}
+          className="py-10 sm:py-12 lg:py-14 grid lg:grid-cols-12 gap-5 lg:gap-12 items-start group"
         >
-          <div className="lg:col-span-3">
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">
+          <div className="lg:col-span-5 min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
               {item.sector}
-            </span>
-            {item.confidential && (
-              <span className="mt-4 block text-[10px] font-black uppercase tracking-[0.35em] text-slate-600">
-                NDA
-              </span>
-            )}
-          </div>
-          <div className="lg:col-span-4">
-            <h4 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold group-hover:text-slate-300 transition-colors leading-[0.95] tracking-tighter">
+              {item.confidential ? " · NDA" : ""}
+            </p>
+            <h4 className="mt-3 text-xl sm:text-2xl font-serif font-semibold leading-snug tracking-tight text-white group-hover:text-slate-200 transition-colors">
               {item.title}
             </h4>
           </div>
-          <div className="lg:col-span-5 flex flex-col gap-8">
-            <p className="text-slate-400 leading-snug text-xl sm:text-2xl lg:text-3xl tracking-tight">
+          <div className="lg:col-span-7 flex flex-col gap-5 min-w-0">
+            <p className="text-slate-300 leading-relaxed text-base sm:text-lg">
               {item.snippet}
             </p>
-            <div className="flex flex-wrap items-center gap-6">
+            <div className="flex flex-wrap items-center gap-5">
               <Link
                 to={caseStudyPath(item.slug)}
-                className="group inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.4em] text-white hover:text-slate-300 transition-colors"
+                className="group/link inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-white hover:text-slate-300 transition-colors"
               >
                 Read more
-                <ArrowRight className="size-5 group-hover:translate-x-1 transition-transform" aria-hidden />
+                <ArrowRight className="size-4 group-hover/link:translate-x-1 transition-transform" aria-hidden />
               </Link>
               {item.liveUrl && (
                 <a
                   href={item.liveUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 hover:text-slate-300 transition-colors"
+                  className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 hover:text-slate-200 transition-colors"
                 >
                   Live demo
                 </a>

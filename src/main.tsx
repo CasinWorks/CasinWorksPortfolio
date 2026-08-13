@@ -5,22 +5,25 @@ import { Analytics } from "@vercel/analytics/react";
 import App from './App.tsx';
 import {MaintenanceNotice} from './components/MaintenanceNotice.tsx';
 import {ScrollToTop} from './components/ScrollToTop.tsx';
+import {SiteSchema} from './components/SiteSchema.tsx';
 import CaseStudyPage from './pages/CaseStudyPage.tsx';
 import AppsForEveryonePage from './pages/AppsForEveryonePage.tsx';
+import NotFoundPage from './pages/NotFoundPage.tsx';
+import ThankYouPage from './pages/ThankYouPage.tsx';
 import './index.css';
-
-const SITE_TITLE = 'C.J. Casin — Independent Engineering';
-document.title = SITE_TITLE;
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <MaintenanceNotice />
       <ScrollToTop />
+      <SiteSchema />
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/AppsForEveryone" element={<AppsForEveryonePage />} />
         <Route path="/case-studies/:slug" element={<CaseStudyPage />} />
+        <Route path="/thank-you" element={<ThankYouPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
     <Analytics />
