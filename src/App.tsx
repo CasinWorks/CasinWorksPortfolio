@@ -310,7 +310,7 @@ export default function App() {
               className="pointer-events-none absolute inset-y-0 right-0 -z-10 w-[min(100%,52rem)] max-w-[100vw] overflow-hidden"
               aria-hidden
             >
-              <div className="absolute -top-16 right-0 sm:-top-20 translate-x-[8%] text-[min(28vw,12rem)] font-serif font-semibold italic text-[#e5dfd4] select-none whitespace-nowrap">
+              <div className="absolute -top-16 right-0 sm:-top-20 translate-x-[8%] text-[min(28vw,12rem)] font-serif font-semibold italic text-[#dddcd7] select-none whitespace-nowrap">
                 CJC
               </div>
             </div>
@@ -366,7 +366,7 @@ export default function App() {
             
             <div className="grid lg:grid-cols-3 gap-px bg-slate-200 border border-slate-200">
               {expertise.map((item, index) => (
-                <div key={index} className="bg-[#faf8f3] p-6 sm:p-8 space-y-4 hover:bg-white/80 transition-colors duration-300 group">
+                <div key={index} className="bg-[var(--page-panel)] p-6 sm:p-8 space-y-4 hover:bg-white/70 transition-colors duration-300 group">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400 group-hover:text-black transition-colors">
                       {item.id}
@@ -386,7 +386,7 @@ export default function App() {
           id="partners"
           className="border-t border-b border-black/10 section-y px-[var(--page-gutter)] overflow-x-hidden"
         >
-          <div className="max-w-[var(--page-max)] mx-auto border border-[#1a1a1a]/20 bg-[#faf8f3] p-6 sm:p-10 lg:p-12">
+          <div className="max-w-[var(--page-max)] mx-auto border border-[#1a1a1a]/20 bg-[var(--page-panel)] p-6 sm:p-10 lg:p-12">
             <div className="grid lg:grid-cols-12 gap-6 lg:gap-12 items-start mb-8 lg:mb-10">
               <div className="lg:col-span-5 min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 mb-3">

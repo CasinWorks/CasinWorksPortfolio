@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  /* Sheet color — same cream as Strategic Partners */
-  --page-cream: #f4f2ec;
+  /* Cool limestone — paper without the yellow cast */
+  --page-cream: #ecebe7;
+  --page-panel: #f4f3f0;
   /*
     Drawing-sheet margins: enough frame to read as a border,
     not so much that the drawing floats in empty space.
