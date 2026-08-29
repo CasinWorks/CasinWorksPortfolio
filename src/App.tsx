@@ -271,11 +271,6 @@ export default function App() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
             >
-              <div className="mb-8 sm:mb-10 flex items-center gap-5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                <div className="w-12 h-px bg-slate-300 shrink-0" />
-                Worldwide
-              </div>
-
               <div className="relative z-0 min-w-0 max-w-full">
                 <h1 className="max-w-full min-w-0 text-5xl sm:text-7xl lg:text-8xl font-serif font-semibold tracking-tight leading-[0.9] mb-6 sm:mb-8 break-words [overflow-wrap:anywhere]">
                   High-Stakes <br />
