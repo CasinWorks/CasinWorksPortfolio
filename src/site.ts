@@ -67,7 +67,10 @@ export type ConfidentialCaseStudySlug =
   | "semiconductor-data-lifecycle"
   | "automotive-andon-ecosystem";
 
-export type ConceptCaseStudySlug = "vela-brand-system";
+export type ConceptCaseStudySlug =
+  | "vela-aviation"
+  | "vela-concierge"
+  | "vela-private";
 
 export type CaseStudySlug = ConfidentialCaseStudySlug | ConceptCaseStudySlug;
 
@@ -236,18 +239,70 @@ export type ConceptCaseStudy = {
   sections: ConfidentialCaseStudySection[];
   results: string[];
   liveLinks: ConceptLiveLink[];
+  related?: { slug: ConceptCaseStudySlug; label: string }[];
 };
 
-/** Public studio concepts — fictional brands, not client engagements */
+/** Public studio concepts — fictional brands, not client engagements. Each site is a standalone commission. */
 export const CONCEPT_CASE_STUDIES: ConceptCaseStudy[] = [
   {
-    id: "vela-brand-system",
+    id: "vela-aviation",
     kind: "concept",
     label: "Studio concept",
-    sector: "Luxury Travel · Concept",
-    title: "Vela — a three-site luxury brand system from runway to road",
+    sector: "Private Aviation · Concept",
+    title: "Vela Aviation — a Manila aviation house for private jets",
     snippet:
-      "A parent portal, Manila-based aviation house, and Philippine chauffeur site that share one design language and navigate as three real domains — cinematic motion, story booking, and a staff operations demo.",
+      "A specialist jet and ferry site — gallery, specialty, team, and enquiry — that ships as its own operator stack for aviation houses that do not run ground.",
+    role: "Independent engineer — product, design system, and front-end architecture",
+    coreStack: ["React", "TypeScript", "Vite", "Motion", "Vercel", "Enquiry"],
+    liveLinks: [{ label: "Vela Aviation", href: "https://aviation.casinworks.com" }],
+    related: [
+      { slug: "vela-concierge", label: "Vela Concierge" },
+      { slug: "vela-private", label: "Vela Private" },
+    ],
+    sections: [
+      {
+        title: "The brief: aviation, on its own",
+        intro:
+          "Jet and charter operators need a house site that sells the aircraft story — not a chauffeur booking form. This studio concept is a complete aviation marketing and enquiry product, ready to commission for a jet-only client.",
+        bullets: [
+          {
+            heading: "One house, one domain",
+            text: "aviation.casinworks.com is a standalone Vite app on its own subdomain. It does not depend on ground booking to function.",
+          },
+          {
+            heading: "Manila across Asia-Pacific",
+            text: "Ferry and delivery narrative from Manila, with gallery, specialty, team, and a dedicated enquiry flow.",
+          },
+        ],
+      },
+      {
+        title: "What ships in the demo",
+        intro: "The live site is interactive product, not a slide deck.",
+        items: [
+          "Cinematic scroll, hero ken-burns, and staggered reveals that respect reduced-motion preferences.",
+          "Vela Aviation ferry and delivery narrative from Manila across Asia-Pacific: gallery, specialty, team, and enquiry.",
+        ],
+      },
+      {
+        title: "How it is hosted",
+        intro:
+          "Its own Vercel project on aviation.casinworks.com. Commission as a single-site operator stack. A chauffeur house can be added later without rebuilding this one.",
+        items: ["aviation.casinworks.com — aviation house"],
+      },
+    ],
+    results: [
+      "A public, clickable aviation house that demonstrates commercial web craft without using a client’s name or trademarks.",
+      "The same motion and enquiry pattern can be commissioned as a production stack for a jet-only operator.",
+    ],
+  },
+  {
+    id: "vela-concierge",
+    kind: "concept",
+    label: "Studio concept",
+    sector: "Chauffeur & Tours · Concept",
+    title: "Vela Concierge — Philippine chauffeur, transfers, and tours",
+    snippet:
+      "A specialist ground site — story booking, staff inbox, NAIA transfers, wedding chauffeur, and signature tours — for limousine operators that do not fly.",
     role: "Independent engineer — product, design system, and front-end architecture",
     coreStack: [
       "React",
@@ -258,52 +313,97 @@ export const CONCEPT_CASE_STUDIES: ConceptCaseStudy[] = [
       "Story booking",
       "RBAC demo",
     ],
-    liveLinks: [
-      { label: "Vela Private", href: "https://vela.casinworks.com" },
-      { label: "Vela Aviation", href: "https://aviation.casinworks.com" },
-      { label: "Vela Concierge", href: "https://concierge.casinworks.com" },
+    liveLinks: [{ label: "Vela Concierge", href: "https://concierge.casinworks.com" }],
+    related: [
+      { slug: "vela-aviation", label: "Vela Aviation" },
+      { slug: "vela-private", label: "Vela Private" },
     ],
     sections: [
       {
-        title: "The brief: three brands, one standard",
+        title: "The brief: ground, on its own",
         intro:
-          "Luxury operators often split aviation and ground into different companies — and different websites. The studio concept shows how a parent portal can hold the umbrella story while two specialist sites keep their own booking, contact, and operations flows.",
+          "Limousine and chauffeur houses need vehicle story, booking, and staff operations — not a jet catalogue. This studio concept is a complete ground product, ready to commission for a fleet that stays on the road.",
         bullets: [
           {
-            heading: "Separate sites, shared craft",
-            text: "Three Vite apps in one monorepo, each on its own subdomain, with cross-site navigation wired through production env URLs.",
+            heading: "One house, one domain",
+            text: "concierge.casinworks.com is a standalone Vite app. Booking, contact, and the staff demo all live on this site.",
           },
           {
-            heading: "Runway to road",
-            text: "The parent portal frames private aviation and Philippine chauffeur as two houses under one concierge standard — without collapsing them into a single form.",
+            heading: "Philippine ground",
+            text: "NAIA transfers, wedding chauffeur, and signature tours — El Nido, Bohol, Tagaytay & Taal, Banaue, Intramuros — without an aviation form in the way.",
           },
         ],
       },
       {
         title: "What ships in the demo",
-        intro: "The live sites are interactive product, not a slide deck.",
+        intro: "The live site is interactive product, not a slide deck.",
         items: [
           "Cinematic scroll, hero ken-burns, and staggered reveals that respect reduced-motion preferences.",
-          "Vela Concierge story booking: vehicle, service, calendar, details, confirmation — with a local staff inbox and role-based demo login.",
-          "Philippine signature tours (El Nido, Bohol, Tagaytay & Taal, Banaue, Intramuros) plus NAIA transfers and wedding chauffeur.",
-          "Vela Aviation ferry and delivery narrative from Manila across Asia-Pacific: gallery, specialty, team, and enquiry.",
-          "Hash routes for About and the architecture blueprint on the parent portal.",
+          "Story booking: vehicle, service, calendar, details, confirmation — with a local staff inbox and role-based demo login.",
+          "Philippine signature tours plus NAIA transfers and wedding chauffeur.",
         ],
       },
       {
         title: "How it is hosted",
         intro:
-          "One GitHub repo, three Vercel projects, three casinworks.com subdomains. Sibling links use production env vars.",
-        items: [
-          "vela.casinworks.com — parent portal",
-          "aviation.casinworks.com — aviation house",
-          "concierge.casinworks.com — chauffeur and tours",
-        ],
+          "Its own Vercel project on concierge.casinworks.com. Commission as a single-site operator stack. An aviation house can be added later without rebuilding this one.",
+        items: ["concierge.casinworks.com — chauffeur and tours"],
       },
     ],
     results: [
-      "A public, clickable luxury brand system that demonstrates commercial web craft without using a client’s name or trademarks.",
-      "The same motion, booking, and multi-domain pattern can be commissioned as a production operator stack.",
+      "A public, clickable chauffeur site that demonstrates commercial web craft without using a client’s name or trademarks.",
+      "The same motion, booking, and staff-ops pattern can be commissioned as a production stack for a limousine-only operator.",
+    ],
+  },
+  {
+    id: "vela-private",
+    kind: "concept",
+    label: "Studio concept",
+    sector: "Luxury Brand Portal · Concept",
+    title: "Vela Private — a parent portal for specialist houses",
+    snippet:
+      "An umbrella luxury portal — cinematic motion, About, and architecture blueprint — for operators who need a brand front door without collapsing aviation and ground into a single form.",
+    role: "Independent engineer — product, design system, and front-end architecture",
+    coreStack: ["React", "TypeScript", "Vite", "Motion", "Vercel"],
+    liveLinks: [{ label: "Vela Private", href: "https://vela.casinworks.com" }],
+    related: [
+      { slug: "vela-aviation", label: "Vela Aviation" },
+      { slug: "vela-concierge", label: "Vela Concierge" },
+    ],
+    sections: [
+      {
+        title: "The brief: a front door, not a combined form",
+        intro:
+          "Some operators want a parent brand that holds the umbrella story while specialist houses keep their own booking and enquiry. This studio concept is that portal — commission it when the client needs a luxury front door, not a one-page mash-up.",
+        bullets: [
+          {
+            heading: "Umbrella, not a merger",
+            text: "vela.casinworks.com frames private aviation and Philippine chauffeur as two houses under one concierge standard — without collapsing them into a single form.",
+          },
+          {
+            heading: "Hash routes for the house story",
+            text: "About and the architecture blueprint live on the parent portal, so the brand narrative stays here while operations stay on the specialist sites.",
+          },
+        ],
+      },
+      {
+        title: "What ships in the demo",
+        intro: "The live site is interactive product, not a slide deck.",
+        items: [
+          "Cinematic scroll, hero ken-burns, and staggered reveals that respect reduced-motion preferences.",
+          "Hash routes for About and the architecture blueprint.",
+        ],
+      },
+      {
+        title: "How it is hosted",
+        intro:
+          "Its own Vercel project on vela.casinworks.com. Commission the portal alone, or pair it with the aviation and chauffeur houses when the operator runs both.",
+        items: ["vela.casinworks.com — parent portal"],
+      },
+    ],
+    results: [
+      "A public, clickable luxury portal that demonstrates commercial web craft without using a client’s name or trademarks.",
+      "The same motion and multi-house framing can be commissioned as a production brand front door.",
     ],
   },
 ];
@@ -318,24 +418,23 @@ export type CaseStudyListItem = {
   label?: string;
 };
 
-export const CASE_STUDY_LIST: CaseStudyListItem[] = [
-  ...CONFIDENTIAL_CASE_STUDIES.map((s) => ({
-    slug: s.id as CaseStudySlug,
-    sector: s.sector,
-    title: s.title,
-    snippet: s.snippet,
-    confidential: true as const,
-  })),
-  ...CONCEPT_CASE_STUDIES.map((s) => ({
-    slug: s.id as CaseStudySlug,
-    sector: s.sector,
-    title: s.title,
-    snippet: s.snippet,
-    liveUrl: s.liveLinks[0]?.href,
-    confidential: false as const,
-    label: s.label,
-  })),
-];
+export const CASE_STUDY_LIST: CaseStudyListItem[] = CONFIDENTIAL_CASE_STUDIES.map((s) => ({
+  slug: s.id as CaseStudySlug,
+  sector: s.sector,
+  title: s.title,
+  snippet: s.snippet,
+  confidential: true as const,
+}));
+
+export const CONCEPT_STUDY_LIST: CaseStudyListItem[] = CONCEPT_CASE_STUDIES.map((s) => ({
+  slug: s.id as CaseStudySlug,
+  sector: s.sector,
+  title: s.title,
+  snippet: s.snippet,
+  liveUrl: s.liveLinks[0]?.href,
+  confidential: false as const,
+  label: s.label,
+}));
 
 export function caseStudyPath(slug: CaseStudySlug) {
   return `/case-studies/${slug}`;
@@ -356,3 +455,4 @@ export function isConceptCaseStudy(
 
 /** Integrated app directory — same origin as main portfolio */
 export const APPS_FOR_EVERYONE_PATH = "/AppsForEveryone";
+export const STUDIO_CONCEPTS_HASH = "/#studio-concepts";

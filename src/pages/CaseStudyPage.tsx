@@ -5,16 +5,20 @@ import { ConfidentialCaseStudyDetail } from "../components/ConfidentialCaseStudy
 import { ConceptCaseStudyDetail } from "../components/ConceptCaseStudyDetail";
 import { JsonLd } from "../components/JsonLd";
 import { usePageMeta } from "../hooks/usePageMeta";
-import { caseStudyPath, isConceptCaseStudy, resolveCaseStudy, SITE } from "../site";
+import { caseStudyPath, isConceptCaseStudy, resolveCaseStudy, SITE, STUDIO_CONCEPTS_HASH } from "../site";
 import NotFoundPage from "./NotFoundPage";
 
 export default function CaseStudyPage() {
   const { slug } = useParams<{ slug: string }>();
   const study = slug ? resolveCaseStudy(slug) : null;
 
+  const concept = study ? isConceptCaseStudy(study) : false;
+
   usePageMeta({
     title: study
-      ? `${study.title} — Case Study | ${SITE.name}`
+      ? concept
+        ? `${study.title} — Studio Concept | ${SITE.name}`
+        : `${study.title} — Case Study | ${SITE.name}`
       : `Case study not found — ${SITE.name}`,
     description: study?.snippet ?? SITE.description,
     path: study && slug ? caseStudyPath(study.id) : `/case-studies/${slug ?? ""}`,
@@ -49,7 +53,7 @@ export default function CaseStudyPage() {
             <span className="text-[8px] uppercase tracking-[0.5em] opacity-50 font-black">Independent Engineering</span>
           </Link>
           <Link
-            to="/#work"
+            to={concept ? STUDIO_CONCEPTS_HASH : "/#work"}
             className="inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="size-4" aria-hidden />
@@ -60,7 +64,9 @@ export default function CaseStudyPage() {
 
       <main className="px-6 sm:px-8 lg:px-16 py-16 sm:py-24 lg:py-32">
         <div className="max-w-[1800px] mx-auto">
-          <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500 mb-12">Case Study</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500 mb-12">
+            {concept ? "Studio Concept" : "Case Study"}
+          </p>
           {isConceptCaseStudy(study) ? (
             <ConceptCaseStudyDetail study={study} />
           ) : (

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { AppsForEveryoneSection } from "./components/AppsForEveryoneSection";
 import { CaseStudySnippetList } from "./components/CaseStudySnippetList";
+import { StudioConceptsSection } from "./components/StudioConceptsSection";
 import { FaqSection } from "./components/FaqSection";
 import { StickyMobileCta } from "./components/StickyMobileCta";
 import { usePageMeta } from "./hooks/usePageMeta";
@@ -35,6 +36,7 @@ export default function App() {
       { href: "#approach", label: "Approach" },
       { href: "#partners", label: "Partners" },
       { href: "#work", label: "Case Studies" },
+      { href: "#studio-concepts", label: "Studio" },
       { href: "#apps-for-everyone", label: "Apps For Everyone" },
       { href: "#faq", label: "FAQ" },
     ],
@@ -271,7 +273,7 @@ export default function App() {
             >
               <div className="mb-8 sm:mb-10 flex items-center gap-5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 <div className="w-12 h-px bg-slate-300 shrink-0" />
-                Mandaluyong, Philippines
+                Worldwide
               </div>
 
               <div className="relative z-0 min-w-0 max-w-full">
@@ -450,11 +452,12 @@ export default function App() {
                 <h3 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-semibold italic leading-[1.05] tracking-tight">Proven.</h3>
               </div>
               <p className="text-slate-300 max-w-sm text-sm sm:text-base leading-relaxed border-l border-slate-600 pl-5">
-                Enterprise NDA engagements below, plus a public studio concept. Consumer tools live in Apps For Everyone.
+                Enterprise NDA engagements — purchased, production work with client identity withheld. Studio demos live further down.
               </p>
             </div>
 
             <CaseStudySnippetList />
+            <StudioConceptsSection />
             <AppsForEveryoneSection />
           </div>
         </section>
@@ -586,6 +589,7 @@ export default function App() {
             <nav className="flex flex-col gap-2 text-sm font-medium text-slate-300">
               <a href="#expertise" className="hover:text-white transition-colors w-fit">Expertise</a>
               <a href="#work" className="hover:text-white transition-colors w-fit">Case Studies</a>
+              <a href="#studio-concepts" className="hover:text-white transition-colors w-fit">Studio concepts</a>
               <a href="#faq" className="hover:text-white transition-colors w-fit">FAQ</a>
               <a href="#contact" className="hover:text-white transition-colors w-fit">Consultation</a>
             </nav>

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
-import { SITE, type ConceptCaseStudy } from "../site";
+import { SITE, STUDIO_CONCEPTS_HASH, caseStudyPath, type ConceptCaseStudy } from "../site";
 
 export function ConceptCaseStudyDetail({ study }: { study: ConceptCaseStudy }) {
   return (
@@ -27,7 +27,7 @@ export function ConceptCaseStudyDetail({ study }: { study: ConceptCaseStudy }) {
 
       <div>
         <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500 mb-4">
-          Live sites
+          {study.liveLinks.length > 1 ? "Live sites" : "Live site"}
         </p>
         <div className="flex flex-wrap gap-3">
           {study.liveLinks.map((link) => (
@@ -113,12 +113,33 @@ export function ConceptCaseStudyDetail({ study }: { study: ConceptCaseStudy }) {
         </ul>
       </div>
 
+      {study.related && study.related.length > 0 && (
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500 mb-4">
+            Related studio concepts
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {study.related.map((item) => (
+              <Link
+                key={item.slug}
+                to={caseStudyPath(item.slug)}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-black/25 px-4 py-2 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 hover:border-slate-400 hover:text-slate-200 transition-colors"
+              >
+                {item.label}
+                <ArrowRight className="size-3.5" aria-hidden />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       <p className="text-sm text-slate-500 leading-relaxed max-w-3xl">
         Vela is a{" "}
         <a href={SITE.url} className="underline decoration-slate-600 underline-offset-4 hover:text-slate-300">
           CasinWorks
         </a>{" "}
-        studio concept. It is not a live operator and is not affiliated with any client brand.
+        studio concept. It is not a live operator and is not affiliated with any client brand. Each house
+        can be commissioned on its own.
       </p>
 
       <div className="flex flex-wrap items-center gap-6 pt-4">
@@ -130,10 +151,10 @@ export function ConceptCaseStudyDetail({ study }: { study: ConceptCaseStudy }) {
           <ArrowRight className="size-5 group-hover:translate-x-1 transition-transform" aria-hidden />
         </Link>
         <Link
-          to="/#work"
+          to={STUDIO_CONCEPTS_HASH}
           className="inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 hover:text-white transition-colors"
         >
-          All case studies <ArrowUpRight className="size-5" aria-hidden />
+          All studio concepts <ArrowUpRight className="size-5" aria-hidden />
         </Link>
       </div>
     </article>

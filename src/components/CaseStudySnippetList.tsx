@@ -1,12 +1,16 @@
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { ArrowRight } from "lucide-react";
-import { CASE_STUDY_LIST, caseStudyPath } from "../site";
+import { CASE_STUDY_LIST, caseStudyPath, type CaseStudyListItem } from "../site";
 
-export function CaseStudySnippetList() {
+export function CaseStudySnippetList({
+  items = CASE_STUDY_LIST,
+}: {
+  items?: CaseStudyListItem[];
+}) {
   return (
     <div className="divide-y divide-slate-700/80 border-y border-slate-700/80">
-      {CASE_STUDY_LIST.map((item, index) => (
+      {items.map((item, index) => (
         <motion.div
           key={item.slug}
           initial={{ opacity: 0, y: 24 }}

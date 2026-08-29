@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { JsonLd } from "./JsonLd";
-import { CASE_STUDY_LIST, caseStudyPath, SITE } from "../site";
+import { CASE_STUDY_LIST, CONCEPT_STUDY_LIST, caseStudyPath, SITE } from "../site";
 
 /** Sitewide Person + Organization + ProfessionalService structured data. */
 export function SiteSchema() {
@@ -27,7 +27,7 @@ export function SiteSchema() {
         worksFor: {
           "@id": `${SITE.url}/#organization`,
         },
-        workExample: CASE_STUDY_LIST.map((item) => ({
+        workExample: [...CASE_STUDY_LIST, ...CONCEPT_STUDY_LIST].map((item) => ({
           "@type": "CreativeWork",
           name: item.title,
           description: item.snippet,

@@ -1,6 +1,6 @@
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
-import {BrowserRouter, Route, Routes} from 'react-router-dom';
+import {BrowserRouter, Navigate, Route, Routes} from 'react-router-dom';
 import { Analytics } from "@vercel/analytics/react";
 import App from './App.tsx';
 import {MaintenanceNotice} from './components/MaintenanceNotice.tsx';
@@ -21,6 +21,7 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/AppsForEveryone" element={<AppsForEveryonePage />} />
+        <Route path="/case-studies/vela-brand-system" element={<Navigate to="/case-studies/vela-private" replace />} />
         <Route path="/case-studies/:slug" element={<CaseStudyPage />} />
         <Route path="/thank-you" element={<ThankYouPage />} />
         <Route path="*" element={<NotFoundPage />} />
