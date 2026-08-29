@@ -137,14 +137,14 @@ export default function App() {
 
                       {/* Subtitle */}
                       <p className="mt-6 text-sm md:text-md text-brand-teal/85 leading-relaxed font-sans max-w-xl">
-                        Independent software, built for Filipinos. Zero subscription fees, zero server-side data harvesting, and clean, beautiful user experience metrics. Always.
+                        Independent software, built for Filipinos — from free consumer tools to subscription business apps, with clean, practical UX.
                       </p>
                     </div>
 
                     {/* Applications Matrix Header */}
                     <div className="border-b border-brand-dark/10 pb-3 mb-8 flex justify-between items-end">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] uppercase tracking-[0.25em] text-brand-dark font-bold">Live Releases</span>
+                        <span className="text-[10px] uppercase tracking-[0.25em] text-brand-dark font-bold">Releases</span>
                         <span className="text-[9px] bg-brand-dark/5 text-brand-teal px-1.5 rounded-sm font-sans font-bold">{APPS_DATA.length} ITEMS</span>
                       </div>
                       <span className="text-[10px] font-mono text-brand-teal/50 hidden xs:inline">
@@ -174,11 +174,23 @@ export default function App() {
                                       Case Study
                                     </span>
                                   )}
-                                  <span className="text-[9px] uppercase tracking-[0.15em] font-bold px-2.5 py-1 rounded-sm font-sans border bg-transparent text-brand-teal border-brand-teal/30">
-                                    {app.demoLabel ?? "LIVE DEMO"}
+                                  <span className={`text-[9px] uppercase tracking-[0.15em] font-bold px-2.5 py-1 rounded-sm font-sans border bg-transparent ${
+                                    app.status === "COMING SOON"
+                                      ? "text-brand-dark/70 border-brand-dark/25"
+                                      : "text-brand-teal border-brand-teal/30"
+                                  }`}>
+                                    {app.demoLabel ?? (app.status === "COMING SOON" ? "COMING SOON" : "LIVE DEMO")}
                                   </span>
                                 </div>
                               </div>
+
+                              {app.image && (
+                                <img
+                                  src={app.image}
+                                  alt={`${app.name} logo`}
+                                  className="mb-4 h-12 w-12 object-cover border border-brand-dark/15"
+                                />
+                              )}
 
                               {/* App Name */}
                               <h3 className="font-serif text-2xl lg:text-3xl font-medium text-brand-dark tracking-tight leading-none group-hover:text-brand-teal transition-colors">
@@ -192,6 +204,11 @@ export default function App() {
                               <p className="text-xs text-brand-teal/85 leading-relaxed font-sans mb-6">
                                 {app.description}
                               </p>
+                              {app.platforms && (
+                                <p className="text-[10px] uppercase tracking-[0.15em] font-semibold text-brand-teal/70 font-sans -mt-3 mb-6">
+                                  {app.platforms}
+                                </p>
+                              )}
                             </div>
 
                             {/* Card Footer Stack */}
@@ -208,16 +225,37 @@ export default function App() {
                               )}
 
                               <div className="flex flex-wrap items-center gap-2">
-                                <a
-                                  href={app.url}
-                                  target="_blank"
-                                  referrerPolicy="no-referrer"
-                                  rel="noopener noreferrer"
-                                  className="py-2.5 px-6 bg-brand-dark text-white hover:bg-brand-teal transition-all duration-300 font-sans text-[11px] uppercase tracking-[0.15em] font-semibold flex items-center justify-center gap-1.5 cursor-pointer rounded-full max-w-fit"
-                                >
-                                  <span>View Live Demo</span>
-                                  <ExternalLink className="w-3 h-3" />
-                                </a>
+                                {app.status === "COMING SOON" ? (
+                                  app.url ? (
+                                    <a
+                                      href={app.url}
+                                      target="_blank"
+                                      referrerPolicy="no-referrer"
+                                      rel="noopener noreferrer"
+                                      className="py-2.5 px-6 border border-brand-dark/20 text-brand-dark hover:border-brand-dark/50 transition-all duration-300 font-sans text-[11px] uppercase tracking-[0.15em] font-semibold flex items-center justify-center gap-1.5 cursor-pointer rounded-full max-w-fit"
+                                    >
+                                      <span>Preview</span>
+                                      <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                  ) : (
+                                    <span className="py-2.5 px-6 border border-brand-dark/15 text-brand-teal/70 font-sans text-[11px] uppercase tracking-[0.15em] font-semibold rounded-full">
+                                      Coming soon
+                                    </span>
+                                  )
+                                ) : (
+                                  app.url && (
+                                    <a
+                                      href={app.url}
+                                      target="_blank"
+                                      referrerPolicy="no-referrer"
+                                      rel="noopener noreferrer"
+                                      className="py-2.5 px-6 bg-brand-dark text-white hover:bg-brand-teal transition-all duration-300 font-sans text-[11px] uppercase tracking-[0.15em] font-semibold flex items-center justify-center gap-1.5 cursor-pointer rounded-full max-w-fit"
+                                    >
+                                      <span>View Live Demo</span>
+                                      <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                  )
+                                )}
                                 {app.details && (
                                   <button
                                     type="button"
@@ -242,7 +280,7 @@ export default function App() {
                             Independent Client-Side Directory
                           </p>
                           <p className="text-xs text-brand-teal/95 mt-1 leading-normal max-w-2xl font-sans">
-                            Each Philippine tool launched above persists its state inside separate browser partitions (using native local storage limits). Neither C.J. Casin nor any web scraper can intercept your active databases. Zero server overhead.
+                            {GENERAL_SPECS.hostingHint} Each Philippine tool launched above persists its state inside separate browser partitions (using native local storage limits). Neither C.J. Casin nor any web scraper can intercept your active databases. Zero server overhead.
                           </p>
                         </div>
                       </div>

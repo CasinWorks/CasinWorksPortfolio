@@ -17,6 +17,11 @@
 html {
   overflow-x: hidden;
   scroll-padding-top: var(--header-h, 6rem);
+  /*
+    Default zoom: everything is rem-based, so growing the root size on wide
+    displays scales type and spacing together instead of leaving dead space.
+  */
+  font-size: clamp(16px, 1.45vw, 21px);
 }
 body {
   overflow-x: hidden;

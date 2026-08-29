@@ -18,7 +18,7 @@ export function CaseStudySnippetList() {
           <div className="lg:col-span-5 min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
               {item.sector}
-              {item.confidential ? " · NDA" : ""}
+              {item.confidential ? " · NDA" : item.label ? ` · ${item.label}` : ""}
             </p>
             <h4 className="mt-3 text-xl sm:text-2xl font-serif font-semibold leading-snug tracking-tight text-white group-hover:text-slate-200 transition-colors">
               {item.title}

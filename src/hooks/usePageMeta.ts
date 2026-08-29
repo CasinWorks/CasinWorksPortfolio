@@ -50,6 +50,7 @@ export function usePageMeta({
     document.title = pageTitle;
 
     upsertMeta("name", "description", pageDescription);
+    upsertMeta("name", "author", SITE.fullName);
     upsertMeta("name", "robots", noIndex ? "noindex, nofollow" : "index, follow");
 
     upsertMeta("property", "og:title", pageTitle);

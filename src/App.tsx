@@ -156,8 +156,8 @@ export default function App() {
         className="fixed top-0 w-full z-50 bg-[var(--page-cream)] text-[#1a1a1a] border-b border-black/10"
       >
         <div className="max-w-[var(--page-max)] mx-auto px-[var(--page-gutter)] min-h-16 md:min-h-[4.25rem] py-3 flex items-center justify-between gap-6">
-          <a href="#top" className="flex flex-col leading-tight w-fit hover:opacity-70 transition-opacity" aria-label="C. J. Casin — top of page">
-            <span className="text-lg font-semibold tracking-tight">C. J. Casin</span>
+          <a href="#top" className="flex flex-col leading-tight w-fit hover:opacity-70 transition-opacity" aria-label={`${SITE.brand} — ${SITE.fullName}`}>
+            <span className="text-lg font-semibold tracking-tight">{SITE.brand}</span>
             <span className="text-xs text-current/55">Independent Engineering</span>
           </a>
 
@@ -261,10 +261,10 @@ export default function App() {
       </motion.div>
 
       <main>
-        {/* Hero Section */}
-        <section className="relative px-[var(--page-gutter)] pt-28 sm:pt-32 lg:pt-36 pb-20 sm:pb-24 lg:pb-28 overflow-x-hidden overflow-y-visible">
-          <div className="max-w-[var(--page-max)] mx-auto relative min-w-0">
-            <motion.div 
+        {/* Hero Section — first screen, up to the fold */}
+        <section className="relative min-h-[100svh] px-[var(--page-gutter)] pt-28 sm:pt-32 lg:pt-36 pb-12 sm:pb-14 overflow-x-hidden flex flex-col">
+          <div className="max-w-[var(--page-max)] mx-auto relative min-w-0 w-full flex-1 flex flex-col justify-between">
+            <motion.div
               initial={{ opacity: 0, x: -100 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
@@ -273,7 +273,7 @@ export default function App() {
                 <div className="w-12 h-px bg-slate-300 shrink-0" />
                 Mandaluyong, Philippines
               </div>
-              
+
               <div className="relative z-0 min-w-0 max-w-full">
                 <h1 className="max-w-full min-w-0 text-5xl sm:text-7xl lg:text-8xl font-serif font-semibold tracking-tight leading-[0.9] mb-6 sm:mb-8 break-words [overflow-wrap:anywhere]">
                   High-Stakes <br />
@@ -282,29 +282,29 @@ export default function App() {
                   </span>
                 </h1>
 
-                <p className="mb-8 max-w-full font-serif text-xl sm:text-2xl italic leading-snug tracking-tight text-[#1a1a1a]">
+                <p className="max-w-full font-serif text-xl sm:text-2xl italic leading-snug tracking-tight text-[#1a1a1a]">
                   {SITE.tagline}
                 </p>
-                
-                <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-start min-w-0">
-                  <div className="min-w-0 lg:col-span-7">
-                    <p className="text-base sm:text-lg lg:text-xl text-slate-600 leading-relaxed max-w-2xl">
-                      Independent software architecture for enterprises that require mission-critical reliability and senior-level accountability.
-                    </p>
-                  </div>
-                  <div className="min-w-0 lg:col-span-5 flex justify-start lg:justify-end">
-                    <a 
-                      href="#contact" 
-                      className="group inline-flex items-center gap-3 text-base sm:text-lg font-semibold"
-                    >
-                      <span className="border-b-2 border-black pb-0.5">Start a Consultation</span>
-                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </a>
-                  </div>
-                </div>
               </div>
             </motion.div>
-            
+
+            <div className="relative z-0 mt-10 sm:mt-12 grid lg:grid-cols-12 gap-8 lg:gap-12 items-end min-w-0">
+              <div className="min-w-0 lg:col-span-7">
+                <p className="text-base sm:text-lg lg:text-xl text-slate-600 leading-relaxed max-w-2xl">
+                  Independent software architecture for enterprises that require mission-critical reliability and senior-level accountability.
+                </p>
+              </div>
+              <div className="min-w-0 lg:col-span-5 flex justify-start lg:justify-end">
+                <a
+                  href="#contact"
+                  className="group inline-flex items-center gap-3 text-base sm:text-lg font-semibold"
+                >
+                  <span className="border-b-2 border-black pb-0.5">Start a Consultation</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </a>
+              </div>
+            </div>
+
             {/* Background accent — clipped to hero width so it never widens the page */}
             <div
               className="pointer-events-none absolute inset-y-0 right-0 -z-10 w-[min(100%,52rem)] max-w-[100vw] overflow-hidden"
@@ -315,10 +315,16 @@ export default function App() {
               </div>
             </div>
           </div>
+
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-b from-transparent to-black/[0.07]"
+            aria-hidden
+          />
+          <div className="absolute inset-x-0 bottom-0 h-px bg-black/15" aria-hidden />
         </section>
 
         {/* Philosophy Section */}
-        <section id="approach" className="section-y px-[var(--page-gutter)] overflow-x-hidden">
+        <section id="approach" className="section-y px-[var(--page-gutter)] overflow-x-hidden border-t border-black/10 shadow-[inset_0_18px_28px_-24px_rgba(0,0,0,0.35)]">
           <div className="max-w-[var(--page-max)] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
             <div className="min-w-0 lg:col-span-4">
               <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 mb-5">The Philosophy</h2>
@@ -444,7 +450,7 @@ export default function App() {
                 <h3 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-semibold italic leading-[1.05] tracking-tight">Proven.</h3>
               </div>
               <p className="text-slate-300 max-w-sm text-sm sm:text-base leading-relaxed border-l border-slate-600 pl-5">
-                Enterprise NDA engagements below. Consumer tools live in Apps For Everyone.
+                Enterprise NDA engagements below, plus a public studio concept. Consumer tools live in Apps For Everyone.
               </p>
             </div>
 
@@ -565,10 +571,13 @@ export default function App() {
       <footer className="border-t border-slate-700/80 bg-[#141414] text-white px-[var(--page-gutter)] pt-10 sm:pt-12 pb-28 md:pb-14">
         <div className="max-w-[var(--page-max)] mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-8">
           <div className="lg:col-span-4">
-            <span className="block text-2xl font-serif font-semibold italic tracking-tight">C. J. Casin</span>
+            <span className="block text-2xl font-serif font-semibold italic tracking-tight">{SITE.brand}</span>
             <span className="mt-1 block text-[9px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Independent Engineering</span>
             <p className="mt-4 max-w-xs text-sm text-slate-400 leading-relaxed">
               {SITE.tagline}. Mission-critical software from {SITE.location}.
+            </p>
+            <p className="mt-3 text-xs text-slate-500 normal-case tracking-normal font-normal">
+              {SITE.fullName}
             </p>
           </div>
 
@@ -597,7 +606,7 @@ export default function App() {
         </div>
 
         <div className="max-w-[var(--page-max)] mx-auto mt-8 pt-5 border-t border-slate-700/80 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-          © {new Date().getFullYear()} C. J. Casin · Mandaluyong, PH
+          © {new Date().getFullYear()} {SITE.brand} · {SITE.fullName} · Mandaluyong, PH
         </div>
       </footer>
 

@@ -16,11 +16,13 @@ export interface AppItem {
   id: string;
   name: string;
   category: string;
-  status: "LIVE";
+  status: "LIVE" | "COMING SOON";
   demoLabel?: string;
   caseStudy?: boolean;
   description: string;
-  url: string;
+  url?: string;
+  image?: string;
+  platforms?: string;
   role?: string;
   releaseDate?: string;
   technologies?: string[];

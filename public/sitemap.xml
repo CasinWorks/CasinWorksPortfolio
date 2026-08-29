@@ -21,6 +21,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://www.casinworks.com/case-studies/vela-brand-system</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://www.casinworks.com/privacy.html</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>

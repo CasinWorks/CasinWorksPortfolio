@@ -24,8 +24,7 @@ export function AppsForEveryoneSection() {
             Apps For Everyone.
           </h3>
           <p className="mt-5 text-base sm:text-lg text-slate-300 leading-relaxed max-w-2xl">
-            Independent software built for everyday <Mark>Filipinos</Mark> — free, local-first, and designed for real workflows.
-            There are <Mark>no subscriptions</Mark>, and <Mark>no server-side data harvesting</Mark>.
+            Independent software built for everyday <Mark>Filipinos</Mark> — designed for real workflows, from free tools to business software.
           </p>
         </div>
         <Link
@@ -48,26 +47,65 @@ export function AppsForEveryoneSection() {
             className="flex flex-col justify-between border border-slate-700 bg-[#141414] p-6 sm:p-7 hover:border-slate-500 transition-colors duration-500 group"
           >
             <div>
-              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
-                {app.category}
-              </span>
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
+                  {app.category}
+                </span>
+                {app.status === "COMING SOON" && (
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 border border-slate-600 px-2 py-1 shrink-0">
+                    Coming soon
+                  </span>
+                )}
+              </div>
+              {app.image && (
+                <img
+                  src={app.image}
+                  alt={`${app.name} logo`}
+                  className="mt-4 h-14 w-14 object-cover border border-slate-700"
+                />
+              )}
               <h4 className="mt-3 text-xl sm:text-2xl font-serif font-semibold leading-snug tracking-tight group-hover:text-slate-200 transition-colors">
                 {app.name}
               </h4>
               <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed">
                 {app.description}
               </p>
+              {app.platforms && (
+                <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  {app.platforms}
+                </p>
+              )}
             </div>
             <div className="mt-8 pt-5 border-t border-slate-700 flex flex-wrap items-center gap-4">
-              <a
-                href={app.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-white hover:text-slate-300 transition-colors"
-              >
-                Live demo
-                <ArrowUpRight className="size-4" aria-hidden />
-              </a>
+              {app.status === "COMING SOON" ? (
+                app.url ? (
+                  <a
+                    href={app.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 hover:text-slate-200 transition-colors"
+                  >
+                    Preview
+                    <ArrowUpRight className="size-4" aria-hidden />
+                  </a>
+                ) : (
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Coming soon
+                  </span>
+                )
+              ) : (
+                app.url && (
+                  <a
+                    href={app.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-white hover:text-slate-300 transition-colors"
+                  >
+                    Live demo
+                    <ArrowUpRight className="size-4" aria-hidden />
+                  </a>
+                )
+              )}
               <Link
                 to={APPS_FOR_EVERYONE_PATH}
                 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 hover:text-slate-200 transition-colors"

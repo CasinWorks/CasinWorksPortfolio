@@ -112,6 +112,32 @@ export const APPS_DATA: AppItem[] = [
       ],
     },
   },
+  {
+    id: "casinfreight",
+    name: "CasinFreight",
+    category: "LOGISTICS / FLEET",
+    status: "LIVE",
+    demoLabel: "LIVE DEMO",
+    description:
+      "Philippine trucking and fleet management — dispatch, trips, and operations in one web workspace.",
+    url: "https://www.casinfreight.com",
+    image: "/apps/casinfreight.png",
+    platforms: "Web",
+    technologies: ["Fleet dispatch", "Trip tracking", "Operations"],
+  },
+  {
+    id: "casinpos",
+    name: "Casin POS",
+    category: "RETAIL / POINT OF SALE",
+    status: "LIVE",
+    demoLabel: "LIVE DEMO",
+    description:
+      "A point-of-sale workspace for everyday retail — checkout, inventory, and sales records built for Philippine shops. Live on pos.casinworks.com; coming soon on iOS and Android.",
+    url: "https://pos.casinworks.com",
+    image: "/apps/casinpos.png",
+    platforms: "iOS and Android soon",
+    technologies: ["Checkout", "Inventory", "Sales records"],
+  },
 ];
 
 export const DESIGN_COLORS: DesignColor[] = [
@@ -184,9 +210,9 @@ export const GENERAL_SPECS = {
   developerName: "C.J. Casin",
   location: "Mandaluyong, Philippines",
   missionStatement:
-    "Designing lightweight, high-utility, and privacy-first software tools for everyday Filipinos. Free of cost, free of tracking.",
+    "Designing lightweight, high-utility, and privacy-first software tools for everyday Filipinos — free consumer apps alongside business products with subscription plans.",
   hostingHint:
-    "All applications in this hub run in micro-containers or static servers on isolated domains. This dashboard serves as a luxury directory to unify access.",
+    "CasinWorks products run on casinworks.com subdomains. This dashboard is the directory that unifies access.",
   securityStatement:
     "Cryptographic sandbox: your credentials and sessions are hashed and kept locally in your context. No passwords, trackers, or cookies are ever forwarded to any remote cloud endpoint.",
 };

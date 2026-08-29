@@ -3,10 +3,12 @@ export const SITE = {
   email: "christianjoshuacasin@gmail.com",
   tagline: "We make things work",
   url: "https://www.casinworks.com",
+  brand: "CasinWorks",
+  fullName: "Christian Joshua Casin",
   name: "C. J. Casin",
-  title: "C.J. Casin — Independent Engineering",
+  title: "CasinWorks — Independent Engineering",
   description:
-    "We make things work. C.J. Casin — independent engineering for mission-critical software, SCADA, and industrial systems.",
+    "CasinWorks — mission-critical software, SCADA, and industrial systems. Independent engineering practice of Christian Joshua Casin (C.J. Casin), Mandaluyong, Philippines.",
   location: "Mandaluyong, Philippines",
   /** Client reply SLA shown near contact */
   responseTimePromise: "I reply within 1 business day.",
@@ -61,12 +63,16 @@ export type ConfidentialCaseStudySection = {
   items?: string[];
 };
 
-export type CaseStudySlug =
+export type ConfidentialCaseStudySlug =
   | "semiconductor-data-lifecycle"
   | "automotive-andon-ecosystem";
 
+export type ConceptCaseStudySlug = "vela-brand-system";
+
+export type CaseStudySlug = ConfidentialCaseStudySlug | ConceptCaseStudySlug;
+
 export type ConfidentialCaseStudy = {
-  id: CaseStudySlug;
+  id: ConfidentialCaseStudySlug;
   label: string;
   sector: string;
   title: string;
@@ -213,6 +219,95 @@ export const CONFIDENTIAL_CASE_STUDIES: ConfidentialCaseStudy[] = [
   },
 ];
 
+export type ConceptLiveLink = {
+  label: string;
+  href: string;
+};
+
+export type ConceptCaseStudy = {
+  id: ConceptCaseStudySlug;
+  kind: "concept";
+  label: string;
+  sector: string;
+  title: string;
+  snippet: string;
+  role: string;
+  coreStack: string[];
+  sections: ConfidentialCaseStudySection[];
+  results: string[];
+  liveLinks: ConceptLiveLink[];
+};
+
+/** Public studio concepts — fictional brands, not client engagements */
+export const CONCEPT_CASE_STUDIES: ConceptCaseStudy[] = [
+  {
+    id: "vela-brand-system",
+    kind: "concept",
+    label: "Studio concept",
+    sector: "Luxury Travel · Concept",
+    title: "Vela — a three-site luxury brand system from runway to road",
+    snippet:
+      "A parent portal, Manila-based aviation house, and Philippine chauffeur site that share one design language and navigate as three real domains — cinematic motion, story booking, and a staff operations demo.",
+    role: "Independent engineer — product, design system, and front-end architecture",
+    coreStack: [
+      "React",
+      "TypeScript",
+      "Vite",
+      "Motion",
+      "Vercel",
+      "Story booking",
+      "RBAC demo",
+    ],
+    liveLinks: [
+      { label: "Vela Private", href: "https://vela.casinworks.com" },
+      { label: "Vela Aviation", href: "https://aviation.casinworks.com" },
+      { label: "Vela Concierge", href: "https://concierge.casinworks.com" },
+    ],
+    sections: [
+      {
+        title: "The brief: three brands, one standard",
+        intro:
+          "Luxury operators often split aviation and ground into different companies — and different websites. The studio concept shows how a parent portal can hold the umbrella story while two specialist sites keep their own booking, contact, and operations flows.",
+        bullets: [
+          {
+            heading: "Separate sites, shared craft",
+            text: "Three Vite apps in one monorepo, each on its own subdomain, with cross-site navigation wired through production env URLs.",
+          },
+          {
+            heading: "Runway to road",
+            text: "The parent portal frames private aviation and Philippine chauffeur as two houses under one concierge standard — without collapsing them into a single form.",
+          },
+        ],
+      },
+      {
+        title: "What ships in the demo",
+        intro: "The live sites are interactive product, not a slide deck.",
+        items: [
+          "Cinematic scroll, hero ken-burns, and staggered reveals that respect reduced-motion preferences.",
+          "Vela Concierge story booking: vehicle, service, calendar, details, confirmation — with a local staff inbox and role-based demo login.",
+          "Philippine signature tours (El Nido, Bohol, Tagaytay & Taal, Banaue, Intramuros) plus NAIA transfers and wedding chauffeur.",
+          "Vela Aviation ferry and delivery narrative from Manila across Asia-Pacific: gallery, specialty, team, and enquiry.",
+          "Hash routes for About and the architecture blueprint on the parent portal.",
+        ],
+      },
+      {
+        title: "How it is hosted",
+        intro:
+          "One GitHub repo, three Vercel projects, three casinworks.com subdomains. Sibling links use production env vars.",
+        items: [
+          "vela.casinworks.com — parent portal",
+          "aviation.casinworks.com — aviation house",
+          "concierge.casinworks.com — chauffeur and tours",
+        ],
+      },
+    ],
+    results: [
+      "A public, clickable luxury brand system that demonstrates commercial web craft without using a client’s name or trademarks.",
+      "The same motion, booking, and multi-domain pattern can be commissioned as a production operator stack.",
+    ],
+  },
+];
+
 export type CaseStudyListItem = {
   slug: CaseStudySlug;
   sector: string;
@@ -220,23 +315,43 @@ export type CaseStudyListItem = {
   snippet: string;
   liveUrl?: string;
   confidential?: boolean;
+  label?: string;
 };
 
-export const CASE_STUDY_LIST: CaseStudyListItem[] = CONFIDENTIAL_CASE_STUDIES.map((s) => ({
-  slug: s.id,
-  sector: s.sector,
-  title: s.title,
-  snippet: s.snippet,
-  confidential: true as const,
-}));
+export const CASE_STUDY_LIST: CaseStudyListItem[] = [
+  ...CONFIDENTIAL_CASE_STUDIES.map((s) => ({
+    slug: s.id as CaseStudySlug,
+    sector: s.sector,
+    title: s.title,
+    snippet: s.snippet,
+    confidential: true as const,
+  })),
+  ...CONCEPT_CASE_STUDIES.map((s) => ({
+    slug: s.id as CaseStudySlug,
+    sector: s.sector,
+    title: s.title,
+    snippet: s.snippet,
+    liveUrl: s.liveLinks[0]?.href,
+    confidential: false as const,
+    label: s.label,
+  })),
+];
 
 export function caseStudyPath(slug: CaseStudySlug) {
   return `/case-studies/${slug}`;
 }
 
 export function resolveCaseStudy(slug: string) {
-  const study = CONFIDENTIAL_CASE_STUDIES.find((s) => s.id === slug);
-  return study ?? null;
+  const confidential = CONFIDENTIAL_CASE_STUDIES.find((s) => s.id === slug);
+  if (confidential) return confidential;
+  const concept = CONCEPT_CASE_STUDIES.find((s) => s.id === slug);
+  return concept ?? null;
+}
+
+export function isConceptCaseStudy(
+  study: ConfidentialCaseStudy | ConceptCaseStudy
+): study is ConceptCaseStudy {
+  return "kind" in study && study.kind === "concept";
 }
 
 /** Integrated app directory — same origin as main portfolio */

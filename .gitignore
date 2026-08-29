@@ -10,3 +10,4 @@ coverage/
 
 # Local copy of Apps For Everyone (integrated under src/apps-for-everyone/)
 casin-works-—-apps-for-everyone-2/
+.vercel
