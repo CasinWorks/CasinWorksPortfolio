@@ -53,8 +53,11 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
       allow create: if signedIn() && request.auth.uid == uid
-        && request.resource.data.role in ['client', 'subcontractor', 'admin'];
-      allow update: if signedIn() && (request.auth.uid == uid || isAdmin());
+        && request.resource.data.role in ['client', 'subcontractor'];
+      allow update: if isAdmin() || (
+        signedIn() && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role
+      );
     }
 
     match /clients/{id} {

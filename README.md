@@ -14,7 +14,7 @@ View your app in AI Studio: https://ai.studio/apps/5e3482f4-0a2a-420a-922b-056c8
 
 1. Install dependencies:
    `npm install`
-2. Copy `.env.example` to `.env.local` and fill Firebase keys for `/portal`.
+2. Copy `.env.example` to `.env.local` and fill **server** `FIREBASE_*` keys (no `VITE_` prefix).
 3. Run the app:
    `npm run dev`
 
@@ -29,7 +29,9 @@ Authenticated workspace (Firebase Auth + Firestore + Storage), isolated from the
 - `/portal/gigs` — subcontractor gig board
 - `/portal/admin` — create projects, issue invoices, post gigs, confirm remittances
 
-Admin emails are listed in `VITE_ADMIN_EMAILS`. Deploy `firestore.rules` and `storage.rules` to the same Firebase project as CasinFreight.
+Firebase web config is served from `/api/firebase-config` using server env vars (`FIREBASE_*` on Vercel). Do not use `VITE_` for those keys. Admin is a Firestore `users/{uid}.role` field — set it in the Console, not in the client.
+
+Deploy `firestore.rules` and `storage.rules` to the CasinWorks Firebase project.
 
 The iOS/Android app lives in `apps/casinworks_portal` (Flutter) and uses the same Firebase project.
 

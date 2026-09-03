@@ -5,7 +5,6 @@ import { SITE } from "../../site";
 import { usePageMeta } from "../../hooks/usePageMeta";
 import { usePortalAuth } from "../auth";
 import type { PortalRole } from "../types";
-import { isFirebaseConfigured } from "../firebase";
 
 function safeNext(raw: string | null) {
   if (raw && raw.startsWith("/portal")) return raw;
@@ -20,7 +19,7 @@ export function PortalSignInScreen() {
     noIndex: true,
   });
 
-  const { profile, signIn } = usePortalAuth();
+  const { configured, profile, signIn } = usePortalAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const nextPath = safeNext(params.get("next"));
@@ -67,9 +66,9 @@ export function PortalSignInScreen() {
           {SITE.tagline}.
         </p>
 
-        {!isFirebaseConfigured() && (
+        {!configured && (
           <p className="mt-6 text-sm text-red-700">
-            Firebase keys are missing. The portal cannot sign anyone in until they are set.
+            Firebase is not configured on the server. The portal cannot sign anyone in until FIREBASE_* keys are set.
           </p>
         )}
 
@@ -140,7 +139,7 @@ export function PortalSignInScreen() {
           {error && <p className="text-sm text-red-700">{error}</p>}
           <button
             type="submit"
-            disabled={sending || !isFirebaseConfigured()}
+            disabled={sending || !configured}
             className="w-full py-3.5 px-6 bg-black text-white rounded-full text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-slate-800 disabled:opacity-50"
           >
             Continue as {role === "client" ? "client" : "subcontractor"}
@@ -169,7 +168,7 @@ export function PortalRegisterScreen() {
     path: "/portal/register",
     noIndex: true,
   });
-  const { profile, register } = usePortalAuth();
+  const { configured, profile, register } = usePortalAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const invitedEmail = (params.get("email") ?? "").trim().toLowerCase();
@@ -246,7 +245,7 @@ export function PortalRegisterScreen() {
           />
           <input required type="password" minLength={8} placeholder="Password (8+ characters)" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3.5 py-2.5 bg-white border border-black/15 text-sm focus:outline-none focus:border-black" />
           {error && <p className="text-sm text-red-700">{error}</p>}
-          <button type="submit" disabled={sending} className="w-full py-3.5 bg-black text-white rounded-full text-sm font-semibold disabled:opacity-50">
+          <button type="submit" disabled={sending || !configured} className="w-full py-3.5 bg-black text-white rounded-full text-sm font-semibold disabled:opacity-50">
             Create account
           </button>
         </form>

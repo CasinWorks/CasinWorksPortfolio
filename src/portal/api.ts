@@ -43,17 +43,17 @@ function omitUndefined<T extends Record<string, unknown>>(obj: T) {
   return Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== undefined)) as T;
 }
 
-export async function upsertUserProfile(user: PortalUser) {
-  await setDoc(
-    doc(db(), "users", user.uid),
-    {
-      email: user.email,
-      displayName: user.displayName,
-      role: user.role,
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
+export async function createUserProfileIfMissing(user: PortalUser): Promise<PortalUser> {
+  const existing = await fetchUserProfile(user.uid);
+  if (existing) return existing;
+  const role = user.role === "subcontractor" ? "subcontractor" : "client";
+  await setDoc(doc(db(), "users", user.uid), {
+    email: user.email,
+    displayName: user.displayName,
+    role,
+    updatedAt: serverTimestamp(),
+  });
+  return { ...user, role };
 }
 
 export async function fetchUserProfile(uid: string): Promise<PortalUser | null> {

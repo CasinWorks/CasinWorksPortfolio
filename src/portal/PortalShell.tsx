@@ -81,7 +81,7 @@ export function RequireAuth() {
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 mb-4">Portal</p>
         <h1 className="font-serif text-4xl font-semibold italic">Firebase is not configured.</h1>
         <p className="mt-4 max-w-xl text-slate-600">
-          Add the VITE_FIREBASE_* keys and VITE_ADMIN_EMAILS to the environment, then reload.
+          Add FIREBASE_* keys on the server (Vercel / .env.local), then reload.
         </p>
       </div>
     );
