@@ -1,0 +1,125 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return signedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    function authEmail() {
+      return request.auth.token.email != null
+        ? request.auth.token.email.lower()
+        : '';
+    }
+    function ownsProject() {
+      return signedIn() && (
+        resource.data.clientId == request.auth.uid ||
+        (
+          authEmail() != '' &&
+          'clientEmail' in resource.data &&
+          resource.data.clientEmail is string &&
+          resource.data.clientEmail.lower() == authEmail()
+        )
+      );
+    }
+    function canAccessProject(projectId) {
+      return isAdmin() || (
+        signedIn()
+        && exists(/databases/$(database)/documents/projects/$(projectId))
+        && (
+          get(/databases/$(database)/documents/projects/$(projectId)).data.clientId == request.auth.uid
+          || (
+            authEmail() != ''
+            && 'clientEmail' in get(/databases/$(database)/documents/projects/$(projectId)).data
+            && get(/databases/$(database)/documents/projects/$(projectId)).data.clientEmail is string
+            && get(/databases/$(database)/documents/projects/$(projectId)).data.clientEmail.lower() == authEmail()
+          )
+        )
+      );
+    }
+    function canClaimProject() {
+      return signedIn()
+        && authEmail() != ''
+        && 'clientEmail' in resource.data
+        && resource.data.clientEmail is string
+        && resource.data.clientEmail.lower() == authEmail()
+        && request.resource.data.clientId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['clientId', 'clientName']);
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.role in ['client', 'subcontractor', 'admin'];
+      allow update: if signedIn() && (request.auth.uid == uid || isAdmin());
+    }
+
+    match /clients/{id} {
+      allow read: if isAdmin() || (
+        signedIn() &&
+        'email' in resource.data &&
+        resource.data.email is string &&
+        resource.data.email.lower() == authEmail()
+      );
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.email is string
+        && resource.data.email.lower() == authEmail()
+        && request.resource.data.authUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authUid'])
+      );
+    }
+
+    match /projects/{id} {
+      allow read: if isAdmin() || ownsProject();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || canClaimProject();
+    }
+
+    match /milestones/{id} {
+      allow read: if canAccessProject(resource.data.projectId);
+      allow write: if isAdmin();
+    }
+
+    match /documents/{id} {
+      allow read: if canAccessProject(resource.data.projectId);
+      allow create: if isAdmin() || (
+        signedIn()
+        && canAccessProject(request.resource.data.projectId)
+        && request.resource.data.type in ['PO', 'remittance']
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    match /projectShares/{token} {
+      allow get: if isAdmin() || (
+        signedIn()
+        && authEmail() != ''
+        && 'clientEmail' in resource.data
+        && resource.data.clientEmail is string
+        && resource.data.clientEmail.lower() == authEmail()
+      );
+      allow list: if false;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /courseTemplates/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    match /gigs/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /applications/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.applicantId == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.applicantId == request.auth.uid;
+      allow update: if isAdmin();
+    }
+  }
+}

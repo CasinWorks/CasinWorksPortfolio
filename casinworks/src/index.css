@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #EDEAE2;
+    color: #17171A;
+  }
+
+  h1, h2, h3, .font-serif-editorial {
+    font-family: var(--font-serif);
+    letter-spacing: -0.015em;
+  }
+}
+
+.font-editorial-serif {
+  font-family: 'Newsreader', Georgia, serif;
+}
+
+/* Custom fine dotted pattern for cartography / fairway fairway survey lines */
+.bg-topo-dots {
+  background-image: radial-gradient(#8A93AD 0.75px, transparent 0.75px);
+  background-size: 16px 16px;
+}

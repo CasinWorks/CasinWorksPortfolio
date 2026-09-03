@@ -182,6 +182,9 @@ export default function App() {
             >
               Consultation
             </a>
+            <Link to="/portal/sign-in" className="text-slate-500 hover:text-black transition-colors">
+              Portal
+            </Link>
           </div>
 
           {/* Mobile burger */}
@@ -256,6 +259,13 @@ export default function App() {
                 >
                   Consultation
                 </a>
+                <Link
+                  to="/portal/sign-in"
+                  className="text-slate-500 hover:text-black transition-opacity w-fit text-[15px]"
+                  onClick={() => setMobileNavOpen(false)}
+                >
+                  Client portal
+                </Link>
               </div>
             </div>
           </div>
@@ -587,6 +597,7 @@ export default function App() {
               <a href="#studio-concepts" className="hover:text-white transition-colors w-fit">Studio concepts</a>
               <a href="#faq" className="hover:text-white transition-colors w-fit">FAQ</a>
               <a href="#contact" className="hover:text-white transition-colors w-fit">Consultation</a>
+              <Link to="/portal/sign-in" className="hover:text-white transition-colors w-fit">Client portal</Link>
             </nav>
           </div>
 

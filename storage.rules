@@ -1,0 +1,32 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return signedIn() &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    function ownsProject(projectId) {
+      return signedIn() && (
+        firestore.get(/databases/(default)/documents/projects/$(projectId)).data.clientId == request.auth.uid
+        || (
+          request.auth.token.email != null
+          && firestore.get(/databases/(default)/documents/projects/$(projectId)).data.clientEmail is string
+          && firestore.get(/databases/(default)/documents/projects/$(projectId)).data.clientEmail.lower()
+            == request.auth.token.email.lower()
+        )
+      );
+    }
+
+    match /documents/{projectId}/{fileName} {
+      allow read: if isAdmin() || ownsProject(projectId);
+      allow write: if (isAdmin() || ownsProject(projectId))
+        && request.resource.size < 40 * 1024 * 1024
+        && request.resource.contentType.matches(
+          '^(application/pdf|image/.*|application/msword|application/vnd\\..*|application/zip|application/x-zip-compressed|text/plain|text/csv|application/octet-stream)$'
+        );
+    }
+  }
+}

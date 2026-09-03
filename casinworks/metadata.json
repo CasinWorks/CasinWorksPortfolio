@@ -1,0 +1,6 @@
+{
+  "name": "CasinWorks",
+  "description": "Boutique independent engineering consultancy mobile UI featuring golf-hole project progress tracking, PO, invoice & remittance documents flow, gig board, and editorial sign-in.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

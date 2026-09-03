@@ -11,3 +11,8 @@ coverage/
 # Local copy of Apps For Everyone (integrated under src/apps-for-everyone/)
 casin-works-—-apps-for-everyone-2/
 .vercel
+
+# Flutter
+apps/casinworks_portal/.dart_tool/
+apps/casinworks_portal/.idea/
+apps/casinworks_portal/build/
