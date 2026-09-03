@@ -175,6 +175,7 @@ export function PortalRegisterScreen() {
   const nextPath = safeNext(params.get("next"));
   const [role, setRole] = useState<Exclude<PortalRole, "admin">>("client");
   const [displayName, setDisplayName] = useState("");
+  const [company, setCompany] = useState("");
   const [email, setEmail] = useState(invitedEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -191,7 +192,13 @@ export function PortalRegisterScreen() {
     }
     setSending(true);
     try {
-      await register({ email: invitedEmail || email, password, displayName, role: invitedEmail ? "client" : role });
+      await register({
+        email: invitedEmail || email,
+        password,
+        displayName,
+        role: invitedEmail ? "client" : role,
+        company: role === "client" || invitedEmail ? company : undefined,
+      });
       navigate(nextPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not register.");
@@ -234,6 +241,15 @@ export function PortalRegisterScreen() {
             </div>
           )}
           <input required placeholder="Full name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full px-3.5 py-2.5 bg-white border border-black/15 text-sm focus:outline-none focus:border-black" />
+          {(role === "client" || invitedEmail) && (
+            <input
+              required
+              placeholder="Company"
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-white border border-black/15 text-sm focus:outline-none focus:border-black"
+            />
+          )}
           <input
             required
             type="email"

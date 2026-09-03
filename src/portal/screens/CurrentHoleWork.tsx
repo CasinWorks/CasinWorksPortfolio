@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
 import { Download, Mail } from "lucide-react";
+import { SITE } from "../../site";
 import { commitMilestoneStatus, docTypeName } from "../api";
 import { attachmentLabel, expectedDocType, kindLabel, resolveAttachmentNeed } from "../pipeline";
 import type { Milestone, Project, ProjectDocument } from "../types";
@@ -119,7 +120,7 @@ export function CurrentHoleWork({
           ready={hasConsult}
           readyLabel="Consultation is on file."
           idleLabel="Log consultation"
-          idleHint="Notes land on the project records the client can read."
+          idleHint={`Billed at ₱${SITE.consultingHourlyRatePhp.toLocaleString("en-US")} per hour. Hours and notes land on the project records.`}
           panel={panel}
           onOpen={() => setPanel("form")}
           onClose={() => setPanel("idle")}

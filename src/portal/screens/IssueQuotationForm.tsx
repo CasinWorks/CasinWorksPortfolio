@@ -3,10 +3,13 @@ import { issueQuotation, nextQuoteNumber, fetchClient } from "../api";
 import {
   applyMilestonePercents,
   buildQuotation,
+  consultingDetails,
+  consultingFee,
+  consultingLine,
+  CONSULTING_HOURLY_RATE,
   defaultMilestones,
   defaultScope,
   formatPeso,
-  newId,
   scopeTotal,
 } from "../quote";
 import type { Project, QuoteBillTo, QuoteMilestone, QuoteScopeItem } from "../types";
@@ -147,22 +150,48 @@ export function IssueQuotationForm({
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Scope of work</p>
           <button
             type="button"
-            onClick={() => setScope((rows) => [...rows, { id: newId(), description: "", details: "", amount: 0 }])}
+            onClick={() => {
+              setScope((rows) => {
+                const next = [...rows, consultingLine(1)];
+                setMilestones((ms) => applyMilestonePercents(ms, scopeTotal(next)));
+                return next;
+              });
+            }}
             className="text-xs font-semibold underline underline-offset-4"
           >
-            Add line
+            Add hours
           </button>
         </div>
         {scope.map((row) => (
           <div key={row.id} className="grid sm:grid-cols-12 gap-2">
+            <input
+              type="number"
+              min={0}
+              step="0.5"
+              value={row.hours ?? ""}
+              onChange={(e) => {
+                const hours = e.target.value === "" ? undefined : Number(e.target.value);
+                if (hours == null || !Number.isFinite(hours) || hours <= 0) {
+                  patchScope(row.id, { hours: undefined });
+                  return;
+                }
+                patchScope(row.id, {
+                  hours,
+                  amount: consultingFee(hours),
+                  details: row.description === "Consulting" ? consultingDetails(hours) : row.details,
+                });
+              }}
+              placeholder="Hours"
+              className="sm:col-span-2 px-3 py-2 bg-white border border-black/15 text-sm"
+            />
             <input value={row.description} onChange={(e) => patchScope(row.id, { description: e.target.value })} placeholder="Description" className="sm:col-span-3 px-3 py-2 bg-white border border-black/15 text-sm" />
-            <input value={row.details} onChange={(e) => patchScope(row.id, { details: e.target.value })} placeholder="Details" className="sm:col-span-6 px-3 py-2 bg-white border border-black/15 text-sm" />
+            <input value={row.details} onChange={(e) => patchScope(row.id, { details: e.target.value })} placeholder="Details" className="sm:col-span-4 px-3 py-2 bg-white border border-black/15 text-sm" />
             <input
               type="number"
               min={0}
               step="0.01"
               value={row.amount || ""}
-              onChange={(e) => patchScope(row.id, { amount: Number(e.target.value) || 0 })}
+              onChange={(e) => patchScope(row.id, { amount: Number(e.target.value) || 0, hours: undefined })}
               placeholder="Amount"
               className="sm:col-span-3 px-3 py-2 bg-white border border-black/15 text-sm"
             />
@@ -170,6 +199,7 @@ export function IssueQuotationForm({
         ))}
         <p className="text-sm text-right">
           Total contract value <span className="font-semibold">{formatPeso(total)}</span>
+          <span className="block text-xs text-slate-500 font-normal mt-0.5">Consulting is ₱{CONSULTING_HOURLY_RATE.toLocaleString("en-US")} per hour. Hours fill the amount automatically.</span>
         </p>
 
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Payment schedule</p>

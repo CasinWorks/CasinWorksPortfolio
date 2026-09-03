@@ -31,7 +31,11 @@ export function ClientsScreen() {
           Clients.
         </h1>
         <p className="mt-3 text-slate-600 max-w-xl">
-          Add the company first. Then open the client and create a project — it starts on Consultation and walks through demo, buy-off, quotation, PO, and delivery.
+          Add the company first, or convert a registered account from{" "}
+          <Link to="/portal/admin/users" className="underline underline-offset-2">
+            Users
+          </Link>
+          . Then open the client and create a project.
         </p>
         {msg && <p className="mt-4 text-sm bg-black text-white px-3 py-2">{msg}</p>}
         {error && <p className="mt-4 text-sm text-red-700">{error}</p>}

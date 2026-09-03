@@ -43,29 +43,38 @@ function omitUndefined<T extends Record<string, unknown>>(obj: T) {
   return Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== undefined)) as T;
 }
 
-export async function createUserProfileIfMissing(user: PortalUser): Promise<PortalUser> {
-  const existing = await fetchUserProfile(user.uid);
-  if (existing) return existing;
-  const role = user.role === "subcontractor" ? "subcontractor" : "client";
-  await setDoc(doc(db(), "users", user.uid), {
-    email: user.email,
-    displayName: user.displayName,
-    role,
-    updatedAt: serverTimestamp(),
-  });
-  return { ...user, role };
-}
-
-export async function fetchUserProfile(uid: string): Promise<PortalUser | null> {
-  const snap = await getDoc(doc(db(), "users", uid));
-  if (!snap.exists()) return null;
-  const data = snap.data();
+function portalUserFromSnap(uid: string, data: Record<string, unknown>): PortalUser {
   return {
     uid,
     email: String(data.email ?? ""),
     displayName: String(data.displayName ?? ""),
     role: (data.role as PortalRole) ?? "client",
+    company: data.company ? String(data.company) : undefined,
   };
+}
+
+export async function createUserProfileIfMissing(user: PortalUser): Promise<PortalUser> {
+  const existing = await fetchUserProfile(user.uid);
+  if (existing) return existing;
+  const role = user.role === "subcontractor" ? "subcontractor" : "client";
+  const company = user.company?.trim() || "";
+  await setDoc(
+    doc(db(), "users", user.uid),
+    omitUndefined({
+      email: user.email,
+      displayName: user.displayName,
+      role,
+      company: company || undefined,
+      updatedAt: serverTimestamp(),
+    } as Record<string, unknown>),
+  );
+  return { ...user, role, company: company || undefined };
+}
+
+export async function fetchUserProfile(uid: string): Promise<PortalUser | null> {
+  const snap = await getDoc(doc(db(), "users", uid));
+  if (!snap.exists()) return null;
+  return portalUserFromSnap(uid, snap.data() as Record<string, unknown>);
 }
 
 export async function findUserByEmail(email: string): Promise<PortalUser | null> {
@@ -73,13 +82,32 @@ export async function findUserByEmail(email: string): Promise<PortalUser | null>
   const snap = await getDocs(q);
   const first = snap.docs[0];
   if (!first) return null;
-  const data = first.data();
-  return {
-    uid: first.id,
-    email: String(data.email ?? ""),
-    displayName: String(data.displayName ?? ""),
-    role: (data.role as PortalRole) ?? "client",
-  };
+  return portalUserFromSnap(first.id, first.data() as Record<string, unknown>);
+}
+
+export async function fetchAllPortalUsers(): Promise<PortalUser[]> {
+  const snap = await getDocs(collection(db(), "users"));
+  return snap.docs
+    .map((d) => portalUserFromSnap(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => a.displayName.localeCompare(b.displayName) || a.email.localeCompare(b.email));
+}
+
+export async function convertUserToClient(user: PortalUser) {
+  const existing = await findClientByEmail(user.email);
+  if (existing) {
+    if (existing.authUid !== user.uid) {
+      await updateClient(existing.id, { authUid: user.uid });
+    }
+    return existing.id;
+  }
+  return createClient({
+    company: (user.company || user.displayName).trim(),
+    contactName: user.displayName.trim() || user.email,
+    email: user.email,
+    phone: "",
+    address: "",
+    authUid: user.uid,
+  });
 }
 
 export async function fetchProjectsForClient(client: { uid: string; email: string }): Promise<Project[]> {
@@ -699,6 +727,8 @@ export async function attachProjectRecord(input: {
   attendees?: string;
   file?: File | null;
   uploadedBy: string;
+  amount?: string;
+  numericAmount?: number;
 }) {
   const uploaded = input.file ? await uploadProjectFile(input.projectId, input.file) : undefined;
   return createDocument({
@@ -713,5 +743,7 @@ export async function attachProjectRecord(input: {
     fileName: uploaded?.fileName,
     status: "issued",
     uploadedBy: input.uploadedBy,
+    amount: input.amount,
+    numericAmount: input.numericAmount,
   });
 }

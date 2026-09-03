@@ -42,6 +42,10 @@ export function AdminScreen() {
           <Link to="/portal/admin/clients" className="underline underline-offset-2">
             Clients
           </Link>
+          . Convert a registration from{" "}
+          <Link to="/portal/admin/users" className="underline underline-offset-2">
+            Users
+          </Link>
           .
         </p>
         {msg && <p className="mt-4 text-sm bg-black text-white px-3 py-2">{msg}</p>}

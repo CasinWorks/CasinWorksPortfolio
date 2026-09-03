@@ -15,6 +15,7 @@ import { HomeRedirect, PortalShell, RequireAdmin, RequireAuth, RequireClientArea
 import { AdminScreen } from './portal/screens/AdminScreen.tsx';
 import { ClientDetailScreen } from './portal/screens/ClientDetailScreen.tsx';
 import { ClientsScreen } from './portal/screens/ClientsScreen.tsx';
+import { UsersScreen } from './portal/screens/UsersScreen.tsx';
 import { PortalRegisterScreen, PortalSignInScreen } from './portal/screens/AuthScreens.tsx';
 import { ClientDashboard } from './portal/screens/ClientDashboard.tsx';
 import { DocumentsScreen } from './portal/screens/DocumentsScreen.tsx';
@@ -53,6 +54,7 @@ createRoot(document.getElementById('root')!).render(
               </Route>
               <Route element={<RequireAdmin />}>
                 <Route path="admin" element={<AdminScreen />} />
+                <Route path="admin/users" element={<UsersScreen />} />
                 <Route path="admin/clients" element={<ClientsScreen />} />
                 <Route path="admin/clients/:clientId" element={<ClientDetailScreen />} />
               </Route>

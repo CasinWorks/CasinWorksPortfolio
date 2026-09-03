@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { ATTACHABLE_TYPES, attachProjectRecord, docTypeName } from "../api";
+import { CONSULTING_HOURLY_RATE, consultingDetails, consultingFee, formatPeso } from "../quote";
 import type { DocumentType, Project } from "../types";
 
 const FILE_ACCEPT =
@@ -24,6 +25,7 @@ export function AttachProjectRecordForm({
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [attendees, setAttendees] = useState("");
   const [notes, setNotes] = useState("");
+  const [hours, setHours] = useState("1");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -35,25 +37,34 @@ export function AttachProjectRecordForm({
   }, [lockedProjectId, lockedType]);
 
   const needsMeeting = type === "consultation" || type === "demo";
+  const consultHours = type === "consultation" ? Number(hours) || 0 : 0;
+  const consultFee = type === "consultation" ? consultingFee(consultHours) : 0;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
     setSaving(true);
     try {
+      const billingNote =
+        type === "consultation" && consultHours > 0
+          ? consultingDetails(consultHours)
+          : "";
       await attachProjectRecord({
         projectId,
         type,
         title: title || `${docTypeName(type)} — ${date}`,
-        notes,
+        notes: [billingNote, notes.trim()].filter(Boolean).join("\n\n"),
         date,
         attendees: needsMeeting ? attendees : undefined,
         file,
         uploadedBy,
+        amount: type === "consultation" && consultFee ? formatPeso(consultFee) : undefined,
+        numericAmount: type === "consultation" && consultFee ? consultFee : undefined,
       });
       setTitle("");
       setNotes("");
       setAttendees("");
+      setHours("1");
       setFile(null);
       if (inputRef.current) inputRef.current.value = "";
       await onCreated(title || docTypeName(type));
@@ -103,6 +114,25 @@ export function AttachProjectRecordForm({
             placeholder="Attendees (optional)"
             className="w-full px-3.5 py-2.5 bg-white border border-black/15 text-sm"
           />
+        )}
+        {type === "consultation" && (
+          <div className="grid sm:grid-cols-2 gap-3 items-center">
+            <input
+              type="number"
+              min={0.5}
+              step="0.5"
+              required
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              placeholder="Hours"
+              className="px-3.5 py-2.5 bg-white border border-black/15 text-sm"
+            />
+            <p className="text-sm text-slate-600">
+              {consultHours > 0
+                ? `${consultingDetails(consultHours)} = ${formatPeso(consultFee)}`
+                : `₱${CONSULTING_HOURLY_RATE.toLocaleString("en-US")} per hour`}
+            </p>
+          </div>
         )}
         <textarea
           value={notes}

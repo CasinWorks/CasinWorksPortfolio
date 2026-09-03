@@ -48,6 +48,7 @@ export interface PortalUser {
   email: string;
   displayName: string;
   role: PortalRole;
+  company?: string;
 }
 
 export interface InvoiceLineItem {
@@ -62,6 +63,8 @@ export interface QuoteScopeItem {
   id: string;
   description: string;
   details: string;
+  /** Hours at the consulting rate. When set, amount is hours × ₱5,000. */
+  hours?: number;
   amount: number;
 }
 

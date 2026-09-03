@@ -101,6 +101,8 @@ class SignInPage extends StatefulWidget {
 class _SignInPageState extends State<SignInPage> {
   final email = TextEditingController();
   final password = TextEditingController();
+  final displayName = TextEditingController();
+  final company = TextEditingController();
   String role = 'client';
   String? error;
   bool sending = false;
@@ -109,6 +111,8 @@ class _SignInPageState extends State<SignInPage> {
   void dispose() {
     email.dispose();
     password.dispose();
+    displayName.dispose();
+    company.dispose();
     super.dispose();
   }
 
@@ -119,14 +123,22 @@ class _SignInPageState extends State<SignInPage> {
     });
     try {
       if (register) {
+        if (displayName.text.trim().isEmpty) {
+          throw Exception('Enter your name.');
+        }
+        if (role == 'client' && company.text.trim().isEmpty) {
+          throw Exception('Enter your company.');
+        }
         final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: email.text.trim(),
           password: password.text,
         );
+        await cred.user?.updateDisplayName(displayName.text.trim());
         await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).set({
           'email': email.text.trim().toLowerCase(),
-          'displayName': email.text.trim(),
+          'displayName': displayName.text.trim(),
           'role': role,
+          if (role == 'client') 'company': company.text.trim(),
         });
       } else {
         await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -161,6 +173,9 @@ class _SignInPageState extends State<SignInPage> {
               onSelectionChanged: (s) => setState(() => role = s.first),
             ),
             const SizedBox(height: 16),
+            TextField(controller: displayName, decoration: const InputDecoration(labelText: 'Full name')),
+            if (role == 'client')
+              TextField(controller: company, decoration: const InputDecoration(labelText: 'Company')),
             TextField(controller: email, decoration: const InputDecoration(labelText: 'Email'), keyboardType: TextInputType.emailAddress),
             TextField(controller: password, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
             if (error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(error!, style: const TextStyle(color: Colors.red))),

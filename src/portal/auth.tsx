@@ -19,7 +19,13 @@ type AuthContextValue = {
   firebaseUser: User | null;
   profile: PortalUser | null;
   signIn: (email: string, password: string) => Promise<void>;
-  register: (input: { email: string; password: string; displayName: string; role: Exclude<PortalRole, "admin"> }) => Promise<void>;
+  register: (input: {
+    email: string;
+    password: string;
+    displayName: string;
+    role: Exclude<PortalRole, "admin">;
+    company?: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -97,7 +103,7 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
         await setPersistence(auth, browserLocalPersistence);
         await signInWithEmailAndPassword(auth, email.trim(), password);
       },
-      async register({ email, password, displayName, role }) {
+      async register({ email, password, displayName, role, company }) {
         if (!isFirebaseConfigured()) throw new Error("Firebase is not configured on the server.");
         const auth = getFirebaseAuth();
         await setPersistence(auth, browserLocalPersistence);
@@ -108,6 +114,7 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
           email: email.trim().toLowerCase(),
           displayName: displayName.trim() || email,
           role,
+          company: company?.trim() || undefined,
         });
         await claimProjectsForClient(profile.uid, profile.email, profile.displayName);
         await linkCrmClientOnLogin(profile.uid, profile.email);

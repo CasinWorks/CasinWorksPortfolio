@@ -1,10 +1,11 @@
 import type { AttachmentNeed, CourseTemplateHole, DocumentType, Milestone, MilestoneKind, MilestoneStatus, ProjectDocument } from "./types";
+import { SITE } from "../site";
 
 export const ENGAGEMENT_PIPELINE: { title: string; kind: MilestoneKind; description: string }[] = [
   {
     title: "Consultation",
     kind: "consultation",
-    description: "Discovery call. Log the notes, then mark this hole done.",
+    description: `Discovery call at ₱${SITE.consultingHourlyRatePhp.toLocaleString("en-US")} per hour. Log hours and notes, then mark this hole done.`,
   },
   {
     title: "Demo",

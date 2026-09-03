@@ -9,8 +9,11 @@ export const DEFAULT_QUOTE_BANK = {
   accountNumber: "1899059728",
 };
 
+export const CONSULTING_HOURLY_RATE = SITE.consultingHourlyRatePhp;
+
 export const DEFAULT_QUOTE_TERMS = [
   "This quotation is valid for {validity} days from date of issuance.",
+  "Consulting time is billed at ₱" + CONSULTING_HOURLY_RATE.toLocaleString("en-US") + " per hour unless a fixed project fee is stated in the scope.",
   "Scope covers system development, deployment, and documentation only. Ongoing support and maintenance are not included.",
   "Payment schedule is milestone-based as indicated above.",
 ];
@@ -49,15 +52,30 @@ export function newId() {
   return crypto.randomUUID();
 }
 
+export function consultingFee(hours: number) {
+  const h = Number(hours) || 0;
+  return Math.round(h * CONSULTING_HOURLY_RATE * 100) / 100;
+}
+
+export function consultingDetails(hours: number) {
+  const h = Number(hours) || 0;
+  const label = h === 1 ? "1 hour" : `${h} hours`;
+  return `${label} × ${formatPeso(CONSULTING_HOURLY_RATE)}/hr`;
+}
+
+export function consultingLine(hours = 1, projectName?: string): QuoteScopeItem {
+  const h = hours > 0 ? hours : 1;
+  return {
+    id: newId(),
+    description: "Consulting",
+    details: projectName ? `${consultingDetails(h)} — ${projectName}` : consultingDetails(h),
+    hours: h,
+    amount: consultingFee(h),
+  };
+}
+
 export function defaultScope(project: Project): QuoteScopeItem[] {
-  return [
-    {
-      id: newId(),
-      description: "Development",
-      details: project.name,
-      amount: parseMoney(project.budget),
-    },
-  ];
+  return [consultingLine(1, project.name)];
 }
 
 export function defaultMilestones(total: number): QuoteMilestone[] {

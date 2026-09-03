@@ -304,6 +304,7 @@ function RecordDetail({
       <p className="text-sm text-slate-500 mt-2">
         {record.date}
         {record.attendees ? ` · ${record.attendees}` : ""}
+        {record.amount ? ` · ${record.amount}` : ""}
       </p>
       {record.notes && <p className="mt-6 text-sm text-slate-700 whitespace-pre-wrap">{record.notes}</p>}
       {isImage && record.fileUrl && (

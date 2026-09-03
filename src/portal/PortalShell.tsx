@@ -36,6 +36,14 @@ export function PortalShell() {
             )}
             {isAdmin && (
               <NavLink
+                to="/portal/admin/users"
+                className={({ isActive }) => (isActive ? "text-black" : "text-slate-500 hover:text-black")}
+              >
+                Users
+              </NavLink>
+            )}
+            {isAdmin && (
+              <NavLink
                 to="/portal/admin/clients"
                 className={({ isActive }) => (isActive ? "text-black" : "text-slate-500 hover:text-black")}
               >
