@@ -479,7 +479,7 @@ export default function App() {
                   <span className="italic">Inquiry.</span>
                 </h2>
                 <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
-                  I am currently accepting inquiries for high-stakes software contracts. Consulting is ₱{SITE.consultingHourlyRatePhp.toLocaleString("en-US")} per hour. Larger builds are quoted after we agree scope.
+                  I am currently accepting inquiries for high-stakes software contracts. Larger builds are quoted after we agree scope.
                 </p>
                 <p className="text-sm sm:text-base font-medium text-white">
                   {SITE.responseTimePromise}

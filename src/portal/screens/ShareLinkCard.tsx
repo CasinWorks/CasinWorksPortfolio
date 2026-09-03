@@ -55,9 +55,9 @@ export function ShareLinkCard({ project }: { project: Project }) {
       <p className="mt-1 text-sm text-slate-600">
         The project stays private until they sign in with {project.clientEmail || "the invited email"}. The link does not show names, files, or the course to anyone else.
       </p>
-      <div className="mt-3 flex gap-2">
-        <input readOnly value={busy ? "Preparing link…" : url} className="flex-1 px-3 py-2 bg-[var(--page-panel)] border border-black/15 text-sm" />
-        <button type="button" disabled={!url || busy} onClick={() => void copy()} className="rounded-full bg-black text-white px-4 py-2 text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50">
+      <div className="mt-3 flex flex-col sm:flex-row gap-2">
+        <input readOnly value={busy ? "Preparing link…" : url} className="min-w-0 w-full flex-1 px-3 py-2.5 bg-[var(--page-panel)] border border-black/15 text-sm truncate" />
+        <button type="button" disabled={!url || busy} onClick={() => void copy()} className="rounded-full bg-black text-white px-4 py-2.5 text-xs font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-50 shrink-0">
           <Copy className="size-3.5" aria-hidden />
           {copied ? "Copied" : "Copy"}
         </button>

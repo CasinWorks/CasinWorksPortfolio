@@ -5,6 +5,7 @@ import { SITE } from "../../site";
 import { usePageMeta } from "../../hooks/usePageMeta";
 import { usePortalAuth } from "../auth";
 import type { PortalRole } from "../types";
+import { PageFade } from "../motion";
 
 function safeNext(raw: string | null) {
   if (raw && raw.startsWith("/portal")) return raw;
@@ -46,7 +47,7 @@ export function PortalSignInScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a] px-[var(--page-gutter)] py-16 sm:py-24">
+    <PageFade className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a] px-[var(--page-gutter)] py-12 sm:py-24">
       <div className="max-w-md mx-auto">
         <div className="flex items-center justify-between pb-6 border-b border-black/10">
           <Link to="/" className="hover:opacity-70">
@@ -158,7 +159,7 @@ export function PortalSignInScreen() {
           </Link>
         </p>
       </div>
-    </div>
+    </PageFade>
   );
 }
 
@@ -208,7 +209,7 @@ export function PortalRegisterScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a] px-[var(--page-gutter)] py-16 sm:py-24">
+    <PageFade className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a] px-[var(--page-gutter)] py-12 sm:py-24">
       <div className="max-w-md mx-auto">
         <Link to={`/portal/sign-in?next=${encodeURIComponent(nextPath)}`} className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
           ← Sign in
@@ -266,6 +267,6 @@ export function PortalRegisterScreen() {
           </button>
         </form>
       </div>
-    </div>
+    </PageFade>
   );
 }

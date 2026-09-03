@@ -13,6 +13,7 @@ import { FairwayVisual } from "./FairwayVisual";
 import { MilestoneManage } from "./MilestoneManage";
 import { ProjectRecordsList } from "./ProjectRecordsList";
 import { ShareLinkCard } from "./ShareLinkCard";
+import { ProgressBar, TimelineDot } from "../motion";
 import { StatusPill, projectLabel } from "./ui";
 
 export function ProjectProgressScreen() {
@@ -105,7 +106,7 @@ export function ProjectProgressScreen() {
       </Link>
 
       {isAdmin && (
-        <div className="mt-6 inline-flex bg-[var(--page-panel)] p-1 rounded-full border border-black/10">
+          <div className="mt-6 inline-flex bg-[var(--page-panel)] p-1 rounded-full border border-black/10 max-w-full">
           {(
             [
               ["work", "Work the hole"],
@@ -120,7 +121,7 @@ export function ProjectProgressScreen() {
                 setNotice("");
                 if (id === "client") setView("course");
               }}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-medium ${
+                className={`px-3.5 py-2 sm:py-1.5 rounded-full text-xs font-medium ${
                 lens === id ? "bg-black text-white" : "text-slate-500 hover:text-black"
               }`}
             >
@@ -180,7 +181,7 @@ export function ProjectProgressScreen() {
                 key={id}
                 type="button"
                 onClick={() => setView(id)}
-                className={`px-3 py-1 rounded-full text-xs font-medium ${
+                className={`px-3 py-2 sm:py-1 rounded-full text-xs font-medium ${
                   view === id ? "bg-black text-white" : "text-slate-500 hover:text-black"
                 }`}
               >
@@ -227,14 +228,9 @@ export function ProjectProgressScreen() {
                 id={`hole-${m.id}`}
                 className={`relative mb-6 scroll-mt-24 ${highlightId === m.id ? "bg-white border border-black/10 -ml-3 pl-3 pr-3 py-3" : ""}`}
               >
-                <span
-                  className={`absolute -left-7 top-1.5 size-3 rounded-full ring-4 ring-[var(--page-cream)] ${
-                    m.status === "blocked"
-                      ? "bg-[#BA593E]"
-                      : m.status === "upcoming"
-                        ? "border-2 border-slate-400 bg-[var(--page-cream)]"
-                        : "bg-black"
-                  }`}
+                <TimelineDot
+                  status={m.status}
+                  className="absolute -left-7 top-1.5 size-3 ring-4 ring-[var(--page-cream)]"
                 />
                 <div className="text-xs text-slate-500">{m.date}</div>
                 <div className="font-semibold mt-0.5">{m.title}</div>
@@ -268,7 +264,7 @@ export function ProjectProgressScreen() {
 
       {clientFacing && (
         <section className="mt-10 max-w-xl">
-          <div className="flex items-end justify-between gap-3 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Your records</p>
               <h2 className="mt-1 font-serif text-2xl font-semibold">Quotations, POs, and files</h2>
@@ -295,7 +291,7 @@ export function ProjectProgressScreen() {
       )}
 
       {!clientFacing && (
-      <div className="mt-8 max-w-xl border border-black/10 p-4 flex items-center justify-between bg-white/60">
+      <div className="mt-8 max-w-xl border border-black/10 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/60">
         <div className="flex items-center gap-3">
           <div className="size-8 border border-black/20 flex items-center justify-center font-mono text-xs font-bold">
             <FileText className="size-4" aria-hidden />
@@ -365,9 +361,7 @@ function AdminProjectHeader({
             : "No course loaded yet."}
       </p>
       <div className="mt-4 max-w-xl">
-        <div className="h-1.5 w-full bg-black/10 overflow-hidden">
-          <div className="h-full bg-black" style={{ width: `${Math.min(100, project.progressPercentage || 0)}%` }} />
-        </div>
+        <ProgressBar value={project.progressPercentage || 0} />
         <div className="flex justify-between text-sm text-slate-500 mt-1.5">
           <span>{project.progressPercentage || 0}% complete</span>
           {project.budget ? <span>{project.budget}</span> : <span>{project.clientEmail}</span>}
@@ -412,9 +406,7 @@ function ClientProjectHeader({
       </p>
       {view === "timeline" && (
         <div className="mt-4 max-w-xl">
-          <div className="h-1.5 w-full bg-black/10 overflow-hidden">
-            <div className="h-full bg-black" style={{ width: `${Math.min(100, project.progressPercentage || 0)}%` }} />
-          </div>
+          <ProgressBar value={project.progressPercentage || 0} />
           <div className="flex justify-between text-sm text-slate-500 mt-1.5">
             <span>{projectLabel(project.status)}</span>
             <span>{project.progressPercentage || 0}% complete</span>

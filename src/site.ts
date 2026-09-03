@@ -39,9 +39,9 @@ export const FAQS: FaqItem[] = [
       "Send a short brief via the inquiry form or email. We clarify scope, constraints, and success criteria, then agree on a focused first phase before any larger commitment.",
   },
   {
-    question: "What is your consulting rate?",
+    question: "How is consulting billed?",
     answer:
-      `Independent consulting is ₱${SITE.consultingHourlyRatePhp.toLocaleString("en-US")} per hour. Larger builds are quoted as a fixed scope after consultation.`,
+      "The first consultation is complimentary. Larger builds are quoted as a fixed scope after we agree what the work is.",
   },
   {
     question: "How quickly will I hear back?",

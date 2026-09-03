@@ -1,71 +1,58 @@
-import { Link, NavLink, Navigate, Outlet } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
+import { LogOut, Menu, X } from "lucide-react";
 import { SITE } from "../site";
 import { usePortalAuth } from "./auth";
+import { AnimatedOutlet } from "./motion";
 
 export function PortalShell() {
   const { profile, logout } = usePortalAuth();
+  const location = useLocation();
   const isAdmin = profile?.role === "admin";
   const showClient = isAdmin || profile?.role === "client";
   const showGigs = isAdmin || profile?.role === "subcontractor";
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const links = [
+    showClient ? { to: "/portal/dashboard", label: "Projects" } : null,
+    showClient ? { to: "/portal/book", label: "Book" } : null,
+    showGigs ? { to: "/portal/gigs", label: "Gig board" } : null,
+    isAdmin ? { to: "/portal/admin/users", label: "Users" } : null,
+    isAdmin ? { to: "/portal/admin/clients", label: "Clients" } : null,
+    isAdmin ? { to: "/portal/admin", label: "Admin" } : null,
+  ].filter((row): row is { to: string; label: string } => Boolean(row));
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [menuOpen]);
+
+  function linkClass(isActive: boolean) {
+    return isActive ? "text-black" : "text-slate-500 hover:text-black";
+  }
 
   return (
     <div className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a]">
       <header className="border-b border-black/10 bg-[var(--page-cream)] sticky top-0 z-40">
-        <div className="max-w-[var(--page-max)] mx-auto px-[var(--page-gutter)] py-4 flex flex-wrap items-center justify-between gap-4">
-          <Link to="/portal" className="flex flex-col leading-tight">
-            <span className="text-lg font-semibold tracking-tight">{SITE.brand}</span>
+        <div className="max-w-[var(--page-max)] mx-auto px-[var(--page-gutter)] py-3 sm:py-4 flex items-center justify-between gap-3">
+          <Link to="/portal" className="flex flex-col leading-tight min-w-0">
+            <span className="text-lg font-semibold tracking-tight truncate">{SITE.brand}</span>
             <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Client portal</span>
           </Link>
-          <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] font-medium">
-            {showClient && (
-              <NavLink
-                to="/portal/dashboard"
-                className={({ isActive }) => (isActive ? "text-black" : "text-slate-500 hover:text-black")}
-              >
-                Projects
+          <nav className="hidden md:flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] font-medium">
+            {links.map((l) => (
+              <NavLink key={l.to} to={l.to} className={({ isActive }) => linkClass(isActive)}>
+                {l.label}
               </NavLink>
-            )}
-            {showClient && (
-              <NavLink
-                to="/portal/book"
-                className={({ isActive }) => (isActive ? "text-black" : "text-slate-500 hover:text-black")}
-              >
-                Book
-              </NavLink>
-            )}
-            {showGigs && (
-              <NavLink
-                to="/portal/gigs"
-                className={({ isActive }) => (isActive ? "text-black" : "text-slate-500 hover:text-black")}
-              >
-                Gig board
-              </NavLink>
-            )}
-            {isAdmin && (
-              <NavLink
-                to="/portal/admin/users"
-                className={({ isActive }) => (isActive ? "text-black" : "text-slate-500 hover:text-black")}
-              >
-                Users
-              </NavLink>
-            )}
-            {isAdmin && (
-              <NavLink
-                to="/portal/admin/clients"
-                className={({ isActive }) => (isActive ? "text-black" : "text-slate-500 hover:text-black")}
-              >
-                Clients
-              </NavLink>
-            )}
-            {isAdmin && (
-              <NavLink
-                to="/portal/admin"
-                className={({ isActive }) => (isActive ? "text-black" : "text-slate-500 hover:text-black")}
-              >
-                Admin
-              </NavLink>
-            )}
+            ))}
             <Link to="/" className="text-slate-500 hover:text-black">
               Site
             </Link>
@@ -80,10 +67,60 @@ export function PortalShell() {
               Sign out
             </Link>
           </nav>
+          <button
+            type="button"
+            className="md:hidden inline-flex items-center justify-center size-11 rounded-full border border-black/15"
+            aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={menuOpen}
+            aria-controls="portal-mobile-nav"
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            {menuOpen ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
+          </button>
         </div>
       </header>
-      <main className="max-w-[var(--page-max)] mx-auto px-[var(--page-gutter)] py-10 sm:py-14">
-        <Outlet />
+
+      {menuOpen && (
+        <div id="portal-mobile-nav" className="md:hidden fixed inset-0 z-30">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/35"
+            aria-label="Close navigation menu"
+            onClick={() => setMenuOpen(false)}
+          />
+          <div className="absolute inset-x-0 top-0 bg-[var(--page-cream)] border-b border-black/10 pt-[4.75rem] pb-6 px-[var(--page-gutter)]">
+            <nav className="flex flex-col border border-black/10 bg-white">
+              {links.map((l) => (
+                <NavLink
+                  key={l.to}
+                  to={l.to}
+                  className={({ isActive }) =>
+                    `min-h-12 px-4 flex items-center text-[15px] font-medium border-b border-black/10 ${linkClass(isActive)}`
+                  }
+                >
+                  {l.label}
+                </NavLink>
+              ))}
+              <Link to="/" className="min-h-12 px-4 flex items-center text-[15px] font-medium text-slate-500 border-b border-black/10">
+                Site
+              </Link>
+              <Link
+                to="/portal/sign-in"
+                onClick={() => {
+                  void logout();
+                }}
+                className="min-h-12 px-4 inline-flex items-center gap-1.5 text-[15px] font-medium text-slate-500"
+              >
+                <LogOut className="size-3.5" aria-hidden />
+                Sign out
+              </Link>
+            </nav>
+          </div>
+        </div>
+      )}
+
+      <main className="max-w-[var(--page-max)] mx-auto px-[var(--page-gutter)] py-8 sm:py-14 pb-[max(2rem,env(safe-area-inset-bottom))]">
+        <AnimatedOutlet />
       </main>
     </div>
   );
@@ -93,9 +130,9 @@ export function RequireAuth() {
   const { configured, loading, profile } = usePortalAuth();
   if (!configured) {
     return (
-      <div className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a] px-[var(--page-gutter)] py-24">
+      <div className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a] px-[var(--page-gutter)] py-16 sm:py-24">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 mb-4">Portal</p>
-        <h1 className="font-serif text-4xl font-semibold italic">Firebase is not configured.</h1>
+        <h1 className="font-serif text-3xl sm:text-4xl font-semibold italic">Firebase is not configured.</h1>
         <p className="mt-4 max-w-xl text-slate-600">
           Add FIREBASE_* keys on the server (Vercel / .env.local), then reload.
         </p>
@@ -104,7 +141,7 @@ export function RequireAuth() {
   }
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--page-cream)] text-slate-500 px-[var(--page-gutter)] py-24">
+      <div className="min-h-screen bg-[var(--page-cream)] text-slate-500 px-[var(--page-gutter)] py-16 sm:py-24">
         Loading portal…
       </div>
     );

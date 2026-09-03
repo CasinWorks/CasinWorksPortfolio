@@ -4,6 +4,7 @@ import { usePageMeta } from "../../hooks/usePageMeta";
 import { SITE } from "../../site";
 import { createEngagement, fetchClient, fetchProjectsForCrmClient, updateClient } from "../api";
 import type { Client, Project } from "../types";
+import { StaggerItem, StaggerList } from "../motion";
 import { projectLabel } from "./ui";
 
 export function ClientDetailScreen() {
@@ -60,20 +61,24 @@ export function ClientDetailScreen() {
 
       <section>
         <h2 className="font-serif text-2xl font-semibold">Projects</h2>
-        <div className="mt-4 divide-y divide-black/10 border-y border-black/10 max-w-3xl">
-          {projects.length === 0 && <p className="py-6 text-slate-500">No projects yet. Create one above.</p>}
-          {projects.map((p) => (
-            <Link key={p.id} to={`/portal/projects/${p.id}`} className="py-4 flex flex-wrap items-center justify-between gap-3 hover:bg-[var(--page-panel)]/80">
-              <div>
-                <div className="font-semibold">{p.name}</div>
-                <div className="text-xs text-slate-500">
-                  {projectLabel(p.status)} · {p.progressPercentage || 0}% complete
+          {projects.length === 0 && <p className="mt-4 py-6 text-slate-500 border-y border-black/10 max-w-3xl">No projects yet. Create one above.</p>}
+          {projects.length > 0 && (
+          <StaggerList className="mt-4 divide-y divide-black/10 border-y border-black/10 max-w-3xl">
+            {projects.map((p) => (
+            <StaggerItem key={p.id}>
+              <Link to={`/portal/projects/${p.id}`} className="py-4 flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-2 sm:gap-3 hover:bg-[var(--page-panel)]/80 min-h-12">
+                <div>
+                  <div className="font-semibold">{p.name}</div>
+                  <div className="text-xs text-slate-500">
+                    {projectLabel(p.status)} · {p.progressPercentage || 0}% complete
+                  </div>
                 </div>
-              </div>
-              <span className="text-xs font-semibold">Open project →</span>
-            </Link>
-          ))}
-        </div>
+                <span className="text-xs font-semibold">Open project →</span>
+              </Link>
+            </StaggerItem>
+            ))}
+          </StaggerList>
+          )}
       </section>
 
       <EditClient

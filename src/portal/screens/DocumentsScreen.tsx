@@ -20,6 +20,7 @@ import { QuoteView } from "./QuoteView";
 import { AttachProjectRecordForm } from "./AttachProjectRecordForm";
 import { IssueInvoiceForm } from "./IssueInvoiceForm";
 import { StatusPill, documentTone } from "./ui";
+import { StaggerItem, StaggerList } from "../motion";
 
 type Flow = "list" | "invoice" | "quotation" | "record" | "attach" | "issue-invoice" | "upload-po" | "upload-remittance";
 
@@ -238,38 +239,39 @@ export function DocumentsScreen() {
         return (
           <section key={group.id} className="mt-10">
             <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{group.label}</h2>
-            <div className="mt-3 divide-y divide-black/10 border-y border-black/10">
+            <StaggerList className="mt-3 divide-y divide-black/10 border-y border-black/10">
               {items.map((d) => (
-                <button
-                  key={d.id}
-                  type="button"
-                  className="w-full py-5 flex items-start justify-between gap-4 text-left hover:bg-[var(--page-panel)]/80"
-                  onClick={() => {
-                    if (d.type === "remittance" && (d.status === "needs_upload" || !d.fileUrl)) {
-                      setActive(d);
-                      setFlow("upload-remittance");
-                      return;
-                    }
-                    navigate(`/portal/projects/${project.id}/documents/${d.id}`);
-                  }}
-                >
-                  <div className="flex gap-3">
-                    <span className="size-9 border border-black/15 flex items-center justify-center font-mono text-[10px] font-bold">
-                      {docTypeLabel(d.type)}
-                    </span>
-                    <div>
-                      <div className="font-semibold">{d.title}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        {docTypeName(d.type)} · {d.date}
-                        {d.amount ? ` · ${d.amount}` : ""}
-                        {d.fileName ? ` · ${d.fileName}` : ""}
+                <StaggerItem key={d.id}>
+                  <button
+                    type="button"
+                    className="w-full py-4 sm:py-5 flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 text-left hover:bg-[var(--page-panel)]/80"
+                    onClick={() => {
+                      if (d.type === "remittance" && (d.status === "needs_upload" || !d.fileUrl)) {
+                        setActive(d);
+                        setFlow("upload-remittance");
+                        return;
+                      }
+                      navigate(`/portal/projects/${project.id}/documents/${d.id}`);
+                    }}
+                  >
+                    <div className="flex gap-3 min-w-0">
+                      <span className="size-9 shrink-0 border border-black/15 flex items-center justify-center font-mono text-[10px] font-bold">
+                        {docTypeLabel(d.type)}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="font-semibold">{d.title}</div>
+                        <div className="text-xs text-slate-500 mt-0.5 break-words">
+                          {docTypeName(d.type)} · {d.date}
+                          {d.amount ? ` · ${d.amount}` : ""}
+                          {d.fileName ? ` · ${d.fileName}` : ""}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <StatusPill tone={documentTone(d.status)}>{statusLabel(d.status)}</StatusPill>
-                </button>
+                    <StatusPill tone={documentTone(d.status)}>{statusLabel(d.status)}</StatusPill>
+                  </button>
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerList>
           </section>
         );
       })}
@@ -419,11 +421,11 @@ function InvoiceDetail({
                 key={k}
                 type="button"
                 onClick={() => copy(v, k)}
-                className="w-full flex items-center justify-between py-2 border-b border-black/10 text-sm"
+                className="w-full flex items-center justify-between gap-3 py-3 border-b border-black/10 text-sm min-h-11"
               >
-                <span className="text-slate-500">{k}</span>
-                <span className="inline-flex items-center gap-2 font-medium">
-                  {copied === k ? "Copied" : v}
+                <span className="text-slate-500 shrink-0">{k}</span>
+                <span className="inline-flex items-center gap-2 font-medium min-w-0 text-right">
+                  <span className="truncate">{copied === k ? "Copied" : v}</span>
                   <Copy className="size-3.5 text-slate-400" aria-hidden />
                 </span>
               </button>

@@ -1,4 +1,6 @@
+import { motion, useReducedMotion } from "motion/react";
 import type { DocumentStatus, MilestoneStatus, ProjectStatus } from "../types";
+import { EASE } from "../motion";
 
 export function StatusPill({
   children,
@@ -7,6 +9,7 @@ export function StatusPill({
   children: string;
   tone?: "neutral" | "blocked" | "current" | "muted";
 }) {
+  const reduce = useReducedMotion();
   const cls =
     tone === "blocked"
       ? "bg-[#F8ECE8] text-[#BA593E]"
@@ -15,13 +18,25 @@ export function StatusPill({
         : tone === "muted"
           ? "text-slate-400"
           : "bg-[var(--page-panel)] text-slate-600";
+  const enter =
+    reduce || tone === "muted"
+      ? undefined
+      : tone === "blocked" || tone === "current"
+        ? { opacity: [0.5, 1, 0.78, 1] }
+        : { opacity: [0.65, 1] };
+
   if (tone === "muted") {
     return <span className={`text-[11px] font-medium ${cls}`}>{children}</span>;
   }
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${cls}`}>
+    <motion.span
+      className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${cls}`}
+      initial={false}
+      animate={enter}
+      transition={{ duration: 0.55, ease: EASE }}
+    >
       {children}
-    </span>
+    </motion.span>
   );
 }
 

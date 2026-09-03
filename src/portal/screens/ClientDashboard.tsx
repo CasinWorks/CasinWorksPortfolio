@@ -6,6 +6,7 @@ import { SITE } from "../../site";
 import { fetchAllProjects, fetchProjectsForClient } from "../api";
 import { usePortalAuth } from "../auth";
 import type { Project } from "../types";
+import { ProgressBar, StaggerItem, StaggerList } from "../motion";
 import { StatusPill, projectLabel } from "./ui";
 
 export function ClientDashboard() {
@@ -70,48 +71,50 @@ export function ClientDashboard() {
             )}
           </p>
         )}
-        {projects.map((p) => (
-          <div
-            key={p.id}
-            className="full-bleed-row grid lg:grid-cols-12 gap-4 py-8 group border-y border-black/10 -mt-px first:mt-0"
-          >
-            <Link to={`/portal/projects/${p.id}`} className="lg:col-span-7">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                {p.clientName || p.clientEmail || p.referenceCode} · {projectLabel(p.status)}
-              </p>
-              <h2 className="mt-2 font-serif text-2xl font-semibold tracking-tight group-hover:text-slate-700">{p.name}</h2>
-              {isAdmin && p.currentHoleTitle ? (
-                <p className="mt-2 text-slate-600">
-                  Now: <span className="font-medium text-black">{p.currentHoleTitle}</span>
+        {projects.length > 0 && (
+          <StaggerList>
+            {projects.map((p) => (
+            <StaggerItem
+              key={p.id}
+              className="full-bleed-row grid lg:grid-cols-12 gap-4 py-8 group border-y border-black/10 -mt-px first:mt-0"
+            >
+              <Link to={`/portal/projects/${p.id}`} className="lg:col-span-7">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  {p.clientName || p.clientEmail || p.referenceCode} · {projectLabel(p.status)}
                 </p>
-              ) : (
-                p.tagline && <p className="mt-2 text-slate-600">{p.tagline}</p>
-              )}
-            </Link>
-            <div className="lg:col-span-5 flex flex-col justify-center gap-3">
-              <Link to={`/portal/projects/${p.id}`}>
-                <div className="h-1.5 w-full bg-black/10 overflow-hidden">
-                  <div className="h-full bg-black" style={{ width: `${Math.min(100, p.progressPercentage || 0)}%` }} />
-                </div>
-                <div className="mt-3 flex items-center justify-between text-sm text-slate-500">
-                  <span>{p.progressPercentage || 0}% complete</span>
-                  <span className="inline-flex items-center gap-1 text-black font-medium">
-                    {isAdmin ? "Open project" : "Open course"} <ArrowRight className="size-4" aria-hidden />
-                  </span>
-                </div>
+                <h2 className="mt-2 font-serif text-2xl font-semibold tracking-tight group-hover:text-slate-700">{p.name}</h2>
+                {isAdmin && p.currentHoleTitle ? (
+                  <p className="mt-2 text-slate-600">
+                    Now: <span className="font-medium text-black">{p.currentHoleTitle}</span>
+                  </p>
+                ) : (
+                  p.tagline && <p className="mt-2 text-slate-600">{p.tagline}</p>
+                )}
               </Link>
-              {!isAdmin && (
-                <Link
-                  to={`/portal/projects/${p.id}/documents`}
-                  className="text-xs font-semibold underline underline-offset-4 w-fit"
-                >
-                  View records
+              <div className="lg:col-span-5 flex flex-col justify-center gap-3">
+                <Link to={`/portal/projects/${p.id}`}>
+                  <ProgressBar value={p.progressPercentage || 0} />
+                  <div className="mt-3 flex items-center justify-between text-sm text-slate-500">
+                    <span>{p.progressPercentage || 0}% complete</span>
+                    <span className="inline-flex items-center gap-1 text-black font-medium">
+                      {isAdmin ? "Open project" : "Open course"} <ArrowRight className="size-4" aria-hidden />
+                    </span>
+                  </div>
                 </Link>
-              )}
-              {p.budget && <StatusPill>{p.budget}</StatusPill>}
-            </div>
-          </div>
-        ))}
+                {!isAdmin && (
+                  <Link
+                    to={`/portal/projects/${p.id}/documents`}
+                    className="text-xs font-semibold underline underline-offset-4 w-fit"
+                  >
+                    View records
+                  </Link>
+                )}
+                {p.budget && <StatusPill>{p.budget}</StatusPill>}
+              </div>
+            </StaggerItem>
+          ))}
+          </StaggerList>
+        )}
       </div>
     </div>
   );

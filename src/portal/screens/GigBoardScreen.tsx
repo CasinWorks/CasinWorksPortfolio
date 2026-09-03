@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, MapPin, Search } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { StaggerItem, StaggerList, EASE } from "../motion";
 import { usePageMeta } from "../../hooks/usePageMeta";
 import { SITE } from "../../site";
 import { applyToGig, fetchApplicationsForUser, fetchOpenGigs } from "../api";
@@ -101,38 +102,41 @@ export function GigBoardScreen() {
         ))}
       </div>
 
-      <div className="mt-8 divide-y divide-black/10 border-y border-black/10">
-        {filtered.length === 0 && <p className="py-10 text-slate-500">No open postings right now.</p>}
+      {filtered.length === 0 && <p className="mt-8 py-10 text-slate-500 border-y border-black/10">No open postings right now.</p>}
+      {filtered.length > 0 && (
+      <StaggerList className="mt-8 divide-y divide-black/10 border-y border-black/10">
         {filtered.map((gig) => (
-          <button
-            key={gig.id}
-            type="button"
-            onClick={() => setSelected(gig)}
-            className="w-full text-left py-6 hover:bg-[var(--page-panel)]/70"
-          >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-              {gig.discipline || "Engagement"}
-              {gig.clientCode ? ` · ${gig.clientCode}` : ""}
-            </p>
-            <h2 className="mt-2 font-serif text-xl font-semibold">{gig.title}</h2>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {gig.location && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] border border-black/15">
-                  <MapPin className="size-3" aria-hidden /> {gig.location}
-                </span>
-              )}
-              {gig.workType && (
-                <span className="px-2 py-0.5 text-[11px] border border-black/15">{gig.workType}</span>
-              )}
-              {gig.rate && <span className="px-2 py-0.5 text-[11px] border border-black/15">{gig.rate}</span>}
-            </div>
-            <p className="mt-3 text-sm text-slate-600 line-clamp-2">{gig.description}</p>
-            <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold">
-              {appliedIds.has(gig.id) ? "Application sent" : "View dossier"} <ArrowRight className="size-3.5" aria-hidden />
-            </span>
-          </button>
+          <StaggerItem key={gig.id}>
+            <button
+              type="button"
+              onClick={() => setSelected(gig)}
+              className="w-full text-left py-6 hover:bg-[var(--page-panel)]/70"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                {gig.discipline || "Engagement"}
+                {gig.clientCode ? ` · ${gig.clientCode}` : ""}
+              </p>
+              <h2 className="mt-2 font-serif text-xl font-semibold">{gig.title}</h2>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {gig.location && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] border border-black/15">
+                    <MapPin className="size-3" aria-hidden /> {gig.location}
+                  </span>
+                )}
+                {gig.workType && (
+                  <span className="px-2 py-0.5 text-[11px] border border-black/15">{gig.workType}</span>
+                )}
+                {gig.rate && <span className="px-2 py-0.5 text-[11px] border border-black/15">{gig.rate}</span>}
+              </div>
+              <p className="mt-3 text-sm text-slate-600 line-clamp-2">{gig.description}</p>
+              <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold">
+                {appliedIds.has(gig.id) ? "Application sent" : "View dossier"} <ArrowRight className="size-3.5" aria-hidden />
+              </span>
+            </button>
+          </StaggerItem>
         ))}
-      </div>
+      </StaggerList>
+      )}
 
       <AnimatePresence>
         {selected && (
@@ -167,10 +171,11 @@ function GigModal({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <button type="button" className="absolute inset-0 bg-black/40" aria-label="Close" onClick={onClose} />
       <motion.div
-        initial={{ y: 40, opacity: 0 }}
+        initial={{ y: 24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 40, opacity: 0 }}
-        className="relative w-full max-w-lg bg-[var(--page-cream)] border border-black/15 z-10 max-h-[85vh] overflow-y-auto"
+        exit={{ y: 16, opacity: 0 }}
+        transition={{ duration: 0.24, ease: EASE }}
+        className="relative w-full max-w-lg bg-[var(--page-cream)] border border-black/15 z-10 max-h-[90dvh] overflow-y-auto rounded-t-2xl sm:rounded-none pb-[max(1rem,env(safe-area-inset-bottom))]"
       >
         <div className="px-5 py-4 border-b border-black/10 flex justify-between">
           <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">

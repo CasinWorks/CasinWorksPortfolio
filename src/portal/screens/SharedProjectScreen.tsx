@@ -4,6 +4,7 @@ import { usePageMeta } from "../../hooks/usePageMeta";
 import { SITE } from "../../site";
 import { listenProjectShare } from "../api";
 import { usePortalAuth } from "../auth";
+import { PageFade } from "../motion";
 import type { ProjectShare } from "../types";
 
 export function SharedProjectScreen() {
@@ -40,7 +41,7 @@ export function SharedProjectScreen() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a]">
+      <PageFade className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a]">
         <header className="border-b border-black/10">
           <div className="max-w-[var(--page-max)] mx-auto px-[var(--page-gutter)] py-4 flex flex-wrap items-center justify-between gap-3">
             <Link to="/" className="flex flex-col leading-tight">
@@ -66,7 +67,7 @@ export function SharedProjectScreen() {
             </Link>
           </div>
         </main>
-      </div>
+      </PageFade>
     );
   }
 

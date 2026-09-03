@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { animate, motion, useMotionValue, useMotionValueEvent, useReducedMotion } from "motion/react";
 import type { Milestone, ProjectDocument } from "../types";
 import { attachmentLabel, docsForHole, resolveAttachmentNeed } from "../pipeline";
+import { EASE } from "../motion";
 import { ProjectRecordsList } from "./ProjectRecordsList";
 import { milestoneLabel, milestoneTone, StatusPill } from "./ui";
 
@@ -42,6 +44,11 @@ function targetIndex(milestones: Milestone[]) {
   return 0;
 }
 
+function goalT(count: number, index: number) {
+  if (count <= 1) return 0.5;
+  return index / Math.max(1, count - 1);
+}
+
 export function FairwayVisual({
   milestones,
   documents,
@@ -54,61 +61,97 @@ export function FairwayVisual({
   onSelect: (m: Milestone) => void;
 }) {
   const shown = milestones;
+  const reduce = useReducedMotion();
   const [points, setPoints] = useState<Point[]>([]);
-  const [playhead, setPlayhead] = useState(0);
   const [focusedId, setFocusedId] = useState<string | null>(shown.find((m) => m.status === "current")?.id ?? shown[0]?.id ?? null);
-  const cancelRef = useRef(0);
+  const [runId, setRunId] = useState(0);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const ribbonRef = useRef<SVGPathElement>(null);
+  const progressRef = useRef<SVGPathElement>(null);
+  const ballRef = useRef<HTMLDivElement>(null);
+  const t = useMotionValue(0);
+  const [scale, setScale] = useState(1);
 
   const goal = useMemo(() => targetIndex(shown), [shown]);
   const goalId = shown[goal]?.id ?? "";
+  const dest = goalT(shown.length, goal);
+
+  const applyT = (v: number) => {
+    const el = ribbonRef.current;
+    const ball = ballRef.current;
+    if (el && ball) {
+      const len = el.getTotalLength();
+      if (len) {
+        const start = len * 0.1;
+        const end = len * 0.86;
+        const p = el.getPointAtLength(start + (end - start) * v);
+        ball.style.transform = `translate3d(${p.x - 8}px, ${p.y - 8}px, 0)`;
+      }
+    }
+    const stroke = progressRef.current;
+    if (stroke) {
+      stroke.style.strokeDasharray = `${8 + 78 * v} 100`;
+    }
+  };
+
+  useMotionValueEvent(t, "change", applyT);
 
   useLayoutEffect(() => {
     const sampled = samplePath(RIBBON, shown.length);
     setPoints(sampled.length === shown.length ? sampled : FALLBACK.slice(0, shown.length));
   }, [shown.length]);
 
-  useEffect(() => {
-    const token = ++cancelRef.current;
-    setPlayhead(0);
-    let i = 0;
-    const tick = () => {
-      if (cancelRef.current !== token) return;
-      setPlayhead(i);
-      if (i >= goal) return;
-      i += 1;
-      window.setTimeout(tick, 380);
-    };
-    tick();
-    return () => {
-      cancelRef.current += 1;
-    };
-  }, [goal, goalId]);
+  useLayoutEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const update = () => setScale(Math.min(1, el.clientWidth / 340));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
-  const ball = points[Math.min(playhead, Math.max(0, points.length - 1))];
+  useLayoutEffect(() => {
+    if (reduce) {
+      t.set(dest);
+      applyT(dest);
+      return;
+    }
+    applyT(t.get());
+  }, [points, dest, reduce, t]);
+
+  useEffect(() => {
+    if (reduce) {
+      t.set(dest);
+      applyT(dest);
+      return;
+    }
+    const from = t.get();
+    const distance = Math.abs(dest - from);
+    const duration = Math.min(0.85, 0.32 + distance * 0.5);
+    const controls = animate(t, dest, { duration, ease: EASE });
+    return () => controls.stop();
+  }, [dest, goalId, runId, reduce, t]);
+
   const focused = shown.find((m) => m.id === focusedId) ?? shown[goal];
   const focusedPoint = focused ? points[shown.findIndex((m) => m.id === focused.id)] : undefined;
   const calloutLeft = focusedPoint ? focusedPoint.x < 170 : true;
   const related = focused && documents ? docsForHole(focused.kind, documents) : [];
 
   function replay() {
-    const token = ++cancelRef.current;
-    setPlayhead(0);
-    let i = 0;
-    const tick = () => {
-      if (cancelRef.current !== token) return;
-      setPlayhead(i);
-      if (i >= goal) return;
-      i += 1;
-      window.setTimeout(tick, 380);
-    };
-    tick();
+    t.set(0);
+    applyT(0);
+    setRunId((n) => n + 1);
   }
 
   return (
     <div className="relative w-full flex flex-col items-center py-2">
-      <div className="relative w-[340px] h-[480px] shrink-0">
+      <div ref={wrapRef} className="w-full max-w-[340px]">
+        <div className="relative overflow-hidden" style={{ height: 480 * scale }}>
+          <div className="absolute top-0 left-0 origin-top-left" style={{ width: 340, height: 480, transform: `scale(${scale})` }}>
         <svg viewBox="0 0 340 480" className="absolute inset-0 w-full h-full pointer-events-none">
           <path
+            ref={ribbonRef}
             d={RIBBON}
             fill="none"
             stroke="#DDD6C6"
@@ -117,15 +160,15 @@ export function FairwayVisual({
             strokeLinejoin="round"
           />
           <path
+            ref={progressRef}
             d={RIBBON}
             fill="none"
             stroke="#1a1a1a"
             strokeWidth="38"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="fairway-progress"
             pathLength={100}
-            strokeDasharray={`${shown.length <= 1 ? 8 : (playhead / Math.max(1, shown.length - 1)) * 78 + 8} 100`}
+            strokeDasharray="8 100"
             opacity={0.08}
           />
           <text x="168" y="23" textAnchor="middle" className="fill-slate-500 text-[11px]">
@@ -156,38 +199,43 @@ export function FairwayVisual({
                   ? "bg-white text-[#1a1a1a] border-black/25"
                   : "bg-[#1a1a1a] text-white border-[#1a1a1a]";
           return (
-            <button
+            <motion.button
               key={m.id}
               type="button"
               onClick={() => setFocusedId(m.id)}
               style={{ left: slot.x - 14, top: slot.y - 14 }}
-              className={`absolute z-10 size-7 rounded-full border text-[11px] font-semibold flex items-center justify-center transition-transform duration-200 hover:scale-110 ${cls} ${
-                active ? "ring-4 ring-black/10 scale-110" : ""
+              initial={false}
+              animate={{
+                scale: active || isCurrent ? 1.12 : 1,
+                backgroundColor:
+                  m.status === "blocked" ? "#BA593E" : m.status === "upcoming" ? "#ffffff" : "#1a1a1a",
+                color: m.status === "upcoming" ? "#1a1a1a" : "#ffffff",
+                borderColor:
+                  m.status === "blocked" ? "#BA593E" : m.status === "upcoming" ? "rgba(0,0,0,0.25)" : "#1a1a1a",
+              }}
+              transition={reduce ? { duration: 0 } : { duration: 0.28, ease: EASE }}
+              className={`absolute z-10 size-7 rounded-full border text-[11px] font-semibold flex items-center justify-center ${cls} ${
+                active ? "ring-4 ring-black/10" : ""
               }`}
               aria-label={`${m.title}, ${milestoneLabel(m.status)}`}
             >
               {i + 1}
-            </button>
+            </motion.button>
           );
         })}
 
-        {ball && (
-          <div
-            className="absolute z-20 size-4 rounded-full bg-white border-2 border-black shadow-[0_1px_4px_rgba(0,0,0,0.25)] pointer-events-none"
-            style={{
-              left: ball.x - 8,
-              top: ball.y - 8,
-              transition: "left 0.36s cubic-bezier(0.22, 1, 0.36, 1), top 0.36s cubic-bezier(0.22, 1, 0.36, 1)",
-            }}
-            aria-hidden
-          >
-            <span className="absolute inset-[3px] rounded-full border border-black/20" />
-          </div>
-        )}
+        <div
+          ref={ballRef}
+          className="absolute z-20 top-0 left-0 size-4 rounded-full bg-white border-2 border-black shadow-[0_1px_4px_rgba(0,0,0,0.25)] pointer-events-none will-change-transform"
+          style={{ visibility: points.length ? "visible" : "hidden" }}
+          aria-hidden
+        >
+          <span className="absolute inset-[3px] rounded-full border border-black/20" />
+        </div>
 
         {focused && focusedPoint && (
           <div
-            className={`absolute z-30 max-w-[168px] rounded-lg px-3 py-2 shadow-sm text-left transition-all duration-200 ${
+            className={`absolute z-30 max-w-[168px] rounded-lg px-3 py-2 shadow-sm text-left ${
               focused.status === "blocked" ? "bg-[#BA593E] text-white" : "bg-[#1a1a1a] text-white"
             }`}
             style={{
@@ -199,11 +247,13 @@ export function FairwayVisual({
             <div className="text-[11px] opacity-90 mt-0.5">{focused.date}</div>
           </div>
         )}
+          </div>
+        </div>
       </div>
 
       {focused && (
         <div className="mt-4 w-full max-w-xl border border-black/10 bg-white p-4">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                 Hole {(shown.findIndex((m) => m.id === focused.id) + 1) || 1}

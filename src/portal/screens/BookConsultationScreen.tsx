@@ -134,8 +134,7 @@ export function BookConsultationScreen() {
         Book an hour, <span className="italic text-slate-400">on the calendar.</span>
       </h1>
       <p className="mt-3 max-w-xl text-slate-600">
-        Weekdays, Manila time. Morning 9–11, afternoon 1–4. ₱{SITE.consultingHourlyRatePhp.toLocaleString("en-US")}{" "}
-        per hour. After you request a slot, save it to your calendar — CasinWorks confirms by hand.
+        Weekdays, Manila time. Morning 9–11, afternoon 1–4. After you request a slot, save it to your calendar — CasinWorks confirms by hand.
       </p>
       {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
 
@@ -200,7 +199,8 @@ export function BookConsultationScreen() {
           <div className="grid grid-cols-7 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-2">
             {WEEKDAYS.map((d) => (
               <div key={d} className="text-center py-1">
-                {d}
+                <span className="sm:hidden">{d.slice(0, 1)}</span>
+                <span className="hidden sm:inline">{d}</span>
               </div>
             ))}
           </div>
@@ -221,7 +221,7 @@ export function BookConsultationScreen() {
                     setHour(null);
                     setJustBooked(null);
                   }}
-                  className={`aspect-square rounded-full text-sm font-medium ${
+                  className={`min-h-10 sm:min-h-0 aspect-square rounded-full text-sm font-medium ${
                     selected
                       ? "bg-black text-white"
                       : hasSlot
@@ -260,7 +260,8 @@ export function BookConsultationScreen() {
             {dateIso ? `Times · ${dateIso}` : "Pick a weekday"}
           </p>
           <div className="mt-2 flex flex-wrap gap-2 min-h-[2.5rem]">
-            {!dateIso && <p className="text-sm text-slate-500">Select a date on the left.</p>}
+            {!dateIso && <p className="text-sm text-slate-500 lg:hidden">Select a date on the calendar.</p>}
+            {!dateIso && <p className="text-sm text-slate-500 hidden lg:block">Select a date on the left.</p>}
             {dateIso && openHours.length === 0 && (
               <p className="text-sm text-slate-500">No open times that day for {hours} hour{hours === 1 ? "" : "s"}.</p>
             )}

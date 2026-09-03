@@ -8,7 +8,6 @@ import 'theme.dart';
 import 'widgets.dart';
 
 const slotHours = [9, 10, 11, 13, 14, 15, 16];
-const consultRate = 5000;
 
 DateTime slotStart(String dateIso, int hour) {
   final h = hour.toString().padLeft(2, '0');
@@ -76,7 +75,7 @@ Event consultEvent({required DateTime start, required int hours}) {
   final local = start.isUtc ? start.toLocal() : start;
   return Event(
     title: 'CasinWorks consultation',
-    description: '$hours hour${hours == 1 ? '' : 's'} with Christian Joshua Casin. PHP ${consultRate.toString()}/hr.',
+    description: '$hours hour${hours == 1 ? '' : 's'} with Christian Joshua Casin.',
     location: 'Video call — CasinWorks',
     startDate: local,
     endDate: local.add(Duration(hours: hours)),
@@ -231,7 +230,7 @@ class _BookPageState extends State<BookPage> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Weekdays, Manila time. Morning 9–11, afternoon 1–4. ₱${consultRate.toString()} per hour. After you request a slot, save it to your calendar.',
+                        'Weekdays, Manila time. Morning 9–11, afternoon 1–4. After you request a slot, save it to your calendar.',
                         style: bodyStyle,
                       ),
                       if (error != null) ...[

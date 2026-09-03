@@ -12,6 +12,7 @@ import {
 } from "../api";
 import type { CourseTemplate, Milestone } from "../types";
 import { attachmentLabel, resolveAttachmentNeed } from "../pipeline";
+import { TimelineDot } from "../motion";
 import { StatusPill, milestoneLabel, milestoneTone } from "./ui";
 
 export function MilestoneCourseList({
@@ -115,7 +116,8 @@ export function MilestoneCourseList({
           } ${dragId === m.id ? "opacity-50" : ""}`}
         >
           {reorderable && (
-            <div className="flex flex-col justify-center shrink-0 border-r border-black/5">
+            <>
+            <div className="hidden sm:flex flex-col justify-center shrink-0 border-r border-black/5">
               <button
                 type="button"
                 draggable
@@ -145,24 +147,37 @@ export function MilestoneCourseList({
                 <ChevronDown className="size-3.5" aria-hidden />
               </button>
             </div>
+            <div className="flex sm:hidden flex-col justify-center shrink-0 border-r border-black/5">
+              <button
+                type="button"
+                disabled={i === 0 || busy}
+                onClick={() => shift(m.id, -1)}
+                className="min-h-11 min-w-11 flex items-center justify-center text-slate-400 disabled:opacity-30"
+                aria-label={`Move ${m.title} up`}
+              >
+                <ChevronUp className="size-4" aria-hidden />
+              </button>
+              <button
+                type="button"
+                disabled={i === rows.length - 1 || busy}
+                onClick={() => shift(m.id, 1)}
+                className="min-h-11 min-w-11 flex items-center justify-center text-slate-400 disabled:opacity-30"
+                aria-label={`Move ${m.title} down`}
+              >
+                <ChevronDown className="size-4" aria-hidden />
+              </button>
+            </div>
+            </>
           )}
           <button
             type="button"
             onClick={() => onSelect(m)}
-            className="flex-1 py-3 px-3 flex items-center justify-between text-left"
+            className="flex-1 min-w-0 py-3 px-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between text-left"
           >
-            <div className="flex items-center gap-2.5">
-              <span className="w-5 text-[11px] font-mono text-slate-400">{i + 1}</span>
-              <span
-                className={`size-2.5 rounded-full shrink-0 ${
-                  m.status === "blocked"
-                    ? "bg-[#BA593E]"
-                    : m.status === "upcoming"
-                      ? "border border-slate-400 bg-transparent"
-                      : "bg-black"
-                }`}
-              />
-              <div>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-5 text-[11px] font-mono text-slate-400 shrink-0">{i + 1}</span>
+              <TimelineDot status={m.status} className="size-2.5 shrink-0" />
+              <div className="min-w-0">
                 <div className="font-semibold text-sm">{m.title}</div>
                 <div className="text-xs text-slate-500">
                   {m.date}
@@ -179,7 +194,7 @@ export function MilestoneCourseList({
               type="button"
               disabled={busy}
               onClick={() => void removeHole(m)}
-              className="shrink-0 px-3 text-slate-400 hover:text-red-800 disabled:opacity-50"
+              className="shrink-0 min-w-11 px-3 text-slate-400 hover:text-red-800 disabled:opacity-50"
               aria-label={`Delete ${m.title}`}
             >
               <Trash2 className="size-4" aria-hidden />
@@ -286,7 +301,7 @@ export function CourseTemplateBar({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Toyota delivery course"
-                className="flex-1 min-w-[12rem] px-3 py-2 bg-[var(--page-panel)] border border-black/15 text-sm"
+                className="flex-1 min-w-0 w-full sm:min-w-[12rem] px-3 py-2 bg-[var(--page-panel)] border border-black/15 text-sm"
               />
               <button
                 type="button"

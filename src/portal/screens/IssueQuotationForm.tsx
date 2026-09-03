@@ -6,7 +6,6 @@ import {
   consultingDetails,
   consultingFee,
   consultingLine,
-  CONSULTING_HOURLY_RATE,
   defaultMilestones,
   defaultScope,
   formatPeso,
@@ -199,7 +198,7 @@ export function IssueQuotationForm({
         ))}
         <p className="text-sm text-right">
           Total contract value <span className="font-semibold">{formatPeso(total)}</span>
-          <span className="block text-xs text-slate-500 font-normal mt-0.5">Consulting is ₱{CONSULTING_HOURLY_RATE.toLocaleString("en-US")} per hour. Hours fill the amount automatically.</span>
+          <span className="block text-xs text-slate-500 font-normal mt-0.5">Hours fill the amount automatically when you add a time-and-materials line.</span>
         </p>
 
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Payment schedule</p>

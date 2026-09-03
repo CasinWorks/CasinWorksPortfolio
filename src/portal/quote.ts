@@ -13,7 +13,7 @@ export const CONSULTING_HOURLY_RATE = SITE.consultingHourlyRatePhp;
 
 export const DEFAULT_QUOTE_TERMS = [
   "This quotation is valid for {validity} days from date of issuance.",
-  "Consulting time is billed at ₱" + CONSULTING_HOURLY_RATE.toLocaleString("en-US") + " per hour unless a fixed project fee is stated in the scope.",
+  "The first consultation is complimentary. This quotation covers the agreed build scope only.",
   "Scope covers system development, deployment, and documentation only. Ongoing support and maintenance are not included.",
   "Payment schedule is milestone-based as indicated above.",
 ];
@@ -75,7 +75,14 @@ export function consultingLine(hours = 1, projectName?: string): QuoteScopeItem 
 }
 
 export function defaultScope(project: Project): QuoteScopeItem[] {
-  return [consultingLine(1, project.name)];
+  return [
+    {
+      id: newId(),
+      description: project.name,
+      details: "",
+      amount: 0,
+    },
+  ];
 }
 
 export function defaultMilestones(total: number): QuoteMilestone[] {

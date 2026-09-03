@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Download } from "lucide-react";
 import { docTypeName } from "../api";
 import type { ProjectDocument } from "../types";
+import { StaggerItem, StaggerList } from "../motion";
 
 export function ProjectRecordsList({
   projectId,
@@ -15,9 +16,9 @@ export function ProjectRecordsList({
   }
 
   return (
-    <ul className="divide-y divide-black/10 border-y border-black/10">
+    <StaggerList className="divide-y divide-black/10 border-y border-black/10">
       {documents.map((d) => (
-        <li key={d.id} className="py-3 flex flex-wrap items-center justify-between gap-2">
+        <StaggerItem key={d.id} className="py-3 flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-2">
           <Link to={`/portal/projects/${projectId}/documents/${d.id}`} className="min-w-0">
             <div className="text-sm font-semibold">{d.title}</div>
             <div className="text-xs text-slate-500 mt-0.5">
@@ -44,8 +45,8 @@ export function ProjectRecordsList({
               </a>
             )}
           </div>
-        </li>
+        </StaggerItem>
       ))}
-    </ul>
+    </StaggerList>
   );
 }

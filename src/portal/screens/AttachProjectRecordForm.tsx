@@ -1,6 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { ATTACHABLE_TYPES, attachProjectRecord, docTypeName } from "../api";
-import { CONSULTING_HOURLY_RATE, consultingDetails, consultingFee, formatPeso } from "../quote";
 import type { DocumentType, Project } from "../types";
 
 const FILE_ACCEPT =
@@ -38,28 +37,25 @@ export function AttachProjectRecordForm({
 
   const needsMeeting = type === "consultation" || type === "demo";
   const consultHours = type === "consultation" ? Number(hours) || 0 : 0;
-  const consultFee = type === "consultation" ? consultingFee(consultHours) : 0;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
     setSaving(true);
     try {
-      const billingNote =
+      const hoursNote =
         type === "consultation" && consultHours > 0
-          ? consultingDetails(consultHours)
+          ? `${consultHours} hour${consultHours === 1 ? "" : "s"}`
           : "";
       await attachProjectRecord({
         projectId,
         type,
         title: title || `${docTypeName(type)} — ${date}`,
-        notes: [billingNote, notes.trim()].filter(Boolean).join("\n\n"),
+        notes: [hoursNote, notes.trim()].filter(Boolean).join("\n\n"),
         date,
         attendees: needsMeeting ? attendees : undefined,
         file,
         uploadedBy,
-        amount: type === "consultation" && consultFee ? formatPeso(consultFee) : undefined,
-        numericAmount: type === "consultation" && consultFee ? consultFee : undefined,
       });
       setTitle("");
       setNotes("");
@@ -127,11 +123,7 @@ export function AttachProjectRecordForm({
               placeholder="Hours"
               className="px-3.5 py-2.5 bg-white border border-black/15 text-sm"
             />
-            <p className="text-sm text-slate-600">
-              {consultHours > 0
-                ? `${consultingDetails(consultHours)} = ${formatPeso(consultFee)}`
-                : `₱${CONSULTING_HOURLY_RATE.toLocaleString("en-US")} per hour`}
-            </p>
+            <p className="text-sm text-slate-600">Duration on the record. Not billed.</p>
           </div>
         )}
         <textarea

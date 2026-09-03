@@ -57,7 +57,7 @@ export function consultationIcs(input: { startsAt: string; hours: number; name?:
   const start = new Date(input.startsAt);
   const end = new Date(start.getTime() + input.hours * 60 * 60 * 1000);
   const summary = "CasinWorks consultation";
-  const desc = `${input.hours} hour${input.hours === 1 ? "" : "s"} with ${SITE.fullName}. ${formatPesoPlain(SITE.consultingHourlyRatePhp)}/hr.`;
+  const desc = `${input.hours} hour${input.hours === 1 ? "" : "s"} with ${SITE.fullName}.`;
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -75,10 +75,6 @@ export function consultationIcs(input: { startsAt: string; hours: number; name?:
     "END:VEVENT",
     "END:VCALENDAR",
   ].join("\r\n");
-}
-
-function formatPesoPlain(n: number) {
-  return `PHP ${n.toLocaleString("en-US")}`;
 }
 
 export function googleCalendarUrl(input: { startsAt: string; hours: number }) {

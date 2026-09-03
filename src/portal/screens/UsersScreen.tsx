@@ -63,11 +63,11 @@ export function UsersScreen() {
         {accounts.map((u) => {
           const client = byEmail.get(u.email.toLowerCase());
           return (
-            <div key={u.uid} className="py-4 flex flex-wrap items-start justify-between gap-3">
-              <div>
+            <div key={u.uid} className="py-4 flex flex-col sm:flex-row sm:flex-wrap sm:items-start justify-between gap-3">
+              <div className="min-w-0">
                 <div className="font-semibold">{u.displayName || u.email}</div>
                 <div className="text-sm text-slate-700 mt-0.5">{u.company || "Company not set"}</div>
-                <div className="text-xs text-slate-500 mt-0.5">
+                <div className="text-xs text-slate-500 mt-0.5 break-words">
                   {u.email}
                   {` · ${u.role === "subcontractor" ? "Subcontractor" : "Client account"}`}
                 </div>

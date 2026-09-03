@@ -4,6 +4,7 @@ import { usePageMeta } from "../../hooks/usePageMeta";
 import { SITE } from "../../site";
 import { createClient, fetchAllClients } from "../api";
 import type { Client } from "../types";
+import { StaggerItem, StaggerList } from "../motion";
 
 export function ClientsScreen() {
   usePageMeta({
@@ -50,21 +51,25 @@ export function ClientsScreen() {
 
       <section>
         <h2 className="font-serif text-2xl font-semibold">Directory</h2>
-        <div className="mt-4 divide-y divide-black/10 border-y border-black/10 max-w-3xl">
-          {clients.length === 0 && <p className="py-6 text-slate-500">No clients yet. Add one above.</p>}
+        {clients.length === 0 && <p className="mt-4 py-6 text-slate-500 border-y border-black/10 max-w-3xl">No clients yet. Add one above.</p>}
+        {clients.length > 0 && (
+        <StaggerList className="mt-4 divide-y divide-black/10 border-y border-black/10 max-w-3xl">
           {clients.map((c) => (
-            <Link key={c.id} to={`/portal/admin/clients/${c.id}`} className="py-4 flex flex-wrap items-center justify-between gap-3 hover:bg-[var(--page-panel)]/80">
-              <div>
-                <div className="font-semibold">{c.company || c.contactName}</div>
-                <div className="text-xs text-slate-500">
-                  {c.contactName}
-                  {c.email ? ` · ${c.email}` : ""}
+            <StaggerItem key={c.id}>
+              <Link to={`/portal/admin/clients/${c.id}`} className="py-4 flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-2 sm:gap-3 hover:bg-[var(--page-panel)]/80 min-h-12">
+                <div>
+                  <div className="font-semibold">{c.company || c.contactName}</div>
+                  <div className="text-xs text-slate-500">
+                    {c.contactName}
+                    {c.email ? ` · ${c.email}` : ""}
+                  </div>
                 </div>
-              </div>
-              <span className="text-xs font-semibold">Open →</span>
-            </Link>
+                <span className="text-xs font-semibold">Open →</span>
+              </Link>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerList>
+        )}
       </section>
     </div>
   );
