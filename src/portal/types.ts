@@ -142,6 +142,8 @@ export interface Project {
   currentHoleTitle?: string;
   currentHoleKind?: string;
   shareToken?: string;
+  /** Set when an invoice or remittance is on file. Blocks project delete. */
+  paymentStarted?: boolean;
 }
 
 export interface Milestone {
@@ -228,6 +230,20 @@ export interface Gig {
   deliverables?: string[];
   qualifications?: string[];
   clientCode?: string;
+}
+
+export type ConsultationStatus = "requested" | "confirmed" | "cancelled";
+
+export interface ConsultationBooking {
+  id: string;
+  clientUid: string;
+  clientEmail: string;
+  clientName: string;
+  company?: string;
+  startsAt: string;
+  hours: number;
+  notes?: string;
+  status: ConsultationStatus;
 }
 
 export interface GigApplication {

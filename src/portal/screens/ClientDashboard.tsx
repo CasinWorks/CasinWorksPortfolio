@@ -46,6 +46,12 @@ export function ClientDashboard() {
           ? "Each card is an engagement. Open it to see the current milestone — issue a quotation, log a consult, or mark the hole done from there."
           : "Project cards, milestones, and documents — not a purchased product marketplace. CasinWorks confirms remittances by hand."}
       </p>
+      <Link
+        to="/portal/book"
+        className="mt-6 inline-flex rounded-full bg-black text-white px-5 py-2.5 text-sm font-semibold"
+      >
+        {isAdmin ? "Consultation calendar" : "Book a consultation"}
+      </Link>
       {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
 
       <div className="mt-10">

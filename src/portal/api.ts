@@ -26,6 +26,8 @@ import type {
   MilestoneStatus,
   PortalRole,
   PortalUser,
+  ConsultationBooking,
+  ConsultationStatus,
   Project,
   ProjectDocument,
   ProjectShare,
@@ -219,7 +221,34 @@ export async function createDocument(payload: Omit<ProjectDocument, "id">) {
     Object.entries({ ...payload, createdAt: serverTimestamp() }).filter(([, value]) => value !== undefined),
   );
   const refDoc = await addDoc(collection(db(), "documents"), body);
+  if (payload.type === "invoice" || payload.type === "remittance") {
+    await markPaymentStarted(payload.projectId);
+  }
   return refDoc.id;
+}
+
+async function markPaymentStarted(projectId: string) {
+  try {
+    await updateProject(projectId, { paymentStarted: true });
+  } catch {
+    // Client remittance uploads cannot patch the project; delete still checks documents.
+  }
+}
+
+export const PROJECT_DELETE_LOCKED_MESSAGE =
+  "This project can’t be deleted after it has moved to sending the downpayment.";
+
+export function canDeleteProject(
+  project: Pick<Project, "paymentStarted" | "currentHoleKind"> | null | undefined,
+  documents: Pick<ProjectDocument, "type">[] = [],
+  milestones: Pick<Milestone, "kind" | "status">[] = [],
+) {
+  if (!project) return false;
+  if (project.paymentStarted) return false;
+  if (documents.some((d) => d.type === "invoice" || d.type === "remittance")) return false;
+  if (project.currentHoleKind === "invoice") return false;
+  if (milestones.some((m) => m.kind === "invoice" && (m.status === "current" || m.status === "done"))) return false;
+  return true;
 }
 
 export async function updateDocumentStatus(id: string, status: DocumentStatus, extra: Record<string, unknown> = {}) {
@@ -367,6 +396,11 @@ export async function deleteProject(id: string) {
     getDocs(query(collection(db(), "milestones"), where("projectId", "==", id))),
     getDocs(query(collection(db(), "documents"), where("projectId", "==", id))),
   ]);
+  const docs = documents.docs.map((d) => d.data() as Omit<ProjectDocument, "id">);
+  const holes = milestones.docs.map((d) => d.data() as Omit<Milestone, "id">);
+  if (!canDeleteProject(project, docs, holes)) {
+    throw new Error(PROJECT_DELETE_LOCKED_MESSAGE);
+  }
   await Promise.all([
     ...milestones.docs.map((d) => deleteDoc(d.ref)),
     ...documents.docs.map((d) => deleteDoc(d.ref)),
@@ -716,6 +750,58 @@ export const DOCUMENT_GROUPS: { id: string; label: string; types: DocumentType[]
 ];
 
 export const ATTACHABLE_TYPES: DocumentType[] = ["consultation", "demo", "proposal", "technical", "other"];
+
+function consultationFromData(id: string, data: Record<string, unknown>): ConsultationBooking {
+  return {
+    id,
+    clientUid: String(data.clientUid ?? ""),
+    clientEmail: String(data.clientEmail ?? ""),
+    clientName: String(data.clientName ?? ""),
+    company: data.company ? String(data.company) : undefined,
+    startsAt: String(data.startsAt ?? ""),
+    hours: Number(data.hours ?? 1),
+    notes: data.notes ? String(data.notes) : undefined,
+    status: (data.status as ConsultationStatus) ?? "requested",
+  };
+}
+
+export function listenConsultations(cb: (rows: ConsultationBooking[]) => void, onError?: (message: string) => void) {
+  return onSnapshot(
+    collection(db(), "consultations"),
+    (snap) => cb(snap.docs.map((d) => consultationFromData(d.id, d.data() as Record<string, unknown>))),
+    (err) => onError?.(err.message),
+  );
+}
+
+export async function createConsultation(input: {
+  clientUid: string;
+  clientEmail: string;
+  clientName: string;
+  company?: string;
+  startsAt: string;
+  hours: number;
+  notes?: string;
+}) {
+  const refDoc = await addDoc(
+    collection(db(), "consultations"),
+    omitUndefined({
+      clientUid: input.clientUid,
+      clientEmail: input.clientEmail.trim().toLowerCase(),
+      clientName: input.clientName.trim(),
+      company: input.company?.trim() || undefined,
+      startsAt: input.startsAt,
+      hours: input.hours,
+      notes: input.notes?.trim() || undefined,
+      status: "requested",
+      createdAt: serverTimestamp(),
+    } as Record<string, unknown>),
+  );
+  return refDoc.id;
+}
+
+export async function updateConsultationStatus(id: string, status: ConsultationStatus) {
+  await updateDoc(doc(db(), "consultations", id), { status });
+}
 
 export async function attachProjectRecord(input: {
   projectId: string;

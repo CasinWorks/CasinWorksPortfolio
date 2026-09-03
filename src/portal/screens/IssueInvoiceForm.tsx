@@ -16,7 +16,7 @@ export function IssueInvoiceForm({
   compact?: boolean;
 }) {
   const [projectId, setProjectId] = useState(lockedProjectId ?? "");
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState("Downpayment");
   const [amount, setAmount] = useState("");
   const [paymentUrl, setPaymentUrl] = useState("");
   const [saving, setSaving] = useState(false);
@@ -65,7 +65,7 @@ export function IssueInvoiceForm({
             ))}
           </select>
         )}
-        <input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Invoice title" className="px-3.5 py-2.5 bg-white border border-black/15 text-sm" />
+        <input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Downpayment" className="px-3.5 py-2.5 bg-white border border-black/15 text-sm" />
         <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount" className="px-3.5 py-2.5 bg-white border border-black/15 text-sm" />
         <input value={paymentUrl} onChange={(e) => setPaymentUrl(e.target.value)} placeholder="External pay URL (opens new tab)" className="px-3.5 py-2.5 bg-white border border-black/15 text-sm" />
         {error && <p className="sm:col-span-2 text-sm text-red-700">{error}</p>}

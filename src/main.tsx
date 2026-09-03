@@ -17,6 +17,7 @@ import { ClientDetailScreen } from './portal/screens/ClientDetailScreen.tsx';
 import { ClientsScreen } from './portal/screens/ClientsScreen.tsx';
 import { UsersScreen } from './portal/screens/UsersScreen.tsx';
 import { PortalRegisterScreen, PortalSignInScreen } from './portal/screens/AuthScreens.tsx';
+import { BookConsultationScreen } from './portal/screens/BookConsultationScreen.tsx';
 import { ClientDashboard } from './portal/screens/ClientDashboard.tsx';
 import { DocumentsScreen } from './portal/screens/DocumentsScreen.tsx';
 import { GigBoardScreen } from './portal/screens/GigBoardScreen.tsx';
@@ -45,6 +46,7 @@ createRoot(document.getElementById('root')!).render(
               <Route index element={<HomeRedirect />} />
               <Route element={<RequireClientArea />}>
                 <Route path="dashboard" element={<ClientDashboard />} />
+                <Route path="book" element={<BookConsultationScreen />} />
                 <Route path="projects/:projectId" element={<ProjectProgressScreen />} />
                 <Route path="projects/:projectId/documents" element={<DocumentsScreen />} />
                 <Route path="projects/:projectId/documents/:documentId" element={<DocumentsScreen />} />

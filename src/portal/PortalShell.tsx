@@ -26,6 +26,14 @@ export function PortalShell() {
                 Projects
               </NavLink>
             )}
+            {showClient && (
+              <NavLink
+                to="/portal/book"
+                className={({ isActive }) => (isActive ? "text-black" : "text-slate-500 hover:text-black")}
+              >
+                Book
+              </NavLink>
+            )}
             {showGigs && (
               <NavLink
                 to="/portal/gigs"

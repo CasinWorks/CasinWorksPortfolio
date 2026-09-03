@@ -2,9 +2,18 @@ import { type FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { usePageMeta } from "../../hooks/usePageMeta";
 import { SITE } from "../../site";
-import { createGig, fetchAllProjects, fetchDocuments, statusLabel, updateDocumentStatus } from "../api";
+import {
+  createGig,
+  fetchAllProjects,
+  fetchDocuments,
+  listenConsultations,
+  statusLabel,
+  updateConsultationStatus,
+  updateDocumentStatus,
+} from "../api";
 import { usePortalAuth } from "../auth";
-import type { ProjectDocument } from "../types";
+import { formatConsultWhen } from "../booking";
+import type { ConsultationBooking, ProjectDocument } from "../types";
 
 export function AdminScreen() {
   usePageMeta({
@@ -14,6 +23,7 @@ export function AdminScreen() {
   });
   const { profile } = usePortalAuth();
   const [pending, setPending] = useState<ProjectDocument[]>([]);
+  const [consults, setConsults] = useState<ConsultationBooking[]>([]);
   const [msg, setMsg] = useState("");
 
   async function reload() {
@@ -24,6 +34,7 @@ export function AdminScreen() {
 
   useEffect(() => {
     reload().catch(() => undefined);
+    return listenConsultations(setConsults);
   }, []);
 
   return (
@@ -50,6 +61,59 @@ export function AdminScreen() {
         </p>
         {msg && <p className="mt-4 text-sm bg-black text-white px-3 py-2">{msg}</p>}
       </div>
+
+      <section>
+        <h2 className="font-serif text-2xl font-semibold">Consultation requests</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Clients book from{" "}
+          <Link to="/portal/book" className="underline underline-offset-2">
+            Book
+          </Link>
+          . Confirm a slot, then they keep it on their calendar.
+        </p>
+        <div className="mt-4 divide-y divide-black/10 border-y border-black/10">
+          {consults.filter((c) => c.status === "requested").length === 0 && (
+            <p className="py-6 text-slate-500">No open requests.</p>
+          )}
+          {consults
+            .filter((c) => c.status === "requested")
+            .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+            .map((c) => (
+              <div key={c.id} className="py-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="font-semibold">{formatConsultWhen(c.startsAt)}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">
+                    {c.clientName}
+                    {c.company ? ` · ${c.company}` : ""} · {c.hours} hr{c.hours === 1 ? "" : "s"}
+                  </div>
+                  {c.notes && <p className="mt-1 text-sm text-slate-600">{c.notes}</p>}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await updateConsultationStatus(c.id, "confirmed");
+                      setMsg("Consultation confirmed.");
+                    }}
+                    className="rounded-full bg-black text-white px-4 py-1.5 text-xs font-semibold"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await updateConsultationStatus(c.id, "cancelled");
+                      setMsg("Consultation cancelled.");
+                    }}
+                    className="rounded-full border border-black/15 px-4 py-1.5 text-xs font-semibold"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+        </div>
+      </section>
 
       <section>
         <h2 className="font-serif text-2xl font-semibold">Waiting on you</h2>

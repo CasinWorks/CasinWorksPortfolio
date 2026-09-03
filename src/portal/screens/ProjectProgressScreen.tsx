@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowRight, FileText } from "lucide-react";
 import { usePageMeta } from "../../hooks/usePageMeta";
 import { SITE } from "../../site";
-import { deleteProject, fetchDocuments, fetchMilestones, fetchProject, findUserByEmail, updateProject } from "../api";
+import { canDeleteProject, deleteProject, fetchDocuments, fetchMilestones, fetchProject, findUserByEmail, PROJECT_DELETE_LOCKED_MESSAGE, updateProject } from "../api";
 import { attachmentLabel, docsForHole, resolveAttachmentNeed } from "../pipeline";
 import { usePortalAuth } from "../auth";
 import type { Milestone, Project, ProjectDocument, ProjectStatus } from "../types";
@@ -329,6 +329,8 @@ export function ProjectProgressScreen() {
           <summary className="cursor-pointer text-sm font-semibold">Project settings</summary>
           <ProjectSettings
             project={project}
+            documents={documents}
+            milestones={milestones}
             onSaved={reload}
             onDeleted={() => navigate("/portal/dashboard")}
           />
@@ -425,10 +427,14 @@ function ClientProjectHeader({
 
 function ProjectSettings({
   project,
+  documents,
+  milestones,
   onSaved,
   onDeleted,
 }: {
   project: Project;
+  documents: ProjectDocument[];
+  milestones: Milestone[];
   onSaved: () => Promise<void>;
   onDeleted: () => void;
 }) {
@@ -439,6 +445,7 @@ function ProjectSettings({
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [busyDelete, setBusyDelete] = useState(false);
+  const deleteLocked = !canDeleteProject(project, documents, milestones);
 
   useEffect(() => {
     setName(project.name);
@@ -499,10 +506,18 @@ function ProjectSettings({
         <button type="submit" disabled={saving} className="rounded-full bg-black text-white text-sm font-semibold px-6 py-2.5 disabled:opacity-50">
           {saving ? "Saving…" : "Save"}
         </button>
-        <button type="button" disabled={busyDelete} onClick={() => void onDelete()} className="rounded-full border border-black/15 px-6 py-2.5 text-sm font-semibold text-red-800 disabled:opacity-50">
+        <button
+          type="button"
+          disabled={busyDelete || deleteLocked}
+          onClick={() => void onDelete()}
+          className="rounded-full border border-black/15 px-6 py-2.5 text-sm font-semibold text-red-800 disabled:opacity-50"
+        >
           Delete project
         </button>
       </div>
+      {deleteLocked && (
+        <p className="sm:col-span-2 text-sm text-slate-500">{PROJECT_DELETE_LOCKED_MESSAGE}</p>
+      )}
       {error && <p className="sm:col-span-2 text-sm text-red-700">{error}</p>}
     </form>
   );

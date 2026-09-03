@@ -79,7 +79,8 @@ service cloud.firestore {
 
     match /projects/{id} {
       allow read: if isAdmin() || ownsProject();
-      allow create, delete: if isAdmin();
+      allow create: if isAdmin();
+      allow delete: if isAdmin() && resource.data.paymentStarted != true;
       allow update: if isAdmin() || canClaimProject();
     }
 
@@ -123,6 +124,25 @@ service cloud.firestore {
       allow read: if isAdmin() || (signedIn() && resource.data.applicantId == request.auth.uid);
       allow create: if signedIn() && request.resource.data.applicantId == request.auth.uid;
       allow update: if isAdmin();
+    }
+
+    match /consultations/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.clientUid == request.auth.uid
+        && request.resource.data.status == 'requested'
+        && request.resource.data.startsAt is string
+        && request.resource.data.hours is number
+        && request.resource.data.hours >= 1
+        && request.resource.data.hours <= 3;
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.clientUid == request.auth.uid
+        && resource.data.status == 'requested'
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+      );
+      allow delete: if isAdmin();
     }
   }
 }
