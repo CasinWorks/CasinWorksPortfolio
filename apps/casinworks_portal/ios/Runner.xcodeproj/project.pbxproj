@@ -383,6 +383,10 @@
 				DEVELOPMENT_TEAM = DQVYSH4ADS;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "CasinWorks uses the camera so you can photograph quotations, purchase orders, remittances, and other project documents and attach them.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "CasinWorks reads location only when it is already stored in a photo you attach. The app does not track your location or use it in the background.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "CasinWorks may save a document photo you capture so you can keep a copy on this device.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "CasinWorks accesses your photo library so you can attach existing photos of quotations, purchase orders, remittances, and other project documents.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -563,6 +567,10 @@
 				DEVELOPMENT_TEAM = DQVYSH4ADS;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "CasinWorks uses the camera so you can photograph quotations, purchase orders, remittances, and other project documents and attach them.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "CasinWorks reads location only when it is already stored in a photo you attach. The app does not track your location or use it in the background.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "CasinWorks may save a document photo you capture so you can keep a copy on this device.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "CasinWorks accesses your photo library so you can attach existing photos of quotations, purchase orders, remittances, and other project documents.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -586,6 +594,10 @@
 				DEVELOPMENT_TEAM = DQVYSH4ADS;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "CasinWorks uses the camera so you can photograph quotations, purchase orders, remittances, and other project documents and attach them.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "CasinWorks reads location only when it is already stored in a photo you attach. The app does not track your location or use it in the background.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "CasinWorks may save a document photo you capture so you can keep a copy on this device.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "CasinWorks accesses your photo library so you can attach existing photos of quotations, purchase orders, remittances, and other project documents.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

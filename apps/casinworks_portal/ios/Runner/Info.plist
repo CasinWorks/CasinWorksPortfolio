@@ -31,11 +31,13 @@
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
 	<string>CasinWorks saves your booked consultation to Calendar.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>CasinWorks needs access to your photo library so you can attach photos of documents, quotations, and other project files.</string>
+	<string>CasinWorks accesses your photo library so you can attach existing photos of quotations, purchase orders, remittances, and other project documents.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>CasinWorks may save a document photo you capture so you can keep a copy on this device.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>CasinWorks needs camera access so you can photograph documents and attach them to a project.</string>
+	<string>CasinWorks uses the camera so you can photograph quotations, purchase orders, remittances, and other project documents and attach them.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>CasinWorks uses your location while you are using the app only when you attach a photo that includes location information.</string>
+	<string>CasinWorks reads location only when it is already stored in a photo you attach. The app does not track your location or use it in the background.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
