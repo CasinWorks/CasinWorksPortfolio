@@ -23,6 +23,7 @@ import { DocumentsScreen } from './portal/screens/DocumentsScreen.tsx';
 import { GigBoardScreen } from './portal/screens/GigBoardScreen.tsx';
 import { ProjectProgressScreen } from './portal/screens/ProjectProgressScreen.tsx';
 import { SharedProjectScreen } from './portal/screens/SharedProjectScreen.tsx';
+import { AccountScreen } from './portal/screens/AccountScreen.tsx';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
@@ -44,6 +45,7 @@ createRoot(document.getElementById('root')!).render(
           <Route element={<RequireAuth />}>
             <Route element={<PortalShell />}>
               <Route index element={<HomeRedirect />} />
+              <Route path="account" element={<AccountScreen />} />
               <Route element={<RequireClientArea />}>
                 <Route path="dashboard" element={<ClientDashboard />} />
                 <Route path="book" element={<BookConsultationScreen />} />

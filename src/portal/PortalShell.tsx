@@ -20,6 +20,7 @@ export function PortalShell() {
     isAdmin ? { to: "/portal/admin/users", label: "Users" } : null,
     isAdmin ? { to: "/portal/admin/clients", label: "Clients" } : null,
     isAdmin ? { to: "/portal/admin", label: "Admin" } : null,
+    { to: "/portal/account", label: "Account" },
   ].filter((row): row is { to: string; label: string } => Boolean(row));
 
   useEffect(() => {

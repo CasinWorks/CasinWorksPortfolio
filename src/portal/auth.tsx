@@ -2,15 +2,24 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
+  EmailAuthProvider,
   onAuthStateChanged,
+  reauthenticateWithCredential,
   setPersistence,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
   type User,
 } from "firebase/auth";
+import { FirebaseError } from "firebase/app";
 import { getFirebaseAuth, isFirebaseConfigured, loadFirebase } from "./firebase";
-import { claimProjectsForClient, createUserProfileIfMissing, fetchUserProfile, linkCrmClientOnLogin } from "./api";
+import {
+  claimProjectsForClient,
+  createUserProfileIfMissing,
+  deleteAccountData,
+  fetchUserProfile,
+  linkCrmClientOnLogin,
+} from "./api";
 import type { PortalRole, PortalUser } from "./types";
 
 type AuthContextValue = {
@@ -27,6 +36,7 @@ type AuthContextValue = {
     company?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: (password: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -122,6 +132,20 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
       async logout() {
         if (!isFirebaseConfigured()) return;
         await signOut(getFirebaseAuth());
+      },
+      async deleteAccount(password: string) {
+        if (!isFirebaseConfigured()) throw new Error("Firebase is not configured on the server.");
+        const user = getFirebaseAuth().currentUser;
+        if (!user?.email) throw new Error("This account has no email address to confirm against.");
+        try {
+          await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
+        } catch (err) {
+          if (err instanceof FirebaseError && (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password" || err.code === "auth/invalid-login-credentials")) {
+            throw new Error("That password did not match. Your account was not deleted.");
+          }
+          throw err;
+        }
+        await deleteAccountData(user);
       },
     }),
     [configured, loading, firebaseUser, profile],

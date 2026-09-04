@@ -12,6 +12,7 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
+import { type User } from "firebase/auth";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { getFirebaseDb, getFirebaseStorage } from "./firebase";
 import type {
@@ -77,6 +78,26 @@ export async function fetchUserProfile(uid: string): Promise<PortalUser | null> 
   const snap = await getDoc(doc(db(), "users", uid));
   if (!snap.exists()) return null;
   return portalUserFromSnap(uid, snap.data() as Record<string, unknown>);
+}
+
+const STORED_DATA_NOTICE =
+  "CasinWorks stores your name, email address, and company so your account can be attached to the right engagement and so consultation requests can be answered. Nothing is sold, and nothing is shared for advertising.";
+
+export const ACCOUNT_PRIVACY_URL = "https://www.casinworks.com/privacy.html";
+export const ACCOUNT_STORED_DATA_NOTICE = STORED_DATA_NOTICE;
+
+/** Removes profile-owned records, then the Firebase Auth user. Engagement documents stay. */
+export async function deleteAccountData(user: User) {
+  const [consultations, applications] = await Promise.all([
+    getDocs(query(collection(db(), "consultations"), where("clientUid", "==", user.uid))),
+    getDocs(query(collection(db(), "applications"), where("applicantId", "==", user.uid))),
+  ]);
+  await Promise.all([
+    ...consultations.docs.map((d) => deleteDoc(d.ref)),
+    ...applications.docs.map((d) => deleteDoc(d.ref)),
+    deleteDoc(doc(db(), "users", user.uid)),
+  ]);
+  await user.delete();
 }
 
 export async function findUserByEmail(email: string): Promise<PortalUser | null> {
