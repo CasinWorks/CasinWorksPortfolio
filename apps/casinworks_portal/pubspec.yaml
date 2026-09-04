@@ -1,7 +1,7 @@
 name: casinworks_portal
 description: CasinWorks client portal and gig board (iOS / Android).
 publish_to: "none"
-version: 1.0.0+7
+version: 1.0.0+8
 
 environment:
   sdk: ^3.12.1
