@@ -470,12 +470,19 @@ function ProjectSettings({
   }
 
   async function onDelete() {
-    const ok = window.confirm(`Delete “${project.name}”? Milestones and documents for this project will also be removed.`);
-    if (!ok) return;
+    if (deleteLocked) {
+      const typed = window.prompt(
+        `“${project.name}” has an invoice or downpayment, so delete is normally locked.\n\nType DELETE to remove this project, its milestones, and its documents anyway.`,
+      );
+      if (typed !== "DELETE") return;
+    } else {
+      const ok = window.confirm(`Delete “${project.name}”? Milestones and documents for this project will also be removed.`);
+      if (!ok) return;
+    }
     setBusyDelete(true);
     setError("");
     try {
-      await deleteProject(project.id);
+      await deleteProject(project.id, { force: deleteLocked });
       onDeleted();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete project.");
@@ -500,15 +507,17 @@ function ProjectSettings({
         </button>
         <button
           type="button"
-          disabled={busyDelete || deleteLocked}
+          disabled={busyDelete}
           onClick={() => void onDelete()}
           className="rounded-full border border-black/15 px-6 py-2.5 text-sm font-semibold text-red-800 disabled:opacity-50"
         >
-          Delete project
+          {deleteLocked ? "Delete project anyway" : "Delete project"}
         </button>
       </div>
       {deleteLocked && (
-        <p className="sm:col-span-2 text-sm text-slate-500">{PROJECT_DELETE_LOCKED_MESSAGE}</p>
+        <p className="sm:col-span-2 text-sm text-slate-500">
+          {PROJECT_DELETE_LOCKED_MESSAGE} You can still remove it: tap Delete project anyway and type DELETE.
+        </p>
       )}
       {error && <p className="sm:col-span-2 text-sm text-red-700">{error}</p>}
     </form>
