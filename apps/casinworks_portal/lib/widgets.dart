@@ -48,9 +48,8 @@ class PortalHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Image.asset(
-                  'assets/icon/app_icon.png',
-                  width: 36,
-                  height: 36,
+                  'assets/icon/app_mark.png',
+                  height: 26,
                   filterQuality: FilterQuality.medium,
                 ),
                 const SizedBox(width: 10),

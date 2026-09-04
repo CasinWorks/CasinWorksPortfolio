@@ -186,9 +186,8 @@ class _SignInPageState extends State<SignInPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Image.asset(
-                        'assets/icon/app_icon.png',
-                        width: 72,
-                        height: 72,
+                        'assets/icon/app_wordmark.png',
+                        width: 172,
                         filterQuality: FilterQuality.medium,
                       ),
                       const SizedBox(height: 10),
