@@ -2,120 +2,232 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'theme.dart';
 
+/// The signed-in account, as far as the UI needs to know it.
+class PortalSession {
+  const PortalSession({
+    required this.uid,
+    required this.email,
+    required this.role,
+    this.displayName = '',
+    this.company = '',
+  });
+
+  final String uid;
+  final String email;
+  final String role;
+  final String displayName;
+  final String company;
+
+  bool get isAdmin => role == 'admin';
+  bool get isSubcontractor => role == 'subcontractor';
+
+  /// Admins get the client-side screens as well, matching the web portal.
+  bool get seesClientArea => role == 'admin' || role == 'client';
+  bool get seesGigBoard => role == 'admin' || role == 'subcontractor';
+
+  String get workspaceLabel => switch (role) {
+    'admin' => 'Admin',
+    'subcontractor' => 'Subcontractor',
+    _ => 'Client',
+  };
+
+  @override
+  bool operator ==(Object other) =>
+      other is PortalSession &&
+      other.uid == uid &&
+      other.email == email &&
+      other.role == role &&
+      other.displayName == displayName &&
+      other.company == company;
+
+  @override
+  int get hashCode => Object.hash(uid, email, role, displayName, company);
+}
+
+/// Everywhere the header menu can send you. Kept in step with the web portal's nav.
+enum PortalDestination { projects, book, gigs, clients, users, adminInbox, account, guide, website, signOut }
+
+/// Menu entries for [session], in the order they appear.
+List<(PortalDestination, String)> destinationsFor(PortalSession session) {
+  return [
+    if (session.seesClientArea) (PortalDestination.projects, 'Projects'),
+    if (session.seesClientArea)
+      (PortalDestination.book, session.isAdmin ? 'Consultation calendar' : 'Book a consultation'),
+    if (session.seesGigBoard) (PortalDestination.gigs, 'Gig board'),
+    if (session.isAdmin) (PortalDestination.clients, 'Clients'),
+    if (session.isAdmin) (PortalDestination.users, 'Users'),
+    if (session.isAdmin) (PortalDestination.adminInbox, 'Admin inbox'),
+    (PortalDestination.account, 'Account'),
+    (PortalDestination.guide, 'Guide'),
+    (PortalDestination.website, 'casinworks.com'),
+    (PortalDestination.signOut, 'Sign out'),
+  ];
+}
+
 class PortalGuideScope extends InheritedWidget {
   const PortalGuideScope({
     super.key,
-    required this.role,
-    required this.setRole,
-    required this.open,
-    required this.openAccount,
+    required this.session,
+    required this.setSession,
+    required this.go,
     required super.child,
   });
 
-  final String? role;
-  final ValueChanged<String?> setRole;
-  final Future<void> Function(BuildContext context, {required String role}) open;
-  final Future<void> Function(BuildContext context) openAccount;
+  final PortalSession? session;
+  final ValueChanged<PortalSession?> setSession;
+
+  /// Routing lives in main.dart, which is the only place that knows every page.
+  final Future<void> Function(BuildContext context, PortalDestination destination) go;
+
+  String? get role => session?.role;
 
   static PortalGuideScope? maybeOf(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<PortalGuideScope>();
   }
 
   @override
-  bool updateShouldNotify(PortalGuideScope oldWidget) => role != oldWidget.role;
+  bool updateShouldNotify(PortalGuideScope oldWidget) => session != oldWidget.session;
+}
+
+/// Opens the navigation sheet, then routes to whatever was picked.
+Future<void> showPortalMenu(BuildContext context) async {
+  final scope = PortalGuideScope.maybeOf(context);
+  final session = scope?.session;
+  if (scope == null || session == null) return;
+
+  final picked = await showModalBottomSheet<PortalDestination>(
+    context: context,
+    backgroundColor: cream,
+    barrierColor: Colors.black.withValues(alpha: 0.35),
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+    builder: (sheet) {
+      final entries = destinationsFor(session);
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(session.workspaceLabel.toUpperCase(), style: kickerStyle),
+                  const SizedBox(height: 4),
+                  Text(
+                    session.displayName.isEmpty ? session.email : session.displayName,
+                    style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: ink),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: hairline),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: entries.length,
+                separatorBuilder: (_, _) => const Divider(height: 1, color: hairline),
+                itemBuilder: (_, i) {
+                  final (destination, label) = entries[i];
+                  final muted =
+                      destination == PortalDestination.signOut ||
+                      destination == PortalDestination.website ||
+                      destination == PortalDestination.guide;
+                  return InkWell(
+                    onTap: () => Navigator.pop(sheet, destination),
+                    child: Container(
+                      constraints: const BoxConstraints(minHeight: 52),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        label,
+                        style: GoogleFonts.dmSans(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: muted ? slate : ink,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+
+  if (picked == null || !context.mounted) return;
+  await scope.go(context, picked);
 }
 
 class PortalHeader extends StatelessWidget {
-  const PortalHeader({super.key, this.onBook, this.bare = false});
-  final VoidCallback? onBook;
+  const PortalHeader({super.key, this.subtitle});
 
-  /// Drops the trailing links, for screens the links would point back to.
-  final bool bare;
+  /// Defaults to the workspace the account is in.
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
+    final session = PortalGuideScope.maybeOf(context)?.session;
+    final kicker = subtitle ?? (session == null ? 'CLIENT PORTAL' : '${session.workspaceLabel} PORTAL');
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+      padding: const EdgeInsets.fromLTRB(24, 12, 16, 12),
       decoration: const BoxDecoration(
         color: cream,
         border: Border(bottom: BorderSide(color: hairline)),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Image.asset(
+            'assets/icon/app_mark.png',
+            height: 26,
+            filterQuality: FilterQuality.medium,
+          ),
+          const SizedBox(width: 10),
           Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Image.asset(
-                  'assets/icon/app_mark.png',
-                  height: 26,
-                  filterQuality: FilterQuality.medium,
+                Text(
+                  'CasinWorks',
+                  style: GoogleFonts.dmSans(fontSize: 17, fontWeight: FontWeight.w600, color: ink),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'CasinWorks',
-                        style: GoogleFonts.dmSans(fontSize: 17, fontWeight: FontWeight.w600, color: ink),
-                      ),
-                      const SizedBox(height: 2),
-                      Text('CLIENT PORTAL', style: kickerStyle.copyWith(fontSize: 10, letterSpacing: 2)),
-                    ],
-                  ),
+                const SizedBox(height: 2),
+                Text(
+                  kicker.toUpperCase(),
+                  style: kickerStyle.copyWith(fontSize: 10, letterSpacing: 2),
                 ),
               ],
             ),
           ),
-          Flexible(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerRight,
-              child: Row(
-                children: [
-                  if (!bare && PortalGuideScope.maybeOf(context)?.role != null) ...[
-                    GestureDetector(
-                      onTap: () {
-                        final scope = PortalGuideScope.maybeOf(context);
-                        final role = scope?.role;
-                        if (scope == null || role == null) return;
-                        scope.open(context, role: role);
-                      },
-                      child: Text(
-                        'Guide',
-                        style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: ink),
-                      ),
+          if (session != null)
+            InkWell(
+              onTap: () => showPortalMenu(context),
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 84, minHeight: 44),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  border: Border.all(color: fieldBorder),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.menu, size: 16, color: ink),
+                    const SizedBox(width: 7),
+                    Text(
+                      'Menu',
+                      style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600, color: ink),
                     ),
-                    const SizedBox(width: 16),
                   ],
-                  if (!bare && onBook != null) ...[
-                    GestureDetector(
-                      onTap: onBook,
-                      child: Text(
-                        'Book',
-                        style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: ink),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                  ],
-                  if (!bare && PortalGuideScope.maybeOf(context)?.role != null)
-                    GestureDetector(
-                      onTap: () {
-                        final scope = PortalGuideScope.maybeOf(context);
-                        if (scope == null) return;
-                        scope.openAccount(context);
-                      },
-                      child: Text(
-                        'Account',
-                        style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: slate),
-                      ),
-                    ),
-                ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -157,6 +269,61 @@ class PortalField extends StatelessWidget {
           style: GoogleFonts.dmSans(fontSize: 14, color: ink),
         ),
       ],
+    );
+  }
+}
+
+/// Square check box in the portal's hairline style.
+class PortalCheckbox extends StatelessWidget {
+  const PortalCheckbox({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    required this.label,
+    this.note,
+  });
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final String label;
+  final String? note;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 20,
+            height: 20,
+            margin: const EdgeInsets.only(top: 1),
+            decoration: BoxDecoration(
+              color: value ? ink : Colors.white,
+              border: Border.all(color: value ? ink : fieldBorder),
+            ),
+            child: value ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w500, color: ink),
+                ),
+                if (note != null) ...[
+                  const SizedBox(height: 4),
+                  Text(note!, style: GoogleFonts.dmSans(fontSize: 12, height: 1.4, color: slate)),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

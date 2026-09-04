@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'credentials.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -136,6 +137,7 @@ class _AccountPageState extends State<AccountPage> {
       }
       await user.reauthenticateWithCredential(EmailAuthProvider.credential(email: email, password: password));
       await deleteAccountData(user);
+      await CredentialStore.clear();
       if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     } on FirebaseAuthException catch (e) {
       final message = e.code == 'invalid-credential' || e.code == 'wrong-password'
@@ -152,14 +154,14 @@ class _AccountPageState extends State<AccountPage> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final role = PortalGuideScope.maybeOf(context)?.role ?? 'client';
+    final workspace = PortalGuideScope.maybeOf(context)?.session?.workspaceLabel ?? 'Client';
 
     return Scaffold(
       backgroundColor: cream,
       body: SafeArea(
         child: Column(
           children: [
-            const PortalHeader(bare: true),
+            const PortalHeader(),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 24, 0),
               child: Align(
@@ -183,7 +185,7 @@ class _AccountPageState extends State<AccountPage> {
                   const Divider(height: 1, color: hairline),
                   _Row(label: 'Name', value: (user?.displayName ?? '').isEmpty ? '—' : user!.displayName!),
                   const Divider(height: 1, color: hairline),
-                  _Row(label: 'Workspace', value: role == 'subcontractor' ? 'Subcontractor' : 'Client'),
+                  _Row(label: 'Workspace', value: workspace),
                   const Divider(height: 1, color: hairline),
                   const SizedBox(height: 28),
                   Text('WHAT IS STORED', style: kickerStyle),

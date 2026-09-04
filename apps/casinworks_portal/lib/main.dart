@@ -7,6 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'account.dart';
+import 'admin.dart';
+import 'credentials.dart';
 import 'theme.dart';
 import 'fairway.dart';
 import 'widgets.dart';
@@ -45,19 +47,65 @@ class CasinWorksPortalApp extends StatefulWidget {
 }
 
 class _CasinWorksPortalAppState extends State<CasinWorksPortalApp> {
-  String? _guideRole;
+  PortalSession? _session;
+
+  /// Every destination in the header menu. Lives here because this is the only
+  /// library that can see all the pages.
+  Future<void> _go(BuildContext context, PortalDestination destination) async {
+    final session = _session;
+    if (session == null) return;
+    final nav = Navigator.of(context, rootNavigator: true);
+
+    if (destination == PortalDestination.guide) {
+      await StoryTutorial.open(context, role: session.role);
+      return;
+    }
+    if (destination == PortalDestination.website) {
+      await launchUrl(Uri.parse('https://www.casinworks.com'), mode: LaunchMode.externalApplication);
+      return;
+    }
+    if (destination == PortalDestination.signOut) {
+      await FirebaseAuth.instance.signOut();
+      nav.popUntil((route) => route.isFirst);
+      return;
+    }
+
+    // The home screen already is Projects for clients and admins, and the gig
+    // board for subcontractors, so those two just unwind the stack.
+    final homeIsTarget =
+        (destination == PortalDestination.projects && session.seesClientArea) ||
+        (destination == PortalDestination.gigs && session.isSubcontractor);
+    nav.popUntil((route) => route.isFirst);
+    if (homeIsTarget) return;
+
+    final page = switch (destination) {
+      PortalDestination.book => BookPage(
+        uid: session.uid,
+        email: session.email,
+        displayName: session.displayName,
+        company: session.company,
+        isAdmin: session.isAdmin,
+      ),
+      PortalDestination.gigs => GigBoard(uid: session.uid, email: session.email),
+      PortalDestination.clients => const ClientsPage(),
+      PortalDestination.users => const UsersPage(),
+      PortalDestination.adminInbox => const AdminInboxPage(),
+      PortalDestination.account => const AccountPage(),
+      _ => null,
+    };
+    if (page == null) return;
+    await nav.push<void>(MaterialPageRoute(builder: (_) => page));
+  }
 
   @override
   Widget build(BuildContext context) {
     return PortalGuideScope(
-      role: _guideRole,
-      setRole: (role) {
-        if (_guideRole == role) return;
-        setState(() => _guideRole = role);
+      session: _session,
+      setSession: (session) {
+        if (_session == session) return;
+        setState(() => _session = session);
       },
-      open: (context, {required String role}) => StoryTutorial.open(context, role: role),
-      openAccount: (context) =>
-          Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) => const AccountPage())),
+      go: _go,
       child: MaterialApp(
         title: 'CasinWorks Portal',
         debugShowCheckedModeBanner: false,
@@ -74,7 +122,7 @@ class Gate extends StatelessWidget {
   void _clearGuide(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!context.mounted) return;
-      PortalGuideScope.maybeOf(context)?.setRole(null);
+      PortalGuideScope.maybeOf(context)?.setSession(null);
     });
   }
 
@@ -117,8 +165,25 @@ class _SignInPageState extends State<SignInPage> {
   String role = 'client';
   bool register = false;
   bool acceptedPrivacy = false;
+  bool remember = false;
   String? error;
   bool sending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreRemembered();
+  }
+
+  Future<void> _restoreRemembered() async {
+    final saved = await CredentialStore.read();
+    if (saved == null || !mounted) return;
+    setState(() {
+      email.text = saved.email;
+      password.text = saved.password;
+      remember = true;
+    });
+  }
 
   @override
   void dispose() {
@@ -162,6 +227,12 @@ class _SignInPageState extends State<SignInPage> {
         });
       } else {
         await FirebaseAuth.instance.signInWithEmailAndPassword(email: email.text.trim(), password: password.text);
+      }
+      // Only after the credentials are known good, so a typo is never stored.
+      if (remember) {
+        await CredentialStore.save(email: email.text.trim(), password: password.text);
+      } else {
+        await CredentialStore.clear();
       }
     } catch (e) {
       setState(() => error = e.toString());
@@ -228,6 +299,14 @@ class _SignInPageState extends State<SignInPage> {
             PortalField(label: 'Email', controller: email, keyboardType: TextInputType.emailAddress),
             const SizedBox(height: 16),
             PortalField(label: 'Password', controller: password, obscure: true),
+            const SizedBox(height: 18),
+            PortalCheckbox(
+              value: remember,
+              onChanged: (v) => setState(() => remember = v),
+              label: 'Remember me',
+              note: 'Keeps your email and password in this device’s secure storage so you can '
+                  'sign back in without typing them.',
+            ),
             if (register) ...[
               const SizedBox(height: 20),
               PrivacyConsent(
@@ -307,12 +386,27 @@ class HomeShell extends StatelessWidget {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
       builder: (context, snap) {
+        // Wait for the profile before naming a role. Guessing 'client' here used to
+        // open the client guide, then open it a second time once the real role landed.
+        if (!snap.hasData) {
+          return const Scaffold(
+            backgroundColor: cream,
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
         final role = (snap.data?.data()?['role'] as String?) ?? 'client';
         final displayName = (snap.data?.data()?['displayName'] as String?) ?? '';
         final company = (snap.data?.data()?['company'] as String?) ?? '';
+        final session = PortalSession(
+          uid: uid,
+          email: email,
+          role: role,
+          displayName: displayName,
+          company: company,
+        );
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!context.mounted) return;
-          PortalGuideScope.maybeOf(context)?.setRole(role);
+          PortalGuideScope.maybeOf(context)?.setSession(session);
         });
         if (role == 'subcontractor') {
           return TutorialGate(
@@ -381,20 +475,7 @@ class _ClientHomeState extends State<ClientHome> {
       body: SafeArea(
         child: Column(
           children: [
-            PortalHeader(
-              onBook: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => BookPage(
-                    uid: widget.uid,
-                    email: widget.email,
-                    displayName: widget.displayName,
-                    company: widget.company,
-                    isAdmin: widget.isAdmin,
-                  ),
-                ),
-              ),
-            ),
+            const PortalHeader(),
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: widget.isAdmin

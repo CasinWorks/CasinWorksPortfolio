@@ -7,7 +7,7 @@ import 'fairway.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
-const _tutorialVersion = 'portal.tutorial.v2';
+const _tutorialVersion = 'portal.tutorial.v3';
 const _dwell = Duration(milliseconds: 5600);
 const _turn = Duration(milliseconds: 420);
 const _ease = Cubic(0.22, 1, 0.36, 1);
@@ -45,8 +45,11 @@ class _TutorialGateState extends State<TutorialGate> {
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool(_key(widget.role)) == true) return;
     if (!mounted) return;
-    await StoryTutorial.open(context, role: widget.role);
+    // Record it before showing, not after. Writing on dismissal meant force-quitting
+    // part way through left the flag unset, so the guide returned on every launch.
     await prefs.setBool(_key(widget.role), true);
+    if (!mounted) return;
+    await StoryTutorial.open(context, role: widget.role);
   }
 
   @override
@@ -77,31 +80,36 @@ List<TutorialSlide> slidesForRole(String role) {
   if (role == 'subcontractor') {
     return const [
       TutorialSlide(
-        kicker: 'SUBCONTRACTOR REGISTRY',
-        title: 'High-stakes work, ',
-        italic: 'open postings.',
-        body: 'A board of specialized roles for independent engineers. Not a client workspace.',
-        visual: TutorialVisual.welcome,
-      ),
-      TutorialSlide(
-        kicker: 'THE BOARD',
-        title: 'Read the posting, ',
-        italic: 'then apply.',
-        body: 'Each row is a live gig — discipline, title, and place. Open postings are the ones still takeable.',
+        kicker: 'WELCOME TO CASINWORKS',
+        title: 'Find engineering ',
+        italic: 'work.',
+        body: 'CasinWorks is an independent engineering studio that brings in specialists '
+            'project by project. This app is the board where that work gets posted.',
+        // The welcome mock draws a client project desk, which is the wrong screen here.
         visual: TutorialVisual.gigs,
       ),
       TutorialSlide(
-        kicker: 'APPLY',
-        title: 'Send your name. ',
-        italic: 'Terms stay off-platform.',
-        body: 'Apply registers interest. The engagement itself is written directly with CasinWorks.',
+        kicker: 'OPEN POSTINGS',
+        title: 'Read the posting, ',
+        italic: 'then apply.',
+        body: 'Each row is a real role we need filled, with its discipline, title, and '
+            'location. A posting drops off the board once it is taken.',
+        visual: TutorialVisual.gigs,
+      ),
+      TutorialSlide(
+        kicker: 'APPLYING',
+        title: 'Apply registers ',
+        italic: 'your interest.',
+        body: 'Tapping Apply sends CasinWorks your name and email — nothing more. Rate and '
+            'contract are agreed with you directly, not inside the app.',
         visual: TutorialVisual.apply,
       ),
       TutorialSlide(
-        kicker: 'READY',
+        kicker: 'THAT IS EVERYTHING',
         title: 'The board ',
         italic: 'is yours.',
-        body: 'Guide sits in the header. Replay this walk whenever you need it.',
+        body: 'Menu in the header opens the board and your account. Guide replays this '
+            'walkthrough whenever you want it.',
         visual: TutorialVisual.ready,
       ),
     ];
@@ -111,37 +119,43 @@ List<TutorialSlide> slidesForRole(String role) {
     return const [
       TutorialSlide(
         kicker: 'STUDIO DESK',
-        title: 'Open a project, ',
-        italic: 'work the hole.',
-        body: 'Every engagement in one desk. Open a card to reach the current milestone.',
+        title: 'Run every ',
+        italic: 'engagement.',
+        body: 'This is the admin side of CasinWorks. Every client project you are running '
+            'sits here, newest work first.',
         visual: TutorialVisual.desk,
       ),
       TutorialSlide(
         kicker: 'PROJECTS',
-        title: 'Each card is ',
-        italic: 'an engagement.',
-        body: 'The rule under the name is progress. Open it to walk the course, then issue paper from Documents.',
+        title: 'One card per ',
+        italic: 'engagement.',
+        body: 'The bar under each name is how far the project has gone. Open a card to '
+            'reach its milestones and its paperwork.',
         visual: TutorialVisual.projects,
       ),
       TutorialSlide(
-        kicker: 'THE COURSE',
-        title: 'The ball walks ',
-        italic: 'to the current hole.',
-        body: 'Pins are milestones. Tap one to inspect it, or switch to the list for dates in a row.',
+        kicker: 'MILESTONES',
+        title: 'Stages drawn as ',
+        italic: 'a golf course.',
+        body: 'Inside a project, each stage of work is a hole on a course. The flag marks '
+            'where the job stands now. Tap a hole to inspect it, or switch to '
+            '“Where things stand” for a plain list of dates.',
         visual: TutorialVisual.course,
       ),
       TutorialSlide(
-        kicker: 'CONSULTATION',
-        title: 'The calendar is ',
-        italic: 'the inbox.',
-        body: 'Requests land on weekday slots in Manila time. Confirm one to hold the hour.',
+        kicker: 'CONSULTATIONS',
+        title: 'Requests land ',
+        italic: 'on the calendar.',
+        body: 'Clients ask for an hour on weekday slots, Manila time. Confirm one to hold '
+            'it, or decline to free the slot.',
         visual: TutorialVisual.book,
       ),
       TutorialSlide(
-        kicker: 'READY',
+        kicker: 'THAT IS EVERYTHING',
         title: 'The desk ',
         italic: 'is yours.',
-        body: 'Guide sits in the header. Replay this walk whenever you need it.',
+        body: 'Menu in the header reaches Projects, Clients, Users, the admin inbox, and '
+            'your account. Guide replays this walkthrough whenever you want it.',
         visual: TutorialVisual.ready,
       ),
     ];
@@ -149,45 +163,54 @@ List<TutorialSlide> slidesForRole(String role) {
 
   return const [
     TutorialSlide(
-      kicker: 'CLIENT WORKSPACE',
-      title: 'Your work, ',
-      italic: 'in one place.',
-      body: 'Progress, records, and time with the studio — held on one desk.',
+      kicker: 'WELCOME TO CASINWORKS',
+      title: 'Follow your ',
+      italic: 'project.',
+      body: 'CasinWorks is an independent engineering studio. This app is where you watch '
+          'the work we are doing for you — how far it has come, the paperwork behind it, '
+          'and time booked with the studio.',
       visual: TutorialVisual.welcome,
     ),
     TutorialSlide(
-      kicker: 'PROJECTS',
-      title: 'The work, ',
-      italic: 'in progress.',
-      body: 'Each card is a project. The rule shows how far the course has been walked. Tap to open it.',
+      kicker: 'YOUR PROJECTS',
+      title: 'One card per ',
+      italic: 'project.',
+      body: 'Everything we are building for you appears here. The bar under the name is '
+          'how far along it is. Tap a card to open it.',
       visual: TutorialVisual.projects,
     ),
     TutorialSlide(
-      kicker: 'THE COURSE',
-      title: 'The ball walks ',
-      italic: 'to the current hole.',
-      body: 'Pins are milestones. Tap one to inspect it, or read “Where things stand” for dates in order.',
+      kicker: 'MILESTONES',
+      title: 'Stages drawn as ',
+      italic: 'a golf course.',
+      body: 'Inside a project, each stage of the work is a hole on a course. The flag marks '
+          'where things stand today. Tap a hole to read what it covers, or switch to '
+          '“Where things stand” for a plain list of dates.',
       visual: TutorialVisual.course,
     ),
     TutorialSlide(
-      kicker: 'RECORDS',
-      title: 'Quotations, orders, ',
-      italic: 'and invoices.',
-      body: 'Documents holds the paper for a project. Tap a row to open the file.',
+      kicker: 'DOCUMENTS',
+      title: 'Quotations, invoices, ',
+      italic: 'and receipts.',
+      body: 'Every quotation, purchase order, invoice, and remittance for a project is '
+          'filed under Documents. Tap a row to open the file.',
       visual: TutorialVisual.records,
     ),
     TutorialSlide(
-      kicker: 'BOOK',
-      title: 'An hour on ',
-      italic: 'the calendar.',
-      body: 'Weekdays, Manila time. Mornings 9–11, afternoons 1–4. Request a slot, then save it.',
+      kicker: 'CONSULTATIONS',
+      title: 'Book an hour ',
+      italic: 'with the studio.',
+      body: 'Need to talk something through? Ask for a weekday slot in Manila time — '
+          'mornings 9–11 or afternoons 1–4. Once we confirm it, you can save it to your '
+          'calendar.',
       visual: TutorialVisual.book,
     ),
     TutorialSlide(
-      kicker: 'READY',
-      title: 'The desk ',
-      italic: 'is yours.',
-      body: 'Guide sits in the header. Replay this walk whenever you need it.',
+      kicker: 'THAT IS EVERYTHING',
+      title: 'You are ',
+      italic: 'set up.',
+      body: 'Menu in the header moves between Projects, Book, and your account. Guide '
+          'replays this walkthrough whenever you want it.',
       visual: TutorialVisual.ready,
     ),
   ];
@@ -198,28 +221,38 @@ class StoryTutorial extends StatefulWidget {
   final String role;
   final VoidCallback onClose;
 
-  static Future<void> open(BuildContext context, {required String role}) {
+  /// Guards against a second guide stacking on top of the first — say, tapping
+  /// Guide in the header while the first-run walkthrough is still opening.
+  static bool _showing = false;
+
+  static Future<void> open(BuildContext context, {required String role}) async {
+    if (_showing) return;
+    _showing = true;
     final reduce = MediaQuery.disableAnimationsOf(context);
-    return Navigator.of(context, rootNavigator: true).push<void>(
-      PageRouteBuilder(
-        opaque: true,
-        fullscreenDialog: true,
-        transitionDuration: reduce ? Duration.zero : _turn,
-        reverseTransitionDuration: reduce ? Duration.zero : const Duration(milliseconds: 260),
-        pageBuilder: (ctx, _, _) => StoryTutorial(role: role, onClose: () => Navigator.of(ctx).pop()),
-        transitionsBuilder: (ctx, anim, _, child) {
-          if (MediaQuery.disableAnimationsOf(ctx)) return child;
-          final curved = CurvedAnimation(parent: anim, curve: _ease);
-          return FadeTransition(
-            opacity: curved,
-            child: SlideTransition(
-              position: Tween<Offset>(begin: const Offset(0, 0.03), end: Offset.zero).animate(curved),
-              child: child,
-            ),
-          );
-        },
-      ),
-    );
+    try {
+      await Navigator.of(context, rootNavigator: true).push<void>(
+        PageRouteBuilder(
+          opaque: true,
+          fullscreenDialog: true,
+          transitionDuration: reduce ? Duration.zero : _turn,
+          reverseTransitionDuration: reduce ? Duration.zero : const Duration(milliseconds: 260),
+          pageBuilder: (ctx, _, _) => StoryTutorial(role: role, onClose: () => Navigator.of(ctx).pop()),
+          transitionsBuilder: (ctx, anim, _, child) {
+            if (MediaQuery.disableAnimationsOf(ctx)) return child;
+            final curved = CurvedAnimation(parent: anim, curve: _ease);
+            return FadeTransition(
+              opacity: curved,
+              child: SlideTransition(
+                position: Tween<Offset>(begin: const Offset(0, 0.03), end: Offset.zero).animate(curved),
+                child: child,
+              ),
+            );
+          },
+        ),
+      );
+    } finally {
+      _showing = false;
+    }
   }
 
   static Future<void> replay(BuildContext context, {required String role}) => open(context, role: role);
@@ -618,16 +651,17 @@ class _VisualPanel extends StatelessWidget {
 }
 
 class _MockHeader extends StatelessWidget {
-  const _MockHeader({this.trailing = 'Guide · Book', this.markGuide = false});
-  final String trailing;
-  final bool markGuide;
+  const _MockHeader({this.kicker = 'CLIENT PORTAL', this.markMenu = false});
+  final String kicker;
+
+  /// Fills the Menu pill, for the slide that points at it.
+  final bool markMenu;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: Column(
@@ -638,29 +672,33 @@ class _MockHeader extends StatelessWidget {
                     style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600, color: ink),
                   ),
                   const SizedBox(height: 2),
-                  Text('CLIENT PORTAL', style: kickerStyle.copyWith(fontSize: 8, letterSpacing: 1.6)),
+                  Text(kicker, style: kickerStyle.copyWith(fontSize: 8, letterSpacing: 1.6)),
                 ],
               ),
             ),
-            if (markGuide) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: const BoxDecoration(color: ink, borderRadius: BorderRadius.all(Radius.circular(999))),
-                child: Text(
-                  'Guide',
-                  style: GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
-                ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: markMenu ? ink : Colors.transparent,
+                border: Border.all(color: markMenu ? ink : fieldBorder),
+                borderRadius: const BorderRadius.all(Radius.circular(999)),
               ),
-              const SizedBox(width: 10),
-              Text(
-                'Book',
-                style: GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w500, color: slate),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.menu, size: 11, color: markMenu ? Colors.white : ink),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Menu',
+                    style: GoogleFonts.dmSans(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: markMenu ? Colors.white : ink,
+                    ),
+                  ),
+                ],
               ),
-            ] else
-              Text(
-                trailing,
-                style: GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w500, color: slate),
-              ),
+            ),
           ],
         ),
         const SizedBox(height: 14),
@@ -727,7 +765,7 @@ class _DeskMock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _MockHeader(trailing: admin ? 'Clients · Admin' : 'Guide · Book'),
+        _MockHeader(kicker: admin ? 'ADMIN PORTAL' : 'CLIENT PORTAL'),
         const SizedBox(height: 18),
         Text(admin ? 'STUDIO DESK' : 'CLIENT WORKSPACE', style: kickerStyle.copyWith(fontSize: 9)),
         const SizedBox(height: 8),
@@ -1272,7 +1310,7 @@ class _ReadyMock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _MockHeader(markGuide: true),
+        const _MockHeader(markMenu: true),
         const SizedBox(height: 18),
         Text('WE MAKE THINGS WORK.', style: kickerStyle.copyWith(fontSize: 9)),
         Expanded(
