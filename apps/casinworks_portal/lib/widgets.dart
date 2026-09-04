@@ -2,10 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'theme.dart';
 
+class PortalGuideScope extends InheritedWidget {
+  const PortalGuideScope({
+    super.key,
+    required this.role,
+    required this.setRole,
+    required this.open,
+    required this.openAccount,
+    required super.child,
+  });
+
+  final String? role;
+  final ValueChanged<String?> setRole;
+  final Future<void> Function(BuildContext context, {required String role}) open;
+  final Future<void> Function(BuildContext context) openAccount;
+
+  static PortalGuideScope? maybeOf(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<PortalGuideScope>();
+  }
+
+  @override
+  bool updateShouldNotify(PortalGuideScope oldWidget) => role != oldWidget.role;
+}
+
 class PortalHeader extends StatelessWidget {
-  const PortalHeader({super.key, this.onSignOut, this.onBook});
-  final VoidCallback? onSignOut;
+  const PortalHeader({super.key, this.onBook, this.bare = false});
   final VoidCallback? onBook;
+
+  /// Drops the trailing links, for screens the links would point back to.
+  final bool bare;
 
   @override
   Widget build(BuildContext context) {
@@ -19,30 +44,78 @@ class PortalHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text('CasinWorks', style: GoogleFonts.dmSans(fontSize: 17, fontWeight: FontWeight.w600, color: ink)),
-                const SizedBox(height: 2),
-                Text('CLIENT PORTAL', style: kickerStyle.copyWith(fontSize: 10, letterSpacing: 2)),
+                Image.asset(
+                  'assets/icon/app_icon.png',
+                  width: 36,
+                  height: 36,
+                  filterQuality: FilterQuality.medium,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'CasinWorks',
+                        style: GoogleFonts.dmSans(fontSize: 17, fontWeight: FontWeight.w600, color: ink),
+                      ),
+                      const SizedBox(height: 2),
+                      Text('CLIENT PORTAL', style: kickerStyle.copyWith(fontSize: 10, letterSpacing: 2)),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-          Row(
-            children: [
-              if (onBook != null) ...[
-                GestureDetector(
-                  onTap: onBook,
-                  child: Text('Book', style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: ink)),
-                ),
-                const SizedBox(width: 16),
-              ],
-              if (onSignOut != null)
-                GestureDetector(
-                  onTap: onSignOut,
-                  child: Text('Sign out', style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: slate)),
-                ),
-            ],
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Row(
+                children: [
+                  if (!bare && PortalGuideScope.maybeOf(context)?.role != null) ...[
+                    GestureDetector(
+                      onTap: () {
+                        final scope = PortalGuideScope.maybeOf(context);
+                        final role = scope?.role;
+                        if (scope == null || role == null) return;
+                        scope.open(context, role: role);
+                      },
+                      child: Text(
+                        'Guide',
+                        style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: ink),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                  ],
+                  if (!bare && onBook != null) ...[
+                    GestureDetector(
+                      onTap: onBook,
+                      child: Text(
+                        'Book',
+                        style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: ink),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                  ],
+                  if (!bare && PortalGuideScope.maybeOf(context)?.role != null)
+                    GestureDetector(
+                      onTap: () {
+                        final scope = PortalGuideScope.maybeOf(context);
+                        if (scope == null) return;
+                        scope.openAccount(context);
+                      },
+                      child: Text(
+                        'Account',
+                        style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: slate),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -58,6 +131,7 @@ class PortalField extends StatelessWidget {
     this.obscure = false,
     this.keyboardType,
     this.readOnly = false,
+    this.onChanged,
   });
 
   final String label;
@@ -65,6 +139,7 @@ class PortalField extends StatelessWidget {
   final bool obscure;
   final TextInputType? keyboardType;
   final bool readOnly;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -78,6 +153,7 @@ class PortalField extends StatelessWidget {
           obscureText: obscure,
           readOnly: readOnly,
           keyboardType: keyboardType,
+          onChanged: onChanged,
           cursorColor: ink,
           style: GoogleFonts.dmSans(fontSize: 14, color: ink),
         ),
@@ -105,12 +181,7 @@ class WorkspaceToggle extends StatelessWidget {
             border: Border.all(color: hairline),
             borderRadius: BorderRadius.circular(999),
           ),
-          child: Row(
-            children: [
-              _seg('client', 'I’m a client'),
-              _seg('subcontractor', 'I’m looking for work'),
-            ],
-          ),
+          child: Row(children: [_seg('client', 'I’m a client'), _seg('subcontractor', 'I’m looking for work')]),
         ),
         const SizedBox(height: 8),
         Text(
@@ -131,10 +202,7 @@ class WorkspaceToggle extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-          decoration: BoxDecoration(
-            color: on ? ink : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
-          ),
+          decoration: BoxDecoration(color: on ? ink : Colors.transparent, borderRadius: BorderRadius.circular(999)),
           child: Text(
             label,
             textAlign: TextAlign.center,
@@ -174,17 +242,10 @@ class PortalSegmented extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 160),
               padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 14),
-              decoration: BoxDecoration(
-                color: on ? ink : Colors.transparent,
-                borderRadius: BorderRadius.circular(999),
-              ),
+              decoration: BoxDecoration(color: on ? ink : Colors.transparent, borderRadius: BorderRadius.circular(999)),
               child: Text(
                 opt.$2,
-                style: GoogleFonts.dmSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: on ? Colors.white : slate,
-                ),
+                style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w500, color: on ? Colors.white : slate),
               ),
             ),
           );
@@ -230,10 +291,7 @@ class StatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(
-        color: current ? ink : panel,
-        borderRadius: BorderRadius.circular(999),
-      ),
+      decoration: BoxDecoration(color: current ? ink : panel, borderRadius: BorderRadius.circular(999)),
       child: Text(
         label,
         style: GoogleFonts.dmSans(

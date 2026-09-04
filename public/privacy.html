@@ -3,8 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Privacy — C.J. Casin</title>
-    <meta name="description" content="Privacy policy for casinworks.com — how inquiry data and basic analytics are handled." />
+    <title>Privacy — CasinWorks</title>
+    <meta
+      name="description"
+      content="Privacy policy for CasinWorks — the website, client portal, and iOS / Android app."
+    />
     <link rel="canonical" href="https://www.casinworks.com/privacy.html" />
     <style>
       body {
@@ -21,51 +24,137 @@
       }
       h1 {
         font-size: 1.75rem;
-        margin-bottom: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+      .meta {
+        color: #475569;
+        font-size: 0.95rem;
+        margin-bottom: 1.75rem;
       }
       h2 {
         font-size: 1.1rem;
         margin: 2rem 0 0.75rem;
+      }
+      ul {
+        padding-left: 1.2rem;
       }
     </style>
   </head>
   <body>
     <p><a href="/">← Back to site</a></p>
     <h1>Privacy</h1>
+    <p class="meta">Last updated 4 September 2026. This policy covers casinworks.com, the CasinWorks web portal, and the CasinWorks iOS and Android app.</p>
+
     <p>
-      This portfolio site does not use advertising cookies.
+      CasinWorks is the independent engineering practice of Christian Joshua Casin, based in Mandaluyong, Philippines.
+      This policy explains what personal information CasinWorks keeps, why it is kept, and how you can delete it.
+      CasinWorks does not sell personal information and does not use it for advertising.
     </p>
-    <h2>Analytics</h2>
+
+    <h2>The CasinWorks app and portal</h2>
     <p>
-      This site uses basic analytics to understand traffic (such as page views and referrers) and improve
-      the site. No advertising cookies are used. I do not sell your personal information.
+      The CasinWorks app and the signed-in portal at
+      <a href="https://www.casinworks.com/portal">casinworks.com/portal</a>
+      are a client and subcontractor workspace for engagements with CasinWorks. Creating an account is optional until you
+      need that workspace.
     </p>
-    <h2>Inquiries</h2>
+    <p>When you create an account, CasinWorks stores:</p>
+    <ul>
+      <li>your name</li>
+      <li>your email address</li>
+      <li>your company (client accounts)</li>
+      <li>whether you signed up as a client or a subcontractor</li>
+      <li>the time you agreed to this use of your details</li>
+    </ul>
     <p>
-      If you submit an inquiry, the information you enter (such as your name, email, organization, and
-      message) is sent to me and may be stored in a Google Spreadsheet so I can respond and track
-      requests. Please avoid sharing sensitive information in the inquiry form.
+      That information is used to attach your account to the right engagement, to answer consultation requests, and to
+      run the portal. Sign-in is handled by Firebase Authentication (Google). Account records are stored in Cloud
+      Firestore.
     </p>
-    <h2>Data retention</h2>
+
+    <h2>Consultations and applications</h2>
     <p>
-      Inquiry submissions are kept only as long as needed to respond and manage client relationships.
-      I periodically review and delete older inquiry records (typically within 12–24 months) unless a
-      longer retention period is required for legitimate business purposes.
-    </p>
-    <h2>Access controls</h2>
-    <p>
-      Access to inquiry records is restricted to authorized accounts only. I review access permissions
-      to the inquiry spreadsheet on a recurring basis (at least quarterly) to ensure only the minimum
-      necessary access is granted.
-    </p>
-    <h2>Deletion requests</h2>
-    <p>
-      If you would like your inquiry information removed, contact me and I will take reasonable steps to
-      delete it from my records, subject to any legal or operational requirements.
+      If you book a consultation, CasinWorks stores the time you asked for, how long it should run, your name, email,
+      company if you provided one, and any notes you type. You can add that booking to the calendar on your device.
+      Calendar access stays on the device. CasinWorks does not read your other calendar events.
     </p>
     <p>
-      For questions about this policy, email
+      If you apply to an open posting as a subcontractor, CasinWorks stores the posting you applied to, your account id,
+      and the email on the account so the application can be reviewed.
+    </p>
+
+    <h2>Project records</h2>
+    <p>
+      Quotations, purchase orders, invoices, remittances, and other files attached to an engagement are business and tax
+      records. They are shown in the portal to the client on that engagement and to CasinWorks. Files are stored in
+      Firebase Storage. Those records stay with CasinWorks even if you delete your account.
+    </p>
+
+    <h2>What CasinWorks does not collect from the app</h2>
+    <p>
+      CasinWorks does not collect photos, camera images, precise location, contacts, or advertising identifiers.
+      The iOS app includes libraries that can reference photo, camera, or location APIs. Purpose strings are required
+      for those APIs. The app does not use that data to identify you, and it is not sent to CasinWorks.
+    </p>
+    <p>
+      The app may open a document or this policy in Safari, and it may ask to save a consultation to Calendar. Fonts
+      used in the app may be fetched from Google Fonts.
+    </p>
+
+    <h2>The public website</h2>
+    <p>
+      casinworks.com uses Vercel Analytics for basic traffic (such as page views). It does not use advertising cookies.
+    </p>
+    <p>
+      If you submit an inquiry, the name, email, organization, and message you enter are sent to CasinWorks so the
+      request can be answered. That submission may be stored in a spreadsheet used only for inquiries. Please do not
+      put sensitive information in the form.
+    </p>
+
+    <h2>Processors</h2>
+    <p>
+      CasinWorks uses Google Firebase (Authentication, Firestore, and Storage) to host accounts and portal data, Vercel
+      to host the website, and, for site inquiries, the inquiry endpoint configured for this site. Those providers
+      process data on CasinWorks’ instructions to operate the service. They are not given it for their own advertising.
+    </p>
+
+    <h2>Retention</h2>
+    <p>
+      Account, consultation, and application records are kept while the account exists. Inquiry submissions are kept
+      only as long as needed to respond and manage the relationship, then reviewed and removed (typically within 12–24
+      months) unless a longer period is required for a legitimate business purpose. Engagement documents needed for
+      business or tax records are kept for that purpose.
+    </p>
+
+    <h2>Access and deletion</h2>
+    <p>
+      You delete a CasinWorks account in the app itself. Sign in, open <strong>Account</strong>, then tap
+      <strong>Delete my account</strong> and confirm with your password. CasinWorks does not require you to email
+      or call to close an account.
+    </p>
+    <p>
+      Deleting the account removes your profile, your consultation requests, and your subcontractor applications, and
+      signs you out. It cannot be undone. Quotations, purchase orders, invoices, and remittances already issued for an
+      engagement stay with CasinWorks as business and tax records.
+    </p>
+    <p>
+      For questions, or for a copy of your information, email
       <a href="mailto:christianjoshuacasin@gmail.com">christianjoshuacasin@gmail.com</a>.
+      That address is not how you delete a portal account.
+    </p>
+
+    <h2>Children</h2>
+    <p>
+      CasinWorks is a professional engineering workspace. It is not directed at children under 13, and CasinWorks does
+      not knowingly collect personal information from children.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      Christian Joshua Casin<br />
+      CasinWorks<br />
+      Mandaluyong, Philippines<br />
+      <a href="mailto:christianjoshuacasin@gmail.com">christianjoshuacasin@gmail.com</a>
     </p>
   </body>
 </html>

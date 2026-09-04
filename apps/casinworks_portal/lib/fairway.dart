@@ -223,7 +223,9 @@ class _FairwayVisualState extends State<FairwayVisual> {
                             color: fill,
                             shape: BoxShape.circle,
                             border: Border.all(color: border),
-                            boxShadow: active ? [BoxShadow(color: ink.withValues(alpha: 0.12), blurRadius: 0, spreadRadius: 4)] : null,
+                            boxShadow: active
+                                ? [BoxShadow(color: ink.withValues(alpha: 0.12), blurRadius: 0, spreadRadius: 4)]
+                                : null,
                           ),
                           child: Text(
                             '${i + 1}',
@@ -280,11 +282,22 @@ class _FairwayVisualState extends State<FairwayVisual> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(focused.title, style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white, height: 1.25)),
+                            Text(
+                              focused.title,
+                              style: GoogleFonts.dmSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                                height: 1.25,
+                              ),
+                            ),
                             if (focused.date.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(top: 2),
-                                child: Text(focused.date, style: GoogleFonts.dmSans(fontSize: 11, color: Colors.white.withValues(alpha: 0.9))),
+                                child: Text(
+                                  focused.date,
+                                  style: GoogleFonts.dmSans(fontSize: 11, color: Colors.white.withValues(alpha: 0.9)),
+                                ),
                               ),
                           ],
                         ),
@@ -300,7 +313,10 @@ class _FairwayVisualState extends State<FairwayVisual> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.white, border: Border.all(color: hairline)),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: hairline),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -313,7 +329,10 @@ class _FairwayVisualState extends State<FairwayVisual> {
                         children: [
                           Text('HOLE ${focusedIndex + 1}', style: kickerStyle),
                           const SizedBox(height: 6),
-                          Text(focused.title, style: GoogleFonts.cormorantGaramond(fontSize: 22, fontWeight: FontWeight.w600, color: ink)),
+                          Text(
+                            focused.title,
+                            style: GoogleFonts.cormorantGaramond(fontSize: 22, fontWeight: FontWeight.w600, color: ink),
+                          ),
                           if (focused.description.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 6),
@@ -392,7 +411,10 @@ class _FairwayPainter extends CustomPainter {
     }
 
     final label = TextPainter(
-      text: TextSpan(text: 'Start', style: GoogleFonts.dmSans(fontSize: 11, color: slate)),
+      text: TextSpan(
+        text: 'Start',
+        style: GoogleFonts.dmSans(fontSize: 11, color: slate),
+      ),
       textDirection: TextDirection.ltr,
     )..layout();
     label.paint(canvas, Offset(168 - label.width / 2, 12));
@@ -424,7 +446,10 @@ class _FairwayPainter extends CustomPainter {
     canvas.drawPath(flag, Paint()..color = const Color(0xFFBA593E));
 
     final finish = TextPainter(
-      text: TextSpan(text: 'Finish', style: GoogleFonts.dmSans(fontSize: 11, color: slate)),
+      text: TextSpan(
+        text: 'Finish',
+        style: GoogleFonts.dmSans(fontSize: 11, color: slate),
+      ),
       textDirection: TextDirection.ltr,
     )..layout();
     finish.paint(canvas, Offset(168 - finish.width / 2, 454));

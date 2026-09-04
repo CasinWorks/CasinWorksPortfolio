@@ -6,10 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'account.dart';
 import 'theme.dart';
 import 'fairway.dart';
 import 'widgets.dart';
 import 'book.dart';
+import 'tutorial.dart';
 
 /// Fill via dart-defines on web (same Firebase project as casinworks.com/portal).
 const firebaseOptions = FirebaseOptions(
@@ -35,16 +37,33 @@ Future<void> main() async {
   runApp(const CasinWorksPortalApp());
 }
 
-class CasinWorksPortalApp extends StatelessWidget {
+class CasinWorksPortalApp extends StatefulWidget {
   const CasinWorksPortalApp({super.key});
 
   @override
+  State<CasinWorksPortalApp> createState() => _CasinWorksPortalAppState();
+}
+
+class _CasinWorksPortalAppState extends State<CasinWorksPortalApp> {
+  String? _guideRole;
+
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'CasinWorks Portal',
-      debugShowCheckedModeBanner: false,
-      theme: portalTheme(),
-      home: const Gate(),
+    return PortalGuideScope(
+      role: _guideRole,
+      setRole: (role) {
+        if (_guideRole == role) return;
+        setState(() => _guideRole = role);
+      },
+      open: (context, {required String role}) => StoryTutorial.open(context, role: role),
+      openAccount: (context) =>
+          Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) => const AccountPage())),
+      child: MaterialApp(
+        title: 'CasinWorks Portal',
+        debugShowCheckedModeBanner: false,
+        theme: portalTheme(),
+        home: const Gate(),
+      ),
     );
   }
 }
@@ -52,18 +71,32 @@ class CasinWorksPortalApp extends StatelessWidget {
 class Gate extends StatelessWidget {
   const Gate({super.key});
 
+  void _clearGuide(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      PortalGuideScope.maybeOf(context)?.setRole(null);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (Firebase.apps.isEmpty) {
+      _clearGuide(context);
       return const SignInPage();
     }
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Scaffold(backgroundColor: cream, body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            backgroundColor: cream,
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
-        if (snap.data == null) return const SignInPage();
+        if (snap.data == null) {
+          _clearGuide(context);
+          return const SignInPage();
+        }
         return HomeShell(uid: snap.data!.uid, email: snap.data!.email ?? '');
       },
     );
@@ -83,6 +116,7 @@ class _SignInPageState extends State<SignInPage> {
   final company = TextEditingController();
   String role = 'client';
   bool register = false;
+  bool acceptedPrivacy = false;
   String? error;
   bool sending = false;
 
@@ -111,6 +145,9 @@ class _SignInPageState extends State<SignInPage> {
         if (role == 'client' && company.text.trim().isEmpty) {
           throw Exception('Enter your company.');
         }
+        if (!acceptedPrivacy) {
+          throw Exception('Please agree to how your details are stored.');
+        }
         final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: email.text.trim(),
           password: password.text,
@@ -121,12 +158,10 @@ class _SignInPageState extends State<SignInPage> {
           'displayName': displayName.text.trim(),
           'role': role,
           if (role == 'client') 'company': company.text.trim(),
+          'privacyAcceptedAt': DateTime.now().toUtc().toIso8601String(),
         });
       } else {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: email.text.trim(),
-          password: password.text,
-        );
+        await FirebaseAuth.instance.signInWithEmailAndPassword(email: email.text.trim(), password: password.text);
       }
     } catch (e) {
       setState(() => error = e.toString());
@@ -150,8 +185,13 @@ class _SignInPageState extends State<SignInPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('CASINWORKS', style: brandStyle),
-                      const SizedBox(height: 4),
+                      Image.asset(
+                        'assets/icon/app_icon.png',
+                        width: 72,
+                        height: 72,
+                        filterQuality: FilterQuality.medium,
+                      ),
+                      const SizedBox(height: 10),
                       Text('INDEPENDENT ENGINEERING', style: kickerStyle.copyWith(fontSize: 10, letterSpacing: 1.6)),
                     ],
                   ),
@@ -184,14 +224,21 @@ class _SignInPageState extends State<SignInPage> {
             if (register) ...[
               PortalField(label: 'Full name', controller: displayName),
               const SizedBox(height: 16),
-              if (role == 'client') ...[
-                PortalField(label: 'Company', controller: company),
-                const SizedBox(height: 16),
-              ],
+              if (role == 'client') ...[PortalField(label: 'Company', controller: company), const SizedBox(height: 16)],
             ],
             PortalField(label: 'Email', controller: email, keyboardType: TextInputType.emailAddress),
             const SizedBox(height: 16),
             PortalField(label: 'Password', controller: password, obscure: true),
+            if (register) ...[
+              const SizedBox(height: 20),
+              PrivacyConsent(
+                accepted: acceptedPrivacy,
+                onChanged: (v) => setState(() {
+                  acceptedPrivacy = v;
+                  error = null;
+                }),
+              ),
+            ],
             if (error != null) ...[
               const SizedBox(height: 12),
               Text(error!, style: GoogleFonts.dmSans(fontSize: 13, color: errorRed)),
@@ -201,11 +248,23 @@ class _SignInPageState extends State<SignInPage> {
               label: sending
                   ? 'Please wait…'
                   : register
-                      ? 'Create account'
-                      : 'Continue as ${role == 'client' ? 'client' : 'subcontractor'}',
-              enabled: !sending,
+                  ? 'Create account'
+                  : 'Continue as ${role == 'client' ? 'client' : 'subcontractor'}',
+              enabled: !sending && (!register || acceptedPrivacy),
               onPressed: _submit,
             ),
+            if (!register) ...[
+              const SizedBox(height: 16),
+              Center(
+                child: GestureDetector(
+                  onTap: openPrivacyPolicy,
+                  child: Text(
+                    'Privacy policy',
+                    style: GoogleFonts.dmSans(fontSize: 13, color: slate, decoration: TextDecoration.underline),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 28),
             const Divider(color: hairline, height: 1),
             const SizedBox(height: 20),
@@ -252,13 +311,25 @@ class HomeShell extends StatelessWidget {
         final role = (snap.data?.data()?['role'] as String?) ?? 'client';
         final displayName = (snap.data?.data()?['displayName'] as String?) ?? '';
         final company = (snap.data?.data()?['company'] as String?) ?? '';
-        if (role == 'subcontractor') return GigBoard(uid: uid, email: email);
-        return ClientHome(
-          uid: uid,
-          email: email,
-          isAdmin: role == 'admin',
-          displayName: displayName,
-          company: company,
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!context.mounted) return;
+          PortalGuideScope.maybeOf(context)?.setRole(role);
+        });
+        if (role == 'subcontractor') {
+          return TutorialGate(
+            role: role,
+            child: GigBoard(uid: uid, email: email),
+          );
+        }
+        return TutorialGate(
+          role: role,
+          child: ClientHome(
+            uid: uid,
+            email: email,
+            isAdmin: role == 'admin',
+            displayName: displayName,
+            company: company,
+          ),
         );
       },
     );
@@ -298,10 +369,7 @@ class _ClientHomeState extends State<ClientHome> {
       final snap = await FirebaseFirestore.instance.collection('projects').where('clientEmail', isEqualTo: email).get();
       for (final d in snap.docs) {
         if (d.data()['clientId'] == widget.uid) continue;
-        await d.reference.update({
-          'clientId': widget.uid,
-          'clientName': d.data()['clientName'] ?? email,
-        });
+        await d.reference.update({'clientId': widget.uid, 'clientName': d.data()['clientName'] ?? email});
       }
     } catch (_) {}
   }
@@ -315,7 +383,6 @@ class _ClientHomeState extends State<ClientHome> {
         child: Column(
           children: [
             PortalHeader(
-              onSignOut: () => FirebaseAuth.instance.signOut(),
               onBook: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -325,7 +392,6 @@ class _ClientHomeState extends State<ClientHome> {
                     displayName: widget.displayName,
                     company: widget.company,
                     isAdmin: widget.isAdmin,
-                    onSignOut: () => FirebaseAuth.instance.signOut(),
                   ),
                 ),
               ),
@@ -334,12 +400,18 @@ class _ClientHomeState extends State<ClientHome> {
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: widget.isAdmin
                     ? FirebaseFirestore.instance.collection('projects').snapshots()
-                    : FirebaseFirestore.instance.collection('projects').where('clientId', isEqualTo: widget.uid).snapshots(),
+                    : FirebaseFirestore.instance
+                          .collection('projects')
+                          .where('clientId', isEqualTo: widget.uid)
+                          .snapshots(),
                 builder: (context, byId) {
                   return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: widget.isAdmin || email.isEmpty
                         ? Stream<QuerySnapshot<Map<String, dynamic>>>.empty()
-                        : FirebaseFirestore.instance.collection('projects').where('clientEmail', isEqualTo: email).snapshots(),
+                        : FirebaseFirestore.instance
+                              .collection('projects')
+                              .where('clientEmail', isEqualTo: email)
+                              .snapshots(),
                     builder: (context, byEmail) {
                       if (!byId.hasData && !byEmail.hasData) {
                         return const Center(child: CircularProgressIndicator());
@@ -386,7 +458,6 @@ class _ClientHomeState extends State<ClientHome> {
                                     displayName: widget.displayName,
                                     company: widget.company,
                                     isAdmin: widget.isAdmin,
-                                    onSignOut: () => FirebaseAuth.instance.signOut(),
                                   ),
                                 ),
                               ),
@@ -421,7 +492,9 @@ class _ClientHomeState extends State<ClientHome> {
                               return InkWell(
                                 onTap: () => Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => ProjectPage(projectId: doc.id, name: name)),
+                                  MaterialPageRoute(
+                                    builder: (_) => ProjectPage(projectId: doc.id, name: name),
+                                  ),
                                 ),
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(vertical: 22),
@@ -433,7 +506,14 @@ class _ClientHomeState extends State<ClientHome> {
                                         style: kickerStyle,
                                       ),
                                       const SizedBox(height: 8),
-                                      Text(name, style: GoogleFonts.cormorantGaramond(fontSize: 24, fontWeight: FontWeight.w600, color: ink)),
+                                      Text(
+                                        name,
+                                        style: GoogleFonts.cormorantGaramond(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w600,
+                                          color: ink,
+                                        ),
+                                      ),
                                       const SizedBox(height: 14),
                                       ClipRect(
                                         child: LinearProgressIndicator(
@@ -450,7 +530,11 @@ class _ClientHomeState extends State<ClientHome> {
                                           const Spacer(),
                                           Text(
                                             widget.isAdmin ? 'Open project →' : 'Open course →',
-                                            style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: ink),
+                                            style: GoogleFonts.dmSans(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                              color: ink,
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -494,7 +578,7 @@ class _ProjectPageState extends State<ProjectPage> {
       body: SafeArea(
         child: Column(
           children: [
-            PortalHeader(onSignOut: () => FirebaseAuth.instance.signOut()),
+            const PortalHeader(),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 24, 0),
               child: Row(
@@ -507,11 +591,18 @@ class _ProjectPageState extends State<ProjectPage> {
                   TextButton(
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => DocumentsPage(projectId: widget.projectId, name: widget.name)),
+                      MaterialPageRoute(
+                        builder: (_) => DocumentsPage(projectId: widget.projectId, name: widget.name),
+                      ),
                     ),
                     child: Text(
                       'Documents',
-                      style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: ink, decoration: TextDecoration.underline),
+                      style: GoogleFonts.dmSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: ink,
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
                   ),
                 ],
@@ -519,10 +610,14 @@ class _ProjectPageState extends State<ProjectPage> {
             ),
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance.collection('milestones').where('projectId', isEqualTo: widget.projectId).snapshots(),
+                stream: FirebaseFirestore.instance
+                    .collection('milestones')
+                    .where('projectId', isEqualTo: widget.projectId)
+                    .snapshots(),
                 builder: (context, snap) {
                   if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-                  final items = [...snap.data!.docs]..sort((a, b) => ((a.data()['order'] as num?) ?? 0).compareTo((b.data()['order'] as num?) ?? 0));
+                  final items = [...snap.data!.docs]
+                    ..sort((a, b) => ((a.data()['order'] as num?) ?? 0).compareTo((b.data()['order'] as num?) ?? 0));
                   final holes = items
                       .map(
                         (doc) => FairwayHole(
@@ -579,17 +674,29 @@ class _ProjectPageState extends State<ProjectPage> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(m['title'] as String? ?? '', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600, color: ink)),
+                                        Text(
+                                          m['title'] as String? ?? '',
+                                          style: GoogleFonts.dmSans(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                            color: ink,
+                                          ),
+                                        ),
                                         if ((m['date'] as String?)?.isNotEmpty == true)
                                           Padding(
                                             padding: const EdgeInsets.only(top: 4),
-                                            child: Text(m['date'] as String, style: GoogleFonts.dmSans(fontSize: 12, color: slate)),
+                                            child: Text(
+                                              m['date'] as String,
+                                              style: GoogleFonts.dmSans(fontSize: 12, color: slate),
+                                            ),
                                           ),
                                       ],
                                     ),
                                   ),
                                   StatusPill(
-                                    label: status.isEmpty ? 'Upcoming' : '${status[0].toUpperCase()}${status.substring(1)}',
+                                    label: status.isEmpty
+                                        ? 'Upcoming'
+                                        : '${status[0].toUpperCase()}${status.substring(1)}',
                                     current: status == 'current',
                                   ),
                                 ],
@@ -621,7 +728,7 @@ class DocumentsPage extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            PortalHeader(onSignOut: () => FirebaseAuth.instance.signOut()),
+            const PortalHeader(),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 24, 0),
               child: Align(
@@ -634,7 +741,10 @@ class DocumentsPage extends StatelessWidget {
             ),
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance.collection('documents').where('projectId', isEqualTo: projectId).snapshots(),
+                stream: FirebaseFirestore.instance
+                    .collection('documents')
+                    .where('projectId', isEqualTo: projectId)
+                    .snapshots(),
                 builder: (context, snap) {
                   if (!snap.hasData) return const Center(child: CircularProgressIndicator());
                   final docs = snap.data!.docs;
@@ -645,7 +755,10 @@ class DocumentsPage extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text('Documents.', style: displayStyle(32)),
                       const SizedBox(height: 8),
-                      Text('Quotations, purchase orders, invoices, and files attached to this project.', style: bodyStyle),
+                      Text(
+                        'Quotations, purchase orders, invoices, and files attached to this project.',
+                        style: bodyStyle,
+                      ),
                       const SizedBox(height: 24),
                       HairlineList(
                         empty: Text('No records yet.', style: bodyStyle),
@@ -664,10 +777,17 @@ class DocumentsPage extends StatelessWidget {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(d['title'] as String? ?? d['type'] as String? ?? 'Document', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600)),
+                                        Text(
+                                          d['title'] as String? ?? d['type'] as String? ?? 'Document',
+                                          style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600),
+                                        ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          [d['type'], d['date'], d['amount']].where((v) => v != null && v.toString().isNotEmpty).join(' · '),
+                                          [
+                                            d['type'],
+                                            d['date'],
+                                            d['amount'],
+                                          ].where((v) => v != null && v.toString().isNotEmpty).join(' · '),
                                           style: GoogleFonts.dmSans(fontSize: 12, color: slate),
                                         ),
                                       ],
@@ -704,7 +824,7 @@ class GigBoard extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            PortalHeader(onSignOut: () => FirebaseAuth.instance.signOut()),
+            const PortalHeader(),
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: FirebaseFirestore.instance.collection('gigs').where('status', isEqualTo: 'open').snapshots(),
@@ -721,12 +841,18 @@ class GigBoard extends StatelessWidget {
                           style: displayStyle(36),
                           children: [
                             const TextSpan(text: 'High-stakes engagements & '),
-                            TextSpan(text: 'open postings.', style: displayStyle(36).copyWith(fontStyle: FontStyle.italic, color: slateMuted)),
+                            TextSpan(
+                              text: 'open postings.',
+                              style: displayStyle(36).copyWith(fontStyle: FontStyle.italic, color: slateMuted),
+                            ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Text('Specialized roles for independent engineers. Apply here; engagement contracts happen off-platform.', style: bodyStyle),
+                      Text(
+                        'Specialized roles for independent engineers. Apply here; engagement contracts happen off-platform.',
+                        style: bodyStyle,
+                      ),
                       const SizedBox(height: 28),
                       HairlineList(
                         empty: Text('No open postings.', style: bodyStyle),
@@ -737,13 +863,24 @@ class GigBoard extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                if ((g['discipline'] as String?)?.isNotEmpty == true) Text((g['discipline'] as String).toUpperCase(), style: kickerStyle),
+                                if ((g['discipline'] as String?)?.isNotEmpty == true)
+                                  Text((g['discipline'] as String).toUpperCase(), style: kickerStyle),
                                 const SizedBox(height: 6),
-                                Text(g['title'] as String? ?? '', style: GoogleFonts.cormorantGaramond(fontSize: 22, fontWeight: FontWeight.w600, color: ink)),
+                                Text(
+                                  g['title'] as String? ?? '',
+                                  style: GoogleFonts.cormorantGaramond(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w600,
+                                    color: ink,
+                                  ),
+                                ),
                                 if ((g['location'] as String?)?.isNotEmpty == true)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 6),
-                                    child: Text(g['location'] as String, style: GoogleFonts.dmSans(fontSize: 13, color: slate)),
+                                    child: Text(
+                                      g['location'] as String,
+                                      style: GoogleFonts.dmSans(fontSize: 13, color: slate),
+                                    ),
                                   ),
                                 const SizedBox(height: 14),
                                 Align(
@@ -762,7 +899,10 @@ class GigBoard extends StatelessWidget {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
                                             backgroundColor: ink,
-                                            content: Text('Application sent', style: GoogleFonts.dmSans(color: Colors.white)),
+                                            content: Text(
+                                              'Application sent',
+                                              style: GoogleFonts.dmSans(color: Colors.white),
+                                            ),
                                           ),
                                         );
                                       }

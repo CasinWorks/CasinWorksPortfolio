@@ -61,9 +61,7 @@ List<String?> monthGrid(int year, int month) {
     cells.add(null);
   }
   for (var d = 1; d <= daysInMonth; d++) {
-    cells.add(
-      '$year-${month.toString().padLeft(2, '0')}-${d.toString().padLeft(2, '0')}',
-    );
+    cells.add('$year-${month.toString().padLeft(2, '0')}-${d.toString().padLeft(2, '0')}');
   }
   while (cells.length % 7 != 0) {
     cells.add(null);
@@ -108,15 +106,12 @@ class BookPage extends StatefulWidget {
     required this.displayName,
     this.company = '',
     this.isAdmin = false,
-    this.onSignOut,
   });
   final String uid;
   final String email;
   final String displayName;
   final String company;
   final bool isAdmin;
-  final VoidCallback? onSignOut;
-
   @override
   State<BookPage> createState() => _BookPageState();
 }
@@ -156,14 +151,27 @@ class _BookPageState extends State<BookPage> {
   Widget build(BuildContext context) {
     final todayIso = manilaDateIso(DateTime.now());
     final cells = monthGrid(cursor.year, cursor.month);
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
 
     return Scaffold(
       backgroundColor: cream,
       body: SafeArea(
         child: Column(
           children: [
-            PortalHeader(onSignOut: widget.onSignOut),
+            const PortalHeader(),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 24, 0),
               child: Align(
@@ -197,18 +205,24 @@ class _BookPageState extends State<BookPage> {
                   final openHours = dateIso == null
                       ? const <int>[]
                       : slotHours
-                          .where(
-                            (h) =>
-                                durationFits(h, hours) &&
-                                !slotStart(dateIso!, h).isBefore(DateTime.now()) &&
-                                !taken(dateIso!, h, hours),
-                          )
-                          .toList();
+                            .where(
+                              (h) =>
+                                  durationFits(h, hours) &&
+                                  !slotStart(dateIso!, h).isBefore(DateTime.now()) &&
+                                  !taken(dateIso!, h, hours),
+                            )
+                            .toList();
 
                   final mine = docs.where((d) => d.data()['clientUid'] == widget.uid).toList()
-                    ..sort((a, b) => (a.data()['startsAt'] as String? ?? '').compareTo(b.data()['startsAt'] as String? ?? ''));
+                    ..sort(
+                      (a, b) =>
+                          (a.data()['startsAt'] as String? ?? '').compareTo(b.data()['startsAt'] as String? ?? ''),
+                    );
                   final inbox = live.toList()
-                    ..sort((a, b) => (a.data()['startsAt'] as String? ?? '').compareTo(b.data()['startsAt'] as String? ?? ''));
+                    ..sort(
+                      (a, b) =>
+                          (a.data()['startsAt'] as String? ?? '').compareTo(b.data()['startsAt'] as String? ?? ''),
+                    );
                   final list = widget.isAdmin ? inbox : mine;
 
                   return ListView(
@@ -240,7 +254,16 @@ class _BookPageState extends State<BookPage> {
                       const SizedBox(height: 24),
                       Row(
                         children: [
-                          Expanded(child: Text('${months[cursor.month - 1]} ${cursor.year}', style: GoogleFonts.cormorantGaramond(fontSize: 24, fontWeight: FontWeight.w600, color: ink))),
+                          Expanded(
+                            child: Text(
+                              '${months[cursor.month - 1]} ${cursor.year}',
+                              style: GoogleFonts.cormorantGaramond(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w600,
+                                color: ink,
+                              ),
+                            ),
+                          ),
                           IconButton(
                             onPressed: () => setState(() {
                               cursor = DateTime(cursor.year, cursor.month - 1, 1);
@@ -283,10 +306,10 @@ class _BookPageState extends State<BookPage> {
                               onTap: !hasSlot
                                   ? null
                                   : () => setState(() {
-                                        dateIso = day;
-                                        hour = null;
-                                        error = null;
-                                      }),
+                                      dateIso = day;
+                                      hour = null;
+                                      error = null;
+                                    }),
                               child: Container(
                                 width: 36,
                                 height: 36,
@@ -303,8 +326,8 @@ class _BookPageState extends State<BookPage> {
                                     color: selected
                                         ? Colors.white
                                         : hasSlot
-                                            ? ink
-                                            : const Color(0xFFCBD5E1),
+                                        ? ink
+                                        : const Color(0xFFCBD5E1),
                                   ),
                                 ),
                               ),
@@ -400,7 +423,9 @@ class _BookPageState extends State<BookPage> {
                             await FirebaseFirestore.instance.collection('consultations').add({
                               'clientUid': widget.uid,
                               'clientEmail': widget.email.trim().toLowerCase(),
-                              'clientName': widget.displayName.trim().isEmpty ? widget.email : widget.displayName.trim(),
+                              'clientName': widget.displayName.trim().isEmpty
+                                  ? widget.email
+                                  : widget.displayName.trim(),
                               if (widget.company.trim().isNotEmpty) 'company': widget.company.trim(),
                               'startsAt': start.toUtc().toIso8601String(),
                               'hours': hours,
@@ -418,7 +443,10 @@ class _BookPageState extends State<BookPage> {
                             messenger.showSnackBar(
                               SnackBar(
                                 backgroundColor: ink,
-                                content: Text('Requested. Add it to your calendar if the sheet did not open.', style: GoogleFonts.dmSans(color: Colors.white)),
+                                content: Text(
+                                  'Requested. Add it to your calendar if the sheet did not open.',
+                                  style: GoogleFonts.dmSans(color: Colors.white),
+                                ),
                               ),
                             );
                           } catch (e) {
@@ -432,7 +460,10 @@ class _BookPageState extends State<BookPage> {
                       Text(widget.isAdmin ? 'UPCOMING' : 'YOUR BOOKINGS', style: kickerStyle),
                       const SizedBox(height: 8),
                       HairlineList(
-                        empty: Text(widget.isAdmin ? 'No active consultations.' : 'Nothing booked yet.', style: bodyStyle),
+                        empty: Text(
+                          widget.isAdmin ? 'No active consultations.' : 'Nothing booked yet.',
+                          style: bodyStyle,
+                        ),
                         children: list.map((doc) {
                           final d = doc.data();
                           final start = DateTime.tryParse(d['startsAt'] as String? ?? '') ?? DateTime.now();
@@ -443,7 +474,10 @@ class _BookPageState extends State<BookPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(formatWhen(start), style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600, color: ink)),
+                                Text(
+                                  formatWhen(start),
+                                  style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600, color: ink),
+                                ),
                                 const SizedBox(height: 4),
                                 Text(
                                   [
@@ -471,7 +505,10 @@ class _BookPageState extends State<BookPage> {
                                       ),
                                       _MiniPill(
                                         label: 'Google',
-                                        onTap: () => launchUrl(googleCalendarUrl(start: start, hours: duration), mode: LaunchMode.externalApplication),
+                                        onTap: () => launchUrl(
+                                          googleCalendarUrl(start: start, hours: duration),
+                                          mode: LaunchMode.externalApplication,
+                                        ),
                                       ),
                                     ],
                                     if (widget.isAdmin && status == 'requested')

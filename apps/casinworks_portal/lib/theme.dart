@@ -12,32 +12,16 @@ const errorRed = Color(0xFFB91C1C);
 const hairline = Color(0x1A000000);
 const fieldBorder = Color(0x26000000);
 
-TextStyle get kickerStyle => GoogleFonts.dmSans(
-      fontSize: 11,
-      fontWeight: FontWeight.w600,
-      letterSpacing: 1.8,
-      color: slate,
-    );
+TextStyle get kickerStyle =>
+    GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.8, color: slate);
 
-TextStyle get brandStyle => GoogleFonts.dmSans(
-      fontSize: 12,
-      fontWeight: FontWeight.w600,
-      letterSpacing: 2.4,
-      color: ink,
-    );
+TextStyle get brandStyle =>
+    GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 2.4, color: ink);
 
-TextStyle displayStyle([double size = 36]) => GoogleFonts.cormorantGaramond(
-      fontSize: size,
-      fontWeight: FontWeight.w600,
-      height: 1.1,
-      color: ink,
-    );
+TextStyle displayStyle([double size = 36]) =>
+    GoogleFonts.cormorantGaramond(fontSize: size, fontWeight: FontWeight.w600, height: 1.1, color: ink);
 
-TextStyle get bodyStyle => GoogleFonts.dmSans(
-      fontSize: 14,
-      height: 1.45,
-      color: const Color(0xFF475569),
-    );
+TextStyle get bodyStyle => GoogleFonts.dmSans(fontSize: 14, height: 1.45, color: const Color(0xFF475569));
 
 ThemeData portalTheme() {
   final base = ThemeData(
@@ -66,19 +50,12 @@ ThemeData portalTheme() {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      titleTextStyle: GoogleFonts.dmSans(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: ink,
-      ),
+      titleTextStyle: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: ink),
     ),
   );
 
   return base.copyWith(
-    textTheme: GoogleFonts.dmSansTextTheme(base.textTheme).apply(
-      bodyColor: ink,
-      displayColor: ink,
-    ),
+    textTheme: GoogleFonts.dmSansTextTheme(base.textTheme).apply(bodyColor: ink, displayColor: ink),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Colors.white,
