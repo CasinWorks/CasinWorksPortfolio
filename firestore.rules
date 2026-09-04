@@ -82,7 +82,7 @@ service cloud.firestore {
     match /projects/{id} {
       allow read: if isAdmin() || ownsProject();
       allow create: if isAdmin();
-      allow delete: if isAdmin() && resource.data.paymentStarted != true;
+      allow delete: if isAdmin();
       allow update: if isAdmin() || canClaimProject();
     }
 

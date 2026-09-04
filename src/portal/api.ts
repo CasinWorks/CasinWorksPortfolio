@@ -390,7 +390,7 @@ export function listenProjectShare(
   );
 }
 
-export async function deleteProject(id: string) {
+export async function deleteProject(id: string, opts?: { force?: boolean }) {
   const project = await fetchProject(id);
   const [milestones, documents] = await Promise.all([
     getDocs(query(collection(db(), "milestones"), where("projectId", "==", id))),
@@ -398,7 +398,7 @@ export async function deleteProject(id: string) {
   ]);
   const docs = documents.docs.map((d) => d.data() as Omit<ProjectDocument, "id">);
   const holes = milestones.docs.map((d) => d.data() as Omit<Milestone, "id">);
-  if (!canDeleteProject(project, docs, holes)) {
+  if (!opts?.force && !canDeleteProject(project, docs, holes)) {
     throw new Error(PROJECT_DELETE_LOCKED_MESSAGE);
   }
   await Promise.all([
