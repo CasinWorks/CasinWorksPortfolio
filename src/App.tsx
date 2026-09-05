@@ -182,7 +182,10 @@ export default function App() {
             >
               Consultation
             </a>
-            <Link to="/portal/sign-in" className="text-slate-500 hover:text-black transition-colors">
+            <Link
+              to="/portal/sign-in"
+              className="px-4 py-2 rounded-full border border-black/20 transition-colors text-[15px] font-medium text-[#1a1a1a] hover:border-black/50 hover:bg-black/[0.04]"
+            >
               Portal
             </Link>
           </div>
@@ -260,11 +263,18 @@ export default function App() {
                   Consultation
                 </a>
                 <Link
-                  to="/portal/sign-in"
-                  className="text-slate-500 hover:text-black transition-opacity w-fit text-[15px]"
+                  to="/portal/register"
+                  className="mt-1 w-fit rounded-full border border-black/20 px-5 py-2.5 text-[15px] font-medium text-[#1a1a1a] hover:border-black/50 hover:bg-black/[0.04] transition-colors"
                   onClick={() => setMobileNavOpen(false)}
                 >
-                  Client portal
+                  Sign up to the portal
+                </Link>
+                <Link
+                  to="/portal/sign-in"
+                  className="text-slate-500 hover:text-black transition-colors w-fit text-[14px]"
+                  onClick={() => setMobileNavOpen(false)}
+                >
+                  Client portal sign in
                 </Link>
               </div>
             </div>
@@ -301,7 +311,7 @@ export default function App() {
                   Independent software architecture for enterprises that require mission-critical reliability and senior-level accountability.
                 </p>
               </div>
-              <div className="min-w-0 lg:col-span-5 flex justify-start lg:justify-end">
+              <div className="min-w-0 lg:col-span-5 flex flex-col items-start lg:items-end gap-3">
                 <a
                   href="#contact"
                   className="group inline-flex items-center gap-3 text-base sm:text-lg font-semibold"
@@ -309,6 +319,15 @@ export default function App() {
                   <span className="border-b-2 border-black pb-0.5">Start a Consultation</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </a>
+                <Link
+                  to="/portal/register"
+                  className="group inline-flex items-center gap-2 text-sm sm:text-base font-medium text-slate-500 hover:text-[#1a1a1a] transition-colors"
+                >
+                  <span className="underline underline-offset-4 decoration-slate-400 group-hover:decoration-[#1a1a1a]">
+                    Or sign up and book your own slot
+                  </span>
+                  <ArrowUpRight className="size-4 shrink-0" aria-hidden />
+                </Link>
               </div>
             </div>
 
@@ -491,6 +510,38 @@ export default function App() {
                     <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </a>
                 </div>
+
+                <div className="min-w-0 rounded-2xl border border-slate-700 bg-white/[0.04] p-6 sm:p-7">
+                  <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Or skip the wait
+                  </span>
+                  <h3 className="mt-3 font-serif text-2xl sm:text-3xl font-semibold italic tracking-tight leading-snug">
+                    Book it yourself in the portal.
+                  </h3>
+                  <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed">
+                    Create a free account and choose your own consultation slot — hourly, 9AM to 5PM Manila time.
+                    The slot is held the moment you book it, and the first consultation is not billed.
+                  </p>
+                  <p className="mt-3 text-sm sm:text-base text-slate-400 leading-relaxed">
+                    The same account carries the engagement afterwards: milestone progress, quotations, purchase
+                    orders, invoices, and remittances in one place instead of a buried email thread.
+                  </p>
+                  <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+                    <Link
+                      to="/portal/register"
+                      className="group inline-flex items-center gap-2.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-slate-200 transition-colors"
+                    >
+                      Create a free account
+                      <ArrowRight className="size-4 shrink-0 group-hover:translate-x-1 transition-transform" aria-hidden />
+                    </Link>
+                    <Link
+                      to="/portal/sign-in"
+                      className="text-sm font-medium text-slate-400 underline underline-offset-4 hover:text-white transition-colors"
+                    >
+                      Already have an account? Sign in
+                    </Link>
+                  </div>
+                </div>
               </div>
 
               <div className="min-w-0 lg:col-span-7">
@@ -597,7 +648,8 @@ export default function App() {
               <a href="#studio-concepts" className="hover:text-white transition-colors w-fit">Studio concepts</a>
               <a href="#faq" className="hover:text-white transition-colors w-fit">FAQ</a>
               <a href="#contact" className="hover:text-white transition-colors w-fit">Consultation</a>
-              <Link to="/portal/sign-in" className="hover:text-white transition-colors w-fit">Client portal</Link>
+              <Link to="/portal/register" className="hover:text-white transition-colors w-fit">Sign up to the portal</Link>
+              <Link to="/portal/sign-in" className="hover:text-white transition-colors w-fit">Client portal sign in</Link>
             </nav>
           </div>
 

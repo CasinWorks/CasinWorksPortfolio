@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { Plus } from "lucide-react";
 import { JsonLd } from "./JsonLd";
@@ -34,7 +35,11 @@ export function FaqSection() {
             Straight answers.
           </h2>
           <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-sm">
-            {SITE.responseTimePromise} Prefer email?{" "}
+            {SITE.responseTimePromise} Or{" "}
+            <Link to="/portal/register" className="text-white font-medium underline underline-offset-4 hover:text-slate-300">
+              sign up to the portal
+            </Link>{" "}
+            and book a consultation slot yourself. Prefer email?{" "}
             <a href={`mailto:${SITE.email}`} className="text-white font-medium underline underline-offset-4 hover:text-slate-300">
               Write directly
             </a>

@@ -21,13 +21,42 @@ export default function ThankYouPage() {
         <p className="text-xl sm:text-2xl text-slate-500 leading-snug tracking-tight mb-6">
           Your message is in. {SITE.responseTimePromise}
         </p>
-        <p className="text-lg text-slate-500 leading-relaxed mb-16 max-w-xl">
+        <p className="text-lg text-slate-500 leading-relaxed mb-10 max-w-xl">
           If your brief is urgent, you can also reach me directly at{" "}
           <a href={`mailto:${SITE.email}`} className="font-medium text-[#1a1a1a] underline underline-offset-4 hover:opacity-70">
             {SITE.email}
           </a>
           .
         </p>
+
+        <div className="mb-16 max-w-xl rounded-2xl border border-black/10 bg-white p-6 sm:p-8">
+          <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+            Don't wait on me
+          </span>
+          <h2 className="mt-3 font-serif text-2xl sm:text-3xl font-semibold italic tracking-tight leading-snug">
+            Pick your own time instead.
+          </h2>
+          <p className="mt-3 text-base text-slate-500 leading-relaxed">
+            Create a free client portal account and book a consultation slot yourself — hourly, 9AM to 5PM
+            Manila time. The slot is held the moment you book it and the first consultation is not billed.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+            <Link
+              to="/portal/register"
+              className="group inline-flex items-center gap-2.5 rounded-full bg-[#1a1a1a] px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 transition-colors"
+            >
+              Create a free account
+              <ArrowRight className="size-4 shrink-0 group-hover:translate-x-1 transition-transform" aria-hidden />
+            </Link>
+            <Link
+              to="/portal/sign-in"
+              className="text-sm font-medium text-slate-500 underline underline-offset-4 hover:text-[#1a1a1a] transition-colors"
+            >
+              Already have an account? Sign in
+            </Link>
+          </div>
+        </div>
+
         <Link
           to="/"
           className="group inline-flex items-center gap-4 text-2xl sm:text-3xl font-bold border-b-4 border-black pb-3 hover:border-slate-300 transition-colors"

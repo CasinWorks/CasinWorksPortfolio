@@ -36,17 +36,27 @@ export const FAQS: FaqItem[] = [
   {
     question: "How do engagements usually start?",
     answer:
-      "Send a short brief via the inquiry form or email. We clarify scope, constraints, and success criteria, then agree on a focused first phase before any larger commitment.",
+      "Two ways. Send a short brief via the inquiry form or email, or create a free client portal account and book a consultation slot yourself. Either way we clarify scope, constraints, and success criteria, then agree on a focused first phase before any larger commitment.",
+  },
+  {
+    question: "Can I book a consultation myself instead of waiting for a reply?",
+    answer:
+      "Yes. Sign up for a free client portal account and choose your own slot — hourly, 9AM to 5PM Manila time. The slot is held the moment you book it and you get a calendar invite straight away, so nothing waits on an email thread.",
+  },
+  {
+    question: "What do I get from a client portal account?",
+    answer:
+      "It is where an engagement lives. You book and reschedule consultations, follow the project milestone by milestone, and read every quotation, purchase order, invoice, and remittance in one place instead of digging through email. Signing up costs nothing and does not commit you to a project.",
   },
   {
     question: "How is consulting billed?",
     answer:
-      "The first consultation is complimentary. Larger builds are quoted as a fixed scope after we agree what the work is.",
+      "The first consultation is complimentary, whether you book it in the portal or reach out by email. Larger builds are quoted as a fixed scope after we agree what the work is.",
   },
   {
     question: "How quickly will I hear back?",
     answer:
-      "I reply to new consultation inquiries within 1 business day. Complex scopes may need a short follow-up call before a written proposal.",
+      "I reply to new consultation inquiries within 1 business day. If you would rather not wait, book a slot in the client portal and it is confirmed on the spot. Complex scopes may need a short follow-up call before a written proposal.",
   },
   {
     question: "Where are you based, and do you work remotely?",
