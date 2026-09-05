@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'credentials.dart';
+import 'push.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -115,6 +116,7 @@ class _AccountPageState extends State<AccountPage> {
   bool working = false;
 
   Future<void> _signOut() async {
+    await PushService.instance.stop();
     await FirebaseAuth.instance.signOut();
     if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
   }
@@ -136,6 +138,9 @@ class _AccountPageState extends State<AccountPage> {
         throw Exception('This account has no email address to confirm against.');
       }
       await user.reauthenticateWithCredential(EmailAuthProvider.credential(email: email, password: password));
+      // Unregister the device before the account goes, while the rules still
+      // allow writing to the user document.
+      await PushService.instance.stop();
       await deleteAccountData(user);
       await CredentialStore.clear();
       if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);

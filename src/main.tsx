@@ -24,6 +24,7 @@ import { GigBoardScreen } from './portal/screens/GigBoardScreen.tsx';
 import { ProjectProgressScreen } from './portal/screens/ProjectProgressScreen.tsx';
 import { SharedProjectScreen } from './portal/screens/SharedProjectScreen.tsx';
 import { AccountScreen } from './portal/screens/AccountScreen.tsx';
+import { MessagesScreen, ThreadScreen } from './portal/screens/MessagesScreens.tsx';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
@@ -46,6 +47,8 @@ createRoot(document.getElementById('root')!).render(
             <Route element={<PortalShell />}>
               <Route index element={<HomeRedirect />} />
               <Route path="account" element={<AccountScreen />} />
+              <Route path="messages" element={<MessagesScreen />} />
+              <Route path="messages/:threadId" element={<ThreadScreen />} />
               <Route element={<RequireClientArea />}>
                 <Route path="dashboard" element={<ClientDashboard />} />
                 <Route path="book" element={<BookConsultationScreen />} />

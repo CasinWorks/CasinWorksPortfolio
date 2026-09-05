@@ -6,6 +6,7 @@ import {
   getDoc,
   getDocs,
   onSnapshot,
+  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -23,6 +24,9 @@ import type {
   DocumentType,
   Gig,
   GigApplication,
+  Message,
+  MessageAuthor,
+  MessageThread,
   Milestone,
   MilestoneStatus,
   PortalRole,
@@ -822,6 +826,244 @@ export async function createConsultation(input: {
 
 export async function updateConsultationStatus(id: string, status: ConsultationStatus) {
   await updateDoc(doc(db(), "consultations", id), { status });
+}
+
+/* ---------------------------------------------------------------- messaging */
+
+/** Never read; sorts before every real ISO timestamp. */
+const NEVER_READ = "";
+
+/**
+ * Thread ids are derived from what the thread is about, so opening a thread is
+ * idempotent — two people hitting "Message" at once converge on one document
+ * instead of racing to create two.
+ */
+export function threadIdForProject(projectId: string) {
+  return `p_${projectId}`;
+}
+
+export function threadIdForClient(clientUid: string) {
+  return `c_${clientUid}`;
+}
+
+function messageThreadFromData(id: string, data: Record<string, unknown>): MessageThread {
+  return {
+    id,
+    clientUid: String(data.clientUid ?? ""),
+    clientEmail: String(data.clientEmail ?? ""),
+    clientName: String(data.clientName ?? ""),
+    projectId: data.projectId ? String(data.projectId) : undefined,
+    projectName: data.projectName ? String(data.projectName) : undefined,
+    subject: String(data.subject ?? "Messages"),
+    createdAt: String(data.createdAt ?? ""),
+    lastMessageAt: String(data.lastMessageAt ?? ""),
+    lastMessagePreview: String(data.lastMessagePreview ?? ""),
+    lastMessageBy: (data.lastMessageBy as MessageAuthor) ?? "client",
+    adminReadAt: String(data.adminReadAt ?? NEVER_READ),
+    clientReadAt: String(data.clientReadAt ?? NEVER_READ),
+  };
+}
+
+function messageFromData(threadId: string, id: string, data: Record<string, unknown>): Message {
+  return {
+    id,
+    threadId,
+    body: String(data.body ?? ""),
+    senderUid: String(data.senderUid ?? ""),
+    senderName: String(data.senderName ?? ""),
+    senderRole: (data.senderRole as MessageAuthor) ?? "client",
+    createdAt: String(data.createdAt ?? ""),
+  };
+}
+
+/** True when the other side has spoken since this side last opened the thread. */
+export function threadHasUnread(thread: MessageThread, viewer: MessageAuthor) {
+  if (!thread.lastMessageAt) return false;
+  if (thread.lastMessageBy === viewer) return false;
+  const readAt = viewer === "admin" ? thread.adminReadAt : thread.clientReadAt;
+  return !readAt || readAt < thread.lastMessageAt;
+}
+
+export function countUnreadThreads(threads: MessageThread[], viewer: MessageAuthor) {
+  return threads.reduce((n, t) => (threadHasUnread(t, viewer) ? n + 1 : n), 0);
+}
+
+function sortThreads(rows: MessageThread[]) {
+  return [...rows].sort((a, b) => (a.lastMessageAt < b.lastMessageAt ? 1 : -1));
+}
+
+/**
+ * Admins watch every thread; clients watch their own by email, which also picks
+ * up threads the studio opened before they had registered.
+ *
+ * Sorting happens here rather than in the query so neither call needs a
+ * composite index deployed.
+ */
+export function listenThreads(
+  viewer: { role: PortalRole; email: string },
+  cb: (rows: MessageThread[]) => void,
+  onError?: (message: string) => void,
+) {
+  const base = collection(db(), "threads");
+  const q =
+    viewer.role === "admin"
+      ? query(base)
+      : query(base, where("clientEmail", "==", viewer.email.trim().toLowerCase()));
+  return onSnapshot(
+    q,
+    (snap) => cb(sortThreads(snap.docs.map((d) => messageThreadFromData(d.id, d.data() as Record<string, unknown>)))),
+    (err) => onError?.(err.message),
+  );
+}
+
+export function listenThread(
+  threadId: string,
+  cb: (thread: MessageThread | null) => void,
+  onError?: (message: string) => void,
+) {
+  return onSnapshot(
+    doc(db(), "threads", threadId),
+    (snap) => cb(snap.exists() ? messageThreadFromData(snap.id, snap.data() as Record<string, unknown>) : null),
+    (err) => onError?.(err.message),
+  );
+}
+
+export function listenMessages(
+  threadId: string,
+  cb: (rows: Message[]) => void,
+  onError?: (message: string) => void,
+) {
+  return onSnapshot(
+    query(collection(db(), "threads", threadId, "messages"), orderBy("createdAt")),
+    (snap) => cb(snap.docs.map((d) => messageFromData(threadId, d.id, d.data() as Record<string, unknown>))),
+    (err) => onError?.(err.message),
+  );
+}
+
+/**
+ * Creates the thread only when it is missing, so callers can treat "open the
+ * conversation" as a single safe call.
+ */
+export async function ensureThread(input: {
+  id: string;
+  clientUid: string;
+  clientEmail: string;
+  clientName: string;
+  projectId?: string;
+  projectName?: string;
+  subject: string;
+  openedBy: MessageAuthor;
+}): Promise<string> {
+  const refDoc = doc(db(), "threads", input.id);
+  const existing = await getDoc(refDoc);
+  if (existing.exists()) return input.id;
+
+  const now = new Date().toISOString();
+  await setDoc(
+    refDoc,
+    omitUndefined({
+      clientUid: input.clientUid,
+      clientEmail: input.clientEmail.trim().toLowerCase(),
+      clientName: input.clientName.trim(),
+      projectId: input.projectId || undefined,
+      projectName: input.projectName?.trim() || undefined,
+      subject: input.subject.trim() || "Messages",
+      createdAt: now,
+      // An empty thread reads as "nothing said yet" on both sides.
+      lastMessageAt: "",
+      lastMessagePreview: "",
+      lastMessageBy: input.openedBy,
+      adminReadAt: NEVER_READ,
+      clientReadAt: NEVER_READ,
+    } as Record<string, unknown>),
+  );
+  return input.id;
+}
+
+export const MESSAGE_MAX_LENGTH = 4000;
+
+/**
+ * Appends a message and refreshes the thread summary the inbox reads from.
+ *
+ * The push notification is deliberately best-effort: a failed notify must never
+ * lose a message that is already committed to Firestore.
+ */
+export async function sendMessage(input: {
+  threadId: string;
+  body: string;
+  senderUid: string;
+  senderName: string;
+  senderRole: MessageAuthor;
+  idToken?: string;
+}) {
+  const body = input.body.trim();
+  if (!body) throw new Error("Write a message first.");
+  if (body.length > MESSAGE_MAX_LENGTH) {
+    throw new Error(`Keep the message under ${MESSAGE_MAX_LENGTH} characters.`);
+  }
+
+  const now = new Date().toISOString();
+  const created = await addDoc(collection(db(), "threads", input.threadId, "messages"), {
+    body,
+    senderUid: input.senderUid,
+    senderName: input.senderName,
+    senderRole: input.senderRole,
+    createdAt: now,
+  });
+
+  await updateDoc(doc(db(), "threads", input.threadId), {
+    lastMessageAt: now,
+    lastMessagePreview: body.slice(0, 140),
+    lastMessageBy: input.senderRole,
+    // Sending counts as reading everything before it.
+    ...(input.senderRole === "admin" ? { adminReadAt: now } : { clientReadAt: now }),
+  });
+
+  if (input.idToken) {
+    void notifyNewMessage(input.threadId, created.id, input.idToken);
+  }
+  return created.id;
+}
+
+async function notifyNewMessage(threadId: string, messageId: string, idToken: string) {
+  try {
+    await fetch("/api/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+      body: JSON.stringify({ threadId, messageId }),
+    });
+  } catch {
+    // Delivery is a convenience; the message is already saved.
+  }
+}
+
+export async function markThreadRead(threadId: string, viewer: MessageAuthor) {
+  const now = new Date().toISOString();
+  await updateDoc(
+    doc(db(), "threads", threadId),
+    viewer === "admin" ? { adminReadAt: now } : { clientReadAt: now },
+  );
+}
+
+/** Registers a device for push. Tokens live on the user so rules already cover them. */
+export async function saveFcmToken(uid: string, token: string) {
+  const refDoc = doc(db(), "users", uid);
+  const snap = await getDoc(refDoc);
+  if (!snap.exists()) return;
+  const current = (snap.data().fcmTokens as string[] | undefined) ?? [];
+  if (current.includes(token)) return;
+  // Capped so a user cycling devices cannot grow the document without bound.
+  const next = [...current, token].slice(-10);
+  await updateDoc(refDoc, { fcmTokens: next });
+}
+
+export async function removeFcmToken(uid: string, token: string) {
+  const refDoc = doc(db(), "users", uid);
+  const snap = await getDoc(refDoc);
+  if (!snap.exists()) return;
+  const current = (snap.data().fcmTokens as string[] | undefined) ?? [];
+  if (!current.includes(token)) return;
+  await updateDoc(refDoc, { fcmTokens: current.filter((t) => t !== token) });
 }
 
 export async function attachProjectRecord(input: {

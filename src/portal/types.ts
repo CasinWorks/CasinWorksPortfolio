@@ -256,3 +256,45 @@ export interface GigApplication {
   status: ApplicationStatus;
   createdAt: string;
 }
+
+/** Who wrote a message. Threads only ever run between a client and the studio. */
+export type MessageAuthor = "admin" | "client";
+
+/**
+ * A conversation between one client and the studio.
+ *
+ * Ids are derived, not random, so "open the thread" never races into creating a
+ * duplicate: `p_<projectId>` when the talk is about a project, `c_<uid>` for a
+ * client's general thread. See `threadId()` in api.ts.
+ */
+export interface MessageThread {
+  id: string;
+  clientUid: string;
+  clientEmail: string;
+  clientName: string;
+  /** Set when the thread hangs off a project rather than being a general one. */
+  projectId?: string;
+  projectName?: string;
+  subject: string;
+  createdAt: string;
+  lastMessageAt: string;
+  lastMessagePreview: string;
+  lastMessageBy: MessageAuthor;
+  /**
+   * When each side last opened the thread. Unread is derived by comparing these
+   * against lastMessageAt, which keeps the inbox to one read per thread instead
+   * of counting message documents.
+   */
+  adminReadAt: string;
+  clientReadAt: string;
+}
+
+export interface Message {
+  id: string;
+  threadId: string;
+  body: string;
+  senderUid: string;
+  senderName: string;
+  senderRole: MessageAuthor;
+  createdAt: string;
+}

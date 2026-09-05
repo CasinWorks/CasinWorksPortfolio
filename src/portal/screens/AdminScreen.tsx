@@ -7,13 +7,15 @@ import {
   fetchAllProjects,
   fetchDocuments,
   listenConsultations,
+  listenThreads,
   statusLabel,
+  threadHasUnread,
   updateConsultationStatus,
   updateDocumentStatus,
 } from "../api";
 import { usePortalAuth } from "../auth";
 import { formatConsultWhen } from "../booking";
-import type { ConsultationBooking, ProjectDocument } from "../types";
+import type { ConsultationBooking, MessageThread, ProjectDocument } from "../types";
 
 export function AdminScreen() {
   usePageMeta({
@@ -24,6 +26,7 @@ export function AdminScreen() {
   const { profile } = usePortalAuth();
   const [pending, setPending] = useState<ProjectDocument[]>([]);
   const [consults, setConsults] = useState<ConsultationBooking[]>([]);
+  const [threads, setThreads] = useState<MessageThread[]>([]);
   const [msg, setMsg] = useState("");
 
   async function reload() {
@@ -36,6 +39,13 @@ export function AdminScreen() {
     reload().catch(() => undefined);
     return listenConsultations(setConsults);
   }, []);
+
+  useEffect(() => {
+    if (!profile) return;
+    return listenThreads({ role: profile.role, email: profile.email }, setThreads);
+  }, [profile]);
+
+  const unanswered = threads.filter((t) => threadHasUnread(t, "admin"));
 
   return (
     <div className="space-y-12 max-w-3xl">
@@ -61,6 +71,37 @@ export function AdminScreen() {
         </p>
         {msg && <p className="mt-4 text-sm bg-black text-white px-3 py-2">{msg}</p>}
       </div>
+
+      <section>
+        <h2 className="font-serif text-2xl font-semibold">Client messages</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Clients who wrote and are still waiting on a reply. Everything else is in{" "}
+          <Link to="/portal/messages" className="underline underline-offset-2">
+            Messages
+          </Link>
+          .
+        </p>
+        <div className="mt-4 divide-y divide-black/10 border-y border-black/10">
+          {unanswered.length === 0 && <p className="py-6 text-slate-500">Nobody is waiting on a reply.</p>}
+          {unanswered.map((t) => (
+            <Link
+              key={t.id}
+              to={`/portal/messages/${t.id}`}
+              className="py-4 flex flex-wrap items-center justify-between gap-3 hover:bg-[var(--page-panel)]/80"
+            >
+              <div className="min-w-0">
+                <div className="font-semibold">{t.clientName || t.clientEmail}</div>
+                <div className="text-xs text-slate-500 mt-0.5">
+                  {t.clientEmail}
+                  {t.projectName ? ` · ${t.projectName}` : ""}
+                </div>
+                <p className="mt-1 text-sm text-slate-600 line-clamp-2">{t.lastMessagePreview}</p>
+              </div>
+              <span className="text-xs font-semibold shrink-0">Reply →</span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <section>
         <h2 className="font-serif text-2xl font-semibold">Consultation requests</h2>

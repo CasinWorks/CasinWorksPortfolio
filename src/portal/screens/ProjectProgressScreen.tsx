@@ -1,9 +1,9 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowRight, FileText } from "lucide-react";
+import { ArrowRight, FileText, MessageSquare } from "lucide-react";
 import { usePageMeta } from "../../hooks/usePageMeta";
 import { SITE } from "../../site";
-import { canDeleteProject, deleteProject, fetchDocuments, fetchMilestones, fetchProject, findUserByEmail, PROJECT_DELETE_LOCKED_MESSAGE, updateProject } from "../api";
+import { canDeleteProject, deleteProject, ensureThread, fetchDocuments, fetchMilestones, fetchProject, findUserByEmail, PROJECT_DELETE_LOCKED_MESSAGE, threadIdForProject, updateProject } from "../api";
 import { attachmentLabel, docsForHole, resolveAttachmentNeed } from "../pipeline";
 import { usePortalAuth } from "../auth";
 import type { Milestone, Project, ProjectDocument, ProjectStatus } from "../types";
@@ -310,6 +310,13 @@ export function ProjectProgressScreen() {
       </div>
       )}
 
+      <ProjectThreadCard
+        project={project}
+        viewerIsAdmin={isAdmin}
+        viewerUid={profile?.uid ?? ""}
+        onError={setError}
+      />
+
       {isAdmin && !clientFacing && (
         <details className="mt-12 max-w-3xl border-t border-black/10 pt-8">
           <summary className="cursor-pointer text-sm font-semibold">Adjust course</summary>
@@ -332,6 +339,75 @@ export function ProjectProgressScreen() {
           />
         </details>
       )}
+    </div>
+  );
+}
+
+/**
+ * Opens the conversation attached to this project, creating it on first use.
+ *
+ * The thread id is derived from the project id, so the client and the studio
+ * always land in the same one no matter who writes first.
+ */
+function ProjectThreadCard({
+  project,
+  viewerIsAdmin,
+  viewerUid,
+  onError,
+}: {
+  project: Project;
+  viewerIsAdmin: boolean;
+  viewerUid: string;
+  onError: (message: string) => void;
+}) {
+  const navigate = useNavigate();
+  const [opening, setOpening] = useState(false);
+
+  async function open() {
+    setOpening(true);
+    try {
+      const id = threadIdForProject(project.id);
+      await ensureThread({
+        id,
+        // An unregistered client has no uid yet; the email keeps the thread
+        // reachable for them once they sign up.
+        clientUid: viewerIsAdmin ? project.clientId : viewerUid,
+        clientEmail: project.clientEmail,
+        clientName: project.clientName,
+        projectId: project.id,
+        projectName: project.name,
+        subject: project.name,
+        openedBy: viewerIsAdmin ? "admin" : "client",
+      });
+      navigate(`/portal/messages/${id}`);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Could not open the conversation.");
+    } finally {
+      setOpening(false);
+    }
+  }
+
+  return (
+    <div className="mt-4 max-w-xl border border-black/10 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/60">
+      <div className="flex items-center gap-3">
+        <div className="size-8 border border-black/20 flex items-center justify-center">
+          <MessageSquare className="size-4" aria-hidden />
+        </div>
+        <div>
+          <div className="text-sm font-semibold">Messages</div>
+          <div className="text-xs text-slate-500">
+            {viewerIsAdmin ? "Write to the client about this project" : "Ask about this project"}
+          </div>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => void open()}
+        disabled={opening}
+        className="text-xs font-semibold inline-flex items-center gap-1 disabled:opacity-50"
+      >
+        {opening ? "Opening…" : "Open"} <ArrowRight className="size-3.5" aria-hidden />
+      </button>
     </div>
   );
 }

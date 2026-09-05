@@ -39,6 +39,29 @@ service cloud.firestore {
         )
       );
     }
+    function threadData(threadId) {
+      return get(/databases/$(database)/documents/threads/$(threadId)).data;
+    }
+    /**
+     * A thread belongs to the caller by uid, or by email when the studio opened
+     * it before the client had registered — the same fallback projects use.
+     */
+    function ownsThreadDoc(data) {
+      return signedIn() && (
+        data.clientUid == request.auth.uid ||
+        (
+          authEmail() != '' &&
+          'clientEmail' in data &&
+          data.clientEmail is string &&
+          data.clientEmail.lower() == authEmail()
+        )
+      );
+    }
+    function ownsThread(threadId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/threads/$(threadId))
+        && ownsThreadDoc(threadData(threadId));
+    }
     function canClaimProject() {
       return signedIn()
         && authEmail() != ''
@@ -146,6 +169,53 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
       );
       allow delete: if isAdmin() || (signedIn() && resource.data.clientUid == request.auth.uid);
+    }
+
+    match /threads/{threadId} {
+      // Covers get and list. A list query only succeeds when every document it
+      // returns passes, so a client must constrain by their own uid or email.
+      allow read: if isAdmin() || ownsThreadDoc(resource.data);
+
+      // A client may only open their own thread, and cannot pre-mark it read for
+      // the studio — that would hide it from the admin inbox.
+      allow create: if isAdmin() || (
+        signedIn()
+        && request.resource.data.clientUid == request.auth.uid
+        && request.resource.data.adminReadAt == ''
+        && request.resource.data.lastMessageBy == 'client'
+      );
+
+      // Clients may only move their own read marker and the last-message summary.
+      allow update: if isAdmin() || (
+        ownsThreadDoc(resource.data)
+        && request.resource.data.clientUid == resource.data.clientUid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['lastMessageAt', 'lastMessagePreview', 'lastMessageBy', 'clientReadAt'])
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastMessageBy'])
+          || request.resource.data.lastMessageBy == 'client'
+        )
+      );
+
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isAdmin() || ownsThread(threadId);
+
+        allow create: if signedIn()
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.body is string
+          && request.resource.data.body.size() > 0
+          && request.resource.data.body.size() <= 4000
+          && (
+            (isAdmin() && request.resource.data.senderRole == 'admin')
+            || (ownsThread(threadId) && request.resource.data.senderRole == 'client')
+          );
+
+        // Sent is sent: nobody rewrites history, only the studio can remove.
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
     }
   }
 }

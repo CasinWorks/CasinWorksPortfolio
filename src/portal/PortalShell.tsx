@@ -4,6 +4,9 @@ import { LogOut, Menu, X } from "lucide-react";
 import { SITE } from "../site";
 import { usePortalAuth } from "./auth";
 import { AnimatedOutlet } from "./motion";
+import { useUnreadThreadCount } from "./unread";
+
+type PortalLink = { to: string; label: string; badge?: number };
 
 export function PortalShell() {
   const { profile, logout } = usePortalAuth();
@@ -12,16 +15,19 @@ export function PortalShell() {
   const showClient = isAdmin || profile?.role === "client";
   const showGigs = isAdmin || profile?.role === "subcontractor";
   const [menuOpen, setMenuOpen] = useState(false);
+  const unread = useUnreadThreadCount();
 
-  const links = [
+  const candidates: (PortalLink | null)[] = [
     showClient ? { to: "/portal/dashboard", label: "Projects" } : null,
     showClient ? { to: "/portal/book", label: "Book" } : null,
+    { to: "/portal/messages", label: "Messages", badge: unread },
     showGigs ? { to: "/portal/gigs", label: "Gig board" } : null,
     isAdmin ? { to: "/portal/admin/users", label: "Users" } : null,
     isAdmin ? { to: "/portal/admin/clients", label: "Clients" } : null,
     isAdmin ? { to: "/portal/admin", label: "Admin" } : null,
     { to: "/portal/account", label: "Account" },
-  ].filter((row): row is { to: string; label: string } => Boolean(row));
+  ];
+  const links = candidates.filter((row): row is PortalLink => Boolean(row));
 
   useEffect(() => {
     setMenuOpen(false);
@@ -50,8 +56,13 @@ export function PortalShell() {
           </Link>
           <nav className="hidden md:flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] font-medium">
             {links.map((l) => (
-              <NavLink key={l.to} to={l.to} className={({ isActive }) => linkClass(isActive)}>
+              <NavLink
+                key={l.to}
+                to={l.to}
+                className={({ isActive }) => `inline-flex items-center gap-1.5 ${linkClass(isActive)}`}
+              >
                 {l.label}
+                {l.badge ? <UnreadBadge count={l.badge} /> : null}
               </NavLink>
             ))}
             <Link to="/" className="text-slate-500 hover:text-black">
@@ -96,10 +107,11 @@ export function PortalShell() {
                   key={l.to}
                   to={l.to}
                   className={({ isActive }) =>
-                    `min-h-12 px-4 flex items-center text-[15px] font-medium border-b border-black/10 ${linkClass(isActive)}`
+                    `min-h-12 px-4 flex items-center gap-2 text-[15px] font-medium border-b border-black/10 ${linkClass(isActive)}`
                   }
                 >
                   {l.label}
+                  {l.badge ? <UnreadBadge count={l.badge} /> : null}
                 </NavLink>
               ))}
               <Link to="/" className="min-h-12 px-4 flex items-center text-[15px] font-medium text-slate-500 border-b border-black/10">
@@ -124,6 +136,17 @@ export function PortalShell() {
         <AnimatedOutlet />
       </main>
     </div>
+  );
+}
+
+function UnreadBadge({ count }: { count: number }) {
+  return (
+    <span
+      className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-black px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"
+      aria-label={`${count} unread ${count === 1 ? "conversation" : "conversations"}`}
+    >
+      {count > 9 ? "9+" : count}
+    </span>
   );
 }
 

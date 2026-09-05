@@ -9,6 +9,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'account.dart';
 import 'admin.dart';
 import 'credentials.dart';
+import 'messages.dart';
+import 'push.dart';
 import 'theme.dart';
 import 'fairway.dart';
 import 'widgets.dart';
@@ -49,6 +51,55 @@ class CasinWorksPortalApp extends StatefulWidget {
 class _CasinWorksPortalAppState extends State<CasinWorksPortalApp> {
   PortalSession? _session;
 
+  /// Rebuilt whenever the account changes so the badge never shows another
+  /// user's unread count after a switch.
+  Stream<int>? _unread;
+
+  final _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    PushService.instance.pendingThreadId.addListener(_openPendingThread);
+  }
+
+  @override
+  void dispose() {
+    PushService.instance.pendingThreadId.removeListener(_openPendingThread);
+    super.dispose();
+  }
+
+  void _applySession(PortalSession? session) {
+    if (_session == session) return;
+    setState(() {
+      _session = session;
+      _unread = session == null ? null : unreadThreadCountStream(session);
+    });
+
+    if (session == null) {
+      PushService.instance.stop();
+    } else {
+      PushService.instance.start(session.uid);
+      // A notification may have launched the app before we knew who was
+      // signed in; this picks that up once the session lands.
+      _openPendingThread();
+    }
+  }
+
+  /// Opens the thread behind a tapped notification, once there is a session and
+  /// a navigator to push onto.
+  void _openPendingThread() {
+    final threadId = PushService.instance.pendingThreadId.value;
+    if (threadId == null || _session == null) return;
+    final nav = _navigatorKey.currentState;
+    if (nav == null) return;
+
+    PushService.instance.pendingThreadId.value = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      nav.push<void>(MaterialPageRoute(builder: (_) => ThreadPage(threadId: threadId)));
+    });
+  }
+
   /// Every destination in the header menu. Lives here because this is the only
   /// library that can see all the pages.
   Future<void> _go(BuildContext context, PortalDestination destination) async {
@@ -65,6 +116,7 @@ class _CasinWorksPortalAppState extends State<CasinWorksPortalApp> {
       return;
     }
     if (destination == PortalDestination.signOut) {
+      await PushService.instance.stop();
       await FirebaseAuth.instance.signOut();
       nav.popUntil((route) => route.isFirst);
       return;
@@ -87,6 +139,7 @@ class _CasinWorksPortalAppState extends State<CasinWorksPortalApp> {
         isAdmin: session.isAdmin,
       ),
       PortalDestination.gigs => GigBoard(uid: session.uid, email: session.email),
+      PortalDestination.messages => const MessagesPage(),
       PortalDestination.clients => const ClientsPage(),
       PortalDestination.users => const UsersPage(),
       PortalDestination.adminInbox => const AdminInboxPage(),
@@ -101,15 +154,14 @@ class _CasinWorksPortalAppState extends State<CasinWorksPortalApp> {
   Widget build(BuildContext context) {
     return PortalGuideScope(
       session: _session,
-      setSession: (session) {
-        if (_session == session) return;
-        setState(() => _session = session);
-      },
+      setSession: _applySession,
       go: _go,
+      unreadMessages: _unread,
       child: MaterialApp(
         title: 'CasinWorks Portal',
         debugShowCheckedModeBanner: false,
         theme: portalTheme(),
+        navigatorKey: _navigatorKey,
         home: const Gate(),
       ),
     );
