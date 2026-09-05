@@ -1,12 +1,12 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowRight, FileText } from "lucide-react";
 import { usePageMeta } from "../../hooks/usePageMeta";
 import { SITE } from "../../site";
-import { canDeleteProject, deleteProject, fetchDocuments, fetchMilestones, fetchProject, findUserByEmail, normalizeLiveUrl, PROJECT_DELETE_LOCKED_MESSAGE, updateProject } from "../api";
+import { canDeleteProject, deleteProject, ensureThread, fetchDocuments, fetchMilestones, fetchProject, findUserByEmail, listenMessages, markThreadRead, MESSAGE_MAX_LENGTH, normalizeLiveUrl, PROJECT_DELETE_LOCKED_MESSAGE, sendMessage, threadIdForProject, updateProject } from "../api";
 import { attachmentLabel, docsForHole, resolveAttachmentNeed } from "../pipeline";
 import { usePortalAuth } from "../auth";
-import type { Milestone, Project, ProjectDocument, ProjectStatus } from "../types";
+import type { Message, MessageAuthor, Milestone, Project, ProjectDocument, ProjectStatus } from "../types";
 import { CurrentHoleWork } from "./CurrentHoleWork";
 import { CourseTemplateBar, MilestoneCourseList } from "./CourseList";
 import { FairwayVisual } from "./FairwayVisual";
@@ -310,6 +310,14 @@ export function ProjectProgressScreen() {
       </div>
       )}
 
+      <ProjectCommentsPanel
+        project={project}
+        viewerIsAdmin={isAdmin}
+        viewerUid={profile?.uid ?? ""}
+        viewerName={profile?.displayName || profile?.email || ""}
+        onError={setError}
+      />
+
       {isAdmin && !clientFacing && (
         <details className="mt-12 max-w-3xl border-t border-black/10 pt-8">
           <summary className="cursor-pointer text-sm font-semibold">Adjust course</summary>
@@ -334,6 +342,176 @@ export function ProjectProgressScreen() {
       )}
     </div>
   );
+}
+
+/**
+ * Inline project comments — same Firestore thread as Messages (`p_<projectId>`),
+ * so inbox unread + email notify stay in sync.
+ */
+function ProjectCommentsPanel({
+  project,
+  viewerIsAdmin,
+  viewerUid,
+  viewerName,
+  onError,
+}: {
+  project: Project;
+  viewerIsAdmin: boolean;
+  viewerUid: string;
+  viewerName: string;
+  onError: (message: string) => void;
+}) {
+  const { firebaseUser } = usePortalAuth();
+  const viewer: MessageAuthor = viewerIsAdmin ? "admin" : "client";
+  const threadId = threadIdForProject(project.id);
+  const [ready, setReady] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [localError, setLocalError] = useState("");
+  const endRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        await ensureThread({
+          id: threadId,
+          clientUid: viewerIsAdmin ? project.clientId : viewerUid,
+          clientEmail: project.clientEmail,
+          clientName: project.clientName,
+          projectId: project.id,
+          projectName: project.name,
+          subject: project.name,
+          openedBy: viewer,
+        });
+        if (!cancelled) setReady(true);
+      } catch (err) {
+        if (!cancelled) {
+          onError(err instanceof Error ? err.message : "Could not open project comments.");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [threadId, project, viewerIsAdmin, viewerUid, viewer, onError]);
+
+  useEffect(() => {
+    if (!ready) return;
+    return listenMessages(threadId, setMessages, (msg) => setLocalError(msg));
+  }, [ready, threadId]);
+
+  useEffect(() => {
+    if (!ready || messages.length === 0) return;
+    void markThreadRead(threadId, viewer).catch(() => undefined);
+  }, [ready, threadId, viewer, messages.length]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [messages.length]);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!body.trim() || sending) return;
+    setLocalError("");
+    setSending(true);
+    try {
+      const idToken = await firebaseUser?.getIdToken().catch(() => undefined);
+      await sendMessage({
+        threadId,
+        body,
+        senderUid: viewerUid,
+        senderName: viewerName,
+        senderRole: viewer,
+        idToken: idToken || undefined,
+      });
+      setBody("");
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : "Could not post the comment.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <section className="mt-12 max-w-3xl border-t border-black/10 pt-10">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Follow-up</p>
+          <h2 className="mt-1 font-serif text-2xl font-semibold tracking-tight">Project comments</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            {viewerIsAdmin
+              ? "Write updates the client will see here and in Messages. They get an email when you post."
+              : "Ask questions or leave notes for CasinWorks. You’ll get an email when there’s a reply."}
+          </p>
+        </div>
+        <Link to={`/portal/messages/${threadId}`} className="text-xs font-semibold underline underline-offset-4 shrink-0">
+          Open in Messages
+        </Link>
+      </div>
+
+      <div className="mt-6 border-y border-black/10 divide-y divide-black/[0.06] max-h-[28rem] overflow-y-auto">
+        {!ready && <p className="py-6 text-sm text-slate-500">Loading comments…</p>}
+        {ready && messages.length === 0 && (
+          <p className="py-6 text-sm text-slate-500">No comments yet. Start the thread below.</p>
+        )}
+        {messages.map((m) => {
+          const mine = m.senderRole === viewer;
+          return (
+            <div key={m.id} className="py-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  {mine ? "You" : m.senderRole === "admin" ? SITE.brand : m.senderName}
+                </span>
+                <span className="text-xs text-slate-400 shrink-0">{formatCommentStamp(m.createdAt)}</span>
+              </div>
+              <p className="mt-1.5 whitespace-pre-wrap break-words text-[15px] leading-relaxed">{m.body}</p>
+            </div>
+          );
+        })}
+        <div ref={endRef} />
+      </div>
+
+      <form onSubmit={(e) => void submit(e)} className="mt-4 space-y-3">
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={3}
+          maxLength={MESSAGE_MAX_LENGTH}
+          placeholder={viewerIsAdmin ? "Update for the client…" : "Ask about this project…"}
+          className="w-full px-3.5 py-2.5 bg-white border border-black/15 text-sm resize-y min-h-[5rem]"
+        />
+        {(localError || !viewerUid) && (
+          <p className="text-sm text-red-700">{localError || "Sign in again to comment."}</p>
+        )}
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs text-slate-400">Email notifies the other side</span>
+          <button
+            type="submit"
+            disabled={sending || !body.trim() || !viewerUid}
+            className="rounded-full bg-black text-white text-sm font-semibold px-5 py-2.5 disabled:opacity-50"
+          >
+            {sending ? "Posting…" : "Post comment"}
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+function formatCommentStamp(iso: string) {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
 }
 
 function AdminProjectHeader({
