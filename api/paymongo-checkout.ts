@@ -93,11 +93,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const siteUrl = (env("APP_URL") || env("SITE_URL") || "https://www.casinworks.com").replace(/\/$/, "");
 
     const successPath =
-      typeof body.successPath === "string" && body.successPath.startsWith("/portal/")
+      typeof body.successPath === "string" &&
+      (body.successPath.startsWith("/portal/") || body.successPath.startsWith("/book/"))
         ? body.successPath
-        : `/portal/book?paid=1&c=${encodeURIComponent(consultationId)}`;
+        : `/book/confirmed?paid=1&c=${encodeURIComponent(consultationId)}&from=portal`;
     const cancelPath =
-      typeof body.cancelPath === "string" && body.cancelPath.startsWith("/portal/")
+      typeof body.cancelPath === "string" &&
+      (body.cancelPath.startsWith("/portal/") || body.cancelPath.startsWith("/book"))
         ? body.cancelPath
         : `/portal/book?paid=0&c=${encodeURIComponent(consultationId)}`;
 

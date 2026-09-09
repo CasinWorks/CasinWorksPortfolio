@@ -871,7 +871,7 @@ export async function startConsultationCheckout(input: {
     body: JSON.stringify({
       consultationId: input.consultationId,
       hours: input.hours,
-      successPath: `/portal/book?paid=1&c=${encodeURIComponent(input.consultationId)}`,
+      successPath: `/book/confirmed?paid=1&c=${encodeURIComponent(input.consultationId)}&from=portal`,
       cancelPath: `/portal/book?paid=0&c=${encodeURIComponent(input.consultationId)}`,
     }),
   });

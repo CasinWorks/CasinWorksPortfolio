@@ -78,62 +78,23 @@ export function BookConsultationScreen() {
     if (paid !== "1" && paid !== "0") return;
     const consultationId = (searchParams.get("c") ?? "").trim();
 
-    // Clear query params once up front so this effect does not re-enter and
-    // cancel the in-flight confirm request.
+    if (paid === "1") {
+      const q = new URLSearchParams();
+      q.set("paid", "1");
+      if (consultationId) q.set("c", consultationId);
+      q.set("from", "portal");
+      window.location.replace(`/book/confirmed?${q.toString()}`);
+      return;
+    }
+
+    setPayNotice(
+      "Payment was cancelled. Your slot is still held — tap Pay to finish, or cancel the request.",
+    );
     const next = new URLSearchParams(searchParams);
     next.delete("paid");
     next.delete("c");
     setSearchParams(next, { replace: true });
-
-    if (paid !== "1") {
-      setPayNotice(
-        "Payment was cancelled. Your slot is still held — tap Pay to finish, or cancel the request.",
-      );
-      return;
-    }
-
-    setPayNotice("Payment received. Confirming with PayMongo…");
-    if (!consultationId) {
-      setPayNotice("Payment received. Refresh if the status is still unpaid.");
-      return;
-    }
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/book-confirm", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ consultationId }),
-        });
-        const json = (await res.json().catch(() => null)) as {
-          ok?: boolean;
-          error?: string;
-          paymentStatus?: string;
-        } | null;
-        if (cancelled) return;
-        if (json?.paymentStatus === "paid") {
-          setPayNotice("Payment confirmed — this booking is marked paid.");
-        } else if (json?.error) {
-          setPayNotice(`Could not confirm payment (${json.error}). Try Pay again or refresh.`);
-        } else {
-          setPayNotice(
-            "Payment is still settling. Refresh in a moment, or tap Pay again if it stays unpaid.",
-          );
-        }
-      } catch {
-        if (!cancelled) {
-          setPayNotice("Payment received. Refresh shortly if the status is still unpaid.");
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-    // Only react to the paid-return landing, not every searchParam change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.get("paid"), searchParams.get("c")]);
+  }, [searchParams, setSearchParams]);
 
   const live = useMemo(() => {
     if (busySlots.length > 0) {

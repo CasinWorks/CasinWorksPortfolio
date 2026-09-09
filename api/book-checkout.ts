@@ -131,7 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           quantity: 1,
         },
       ],
-      successUrl: `${siteUrl}/book/complete?paid=1&c=${encodeURIComponent(consultationId)}&email=${encodeURIComponent(email)}`,
+      successUrl: `${siteUrl}/book/confirmed?paid=1&c=${encodeURIComponent(consultationId)}&email=${encodeURIComponent(email)}`,
       cancelUrl: `${siteUrl}/book?paid=0&c=${encodeURIComponent(consultationId)}`,
       referenceNumber,
       description: "CasinWorks exploratory consultation",
