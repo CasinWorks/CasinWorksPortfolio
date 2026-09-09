@@ -1,10 +1,21 @@
-import { env } from "../server/lib/env";
-import { getClientIp, noStore, sameOrigin, type VercelResponse, type VercelRequest } from "../server/lib/http";
-import {
-  createCheckoutSession,
-  paymongoSecretKey,
-  phpToCentavos,
-} from "../server/lib/paymongo";
+import { createHmac, timingSafeEqual } from "node:crypto";
+import type { IncomingMessage, ServerResponse } from "node:http";
+import { createRequire } from "node:module";
+
+type VercelRequest = IncomingMessage & {
+  body?: unknown;
+  method?: string;
+  headers: IncomingMessage["headers"] & {
+    origin?: string;
+    host?: string;
+    "x-forwarded-for"?: string;
+  };
+};
+
+type VercelResponse = ServerResponse & {
+  status: (code: number) => VercelResponse;
+  json: (data: unknown) => void;
+};
 
 type GuestPayload = {
   email?: unknown;
@@ -12,20 +23,18 @@ type GuestPayload = {
   startsAt?: unknown;
   hours?: unknown;
   notes?: unknown;
-  website?: unknown; // honeypot
+  website?: unknown;
 };
 
 const ALLOWED_HOURS = new Set([1, 2, 3]);
+const PAYMONGO_API = "https://api.paymongo.com";
 
 /**
- * POST /api/book/checkout
- *
- * Guest exploratory consultation: email + slot + concerns → PayMongo.
- * No Firebase sign-in. Consultation is created with Admin SDK (guest: true).
- * After payment, the success page invites them to register.
+ * POST /api/book-checkout
+ * Self-contained guest checkout (no local relative imports).
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  noStore(res);
+  res.setHeader("Cache-Control", "no-store");
 
   try {
     if (req.method !== "POST") {
@@ -33,23 +42,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(405).json({ ok: false, error: "Method not allowed" });
     }
 
-    if (req.headers.origin && !sameOrigin(req)) {
-      return res.status(403).json({ ok: false, error: "Forbidden" });
+    if (req.headers.origin && req.headers.host) {
+      try {
+        if (new URL(req.headers.origin).host !== req.headers.host) {
+          return res.status(403).json({ ok: false, error: "Forbidden" });
+        }
+      } catch {
+        return res.status(403).json({ ok: false, error: "Forbidden" });
+      }
     }
 
-    const ip = getClientIp(req);
+    const ip = clientIp(req);
     if (!rateLimit(ip, { limit: 8, windowMs: 60_000 })) {
       return res.status(429).json({ ok: false, error: "Too many requests" });
     }
 
     const secretKey = paymongoSecretKey();
-    const { adminDb, adminInitError } = await import("../server/lib/firebaseAdmin");
-    const db = adminDb();
+    const db = getAdminDb();
     if (!secretKey || !db) {
-      console.error("[book/checkout] missing PayMongo or Firebase admin", {
-        paymongo: Boolean(secretKey),
-        admin: adminInitError() ?? (db ? "ok" : "missing-credentials"),
-      });
+      console.error("[book-checkout] missing PayMongo or Firebase admin");
       return res.status(503).json({ ok: false, error: "Booking is not configured" });
     }
 
@@ -58,7 +69,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ ok: false, error: "Invalid request" });
     }
 
-    // Honeypot
     if (typeof body.website === "string" && body.website.trim()) {
       return res.status(200).json({ ok: true, checkoutUrl: "https://www.casinworks.com/book" });
     }
@@ -69,7 +79,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const startsAt = clamp(body.startsAt, 64);
     const hours = Number(body.hours);
 
-    if (!email || !isEmail(email)) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ ok: false, error: "A valid email is required" });
     }
     if (!notes) {
@@ -83,9 +93,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ ok: false, error: "Pick a future weekday slot" });
     }
 
-    // Collision check
     const snap = await db.collection("consultations").get();
-    const taken = snap.docs.some((d) => {
+    const taken = snap.docs.some((d: { data: () => Record<string, unknown> }) => {
       const row = d.data();
       const status = String(row.status ?? "");
       if (status !== "requested" && status !== "confirmed") return false;
@@ -97,7 +106,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const ratePhp = Number(env("EXPLORATORY_CONSULTATION_RATE_PHP") || "1000");
     const totalPhp = hours * ratePhp;
-    const amount = phpToCentavos(totalPhp);
+    const amount = Math.round(totalPhp * 100);
     const siteUrl = (env("APP_URL") || env("SITE_URL") || "https://www.casinworks.com").replace(/\/$/, "");
 
     const consultRef = db.collection("consultations").doc();
@@ -143,7 +152,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     });
 
-    if (created.ok === false) {
+    if (!created.ok) {
       await consultRef.delete().catch(() => undefined);
       return res.status(502).json({ ok: false, error: "Could not start checkout" });
     }
@@ -151,13 +160,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await consultRef.update({
       paymongoSessionId: created.session.id,
       paymongoReference: referenceNumber,
-    });
-
-    console.info("[book/checkout] guest session", {
-      consultationId: consultRef.id,
-      hours,
-      sessionId: created.session.id,
-      ip,
     });
 
     return res.status(200).json({
@@ -168,9 +170,115 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       amountPhp: totalPhp,
     });
   } catch (err) {
-    console.error("[book/checkout]", err instanceof Error ? err.message : String(err));
+    console.error("[book-checkout]", err instanceof Error ? err.message : String(err));
     return res.status(500).json({ ok: false, error: "Could not start checkout" });
   }
+}
+
+function env(name: string) {
+  return (process.env[name] ?? "").trim();
+}
+
+function paymongoSecretKey(): string | null {
+  const key = env("PAYMONGO_SECRET_KEY");
+  if (!key || key.startsWith("pk_")) return null;
+  if (!key.startsWith("sk_test_") && !key.startsWith("sk_live_")) return null;
+  return key;
+}
+
+function normalizePrivateKey(raw: string): string {
+  let key = raw.trim();
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1);
+  }
+  return key.replace(/\\n/g, "\n").replace(/\r\n/g, "\n");
+}
+
+function getAdminDb() {
+  try {
+    const require = createRequire(import.meta.url);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const admin = require("firebase-admin") as typeof import("firebase-admin");
+    if (!admin.apps.length) {
+      const blob = env("FIREBASE_SERVICE_ACCOUNT");
+      if (!blob) return null;
+      let parsed: Record<string, unknown> = JSON.parse(blob);
+      if (typeof (parsed as unknown) === "string") {
+        parsed = JSON.parse(parsed as unknown as string);
+      }
+      const projectId = String(parsed.project_id ?? "");
+      const clientEmail = String(parsed.client_email ?? "");
+      const privateKey = normalizePrivateKey(String(parsed.private_key ?? ""));
+      if (!projectId || !clientEmail || !privateKey.includes("BEGIN")) return null;
+      admin.initializeApp({
+        credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
+        projectId,
+      });
+    }
+    return admin.firestore();
+  } catch (err) {
+    console.error("[book-checkout] admin init failed:", err instanceof Error ? err.message : String(err));
+    return null;
+  }
+}
+
+async function createCheckoutSession(
+  secretKey: string,
+  input: {
+    lineItems: {
+      name: string;
+      amount: number;
+      currency: "PHP";
+      quantity: number;
+      description?: string;
+    }[];
+    successUrl: string;
+    cancelUrl: string;
+    referenceNumber: string;
+    description?: string;
+    metadata?: Record<string, string>;
+  },
+) {
+  const res = await fetch(`${PAYMONGO_API}/v2/checkout_sessions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${secretKey}:`, "utf8").toString("base64")}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      data: {
+        attributes: {
+          line_items: input.lineItems,
+          payment_method_types: ["card", "gcash", "paymaya", "grab_pay", "qrph"],
+          success_url: input.successUrl,
+          cancel_url: input.cancelUrl,
+          reference_number: input.referenceNumber,
+          description: input.description,
+          send_email_receipt: true,
+          metadata: input.metadata ?? {},
+        },
+      },
+    }),
+  });
+
+  const json = (await res.json().catch(() => null)) as {
+    data?: { id?: string; attributes?: { checkout_url?: string } };
+    errors?: { detail?: string }[];
+  } | null;
+
+  if (!res.ok) {
+    console.error("[book-checkout] paymongo failed", {
+      status: res.status,
+      detail: json?.errors?.[0]?.detail,
+    });
+    return { ok: false as const };
+  }
+
+  const id = json?.data?.id ?? "";
+  const checkoutUrl = json?.data?.attributes?.checkout_url ?? "";
+  if (!id || !checkoutUrl) return { ok: false as const };
+  return { ok: true as const, session: { id, checkoutUrl } };
 }
 
 function slotsOverlap(aStart: string, aHours: number, bStart: string, bHours: number) {
@@ -187,16 +295,18 @@ function clamp(v: unknown, max: number) {
   return v.replace(/\u0000/g, "").trim().slice(0, max);
 }
 
-function isEmail(s: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
-}
-
 function safeParse(s: string) {
   try {
     return JSON.parse(s);
   } catch {
     return null;
   }
+}
+
+function clientIp(req: VercelRequest) {
+  const xf = req.headers["x-forwarded-for"];
+  if (typeof xf === "string" && xf.trim()) return xf.split(",")[0].trim();
+  return "unknown";
 }
 
 const _rl: Map<string, { count: number; resetAt: number }> =
@@ -214,3 +324,7 @@ function rateLimit(key: string, opts: { limit: number; windowMs: number }) {
   cur.count += 1;
   return true;
 }
+
+// Silence unused import warnings while keeping crypto available for future webhook reuse.
+void createHmac;
+void timingSafeEqual;
