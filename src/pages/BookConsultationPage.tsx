@@ -343,13 +343,44 @@ export default function BookConsultationPage() {
 export function BookCompletePage() {
   const [params] = useSearchParams();
   const email = (params.get("email") ?? "").trim().toLowerCase();
+  const consultationId = (params.get("c") ?? "").trim();
   const paid = params.get("paid") === "1";
+  const [confirmNote, setConfirmNote] = useState("");
 
   usePageMeta({
     title: paid ? `Consultation booked — ${SITE.name}` : `Checkout — ${SITE.name}`,
     path: "/book/complete",
     noIndex: true,
   });
+
+  useEffect(() => {
+    if (!paid || !consultationId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/book-confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ consultationId }),
+        });
+        const json = (await res.json().catch(() => null)) as {
+          ok?: boolean;
+          paymentStatus?: string;
+        } | null;
+        if (cancelled) return;
+        if (json?.paymentStatus === "paid") {
+          setConfirmNote("Payment confirmed — your booking is marked paid.");
+        } else if (json?.ok) {
+          setConfirmNote("Payment is still settling. It should show as paid shortly.");
+        }
+      } catch {
+        if (!cancelled) setConfirmNote("");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [paid, consultationId]);
 
   const registerHref = useMemo(() => {
     const q = new URLSearchParams();
@@ -385,11 +416,12 @@ export function BookCompletePage() {
           {email ? (
             <>
               {" "}
-              (<span className="font-medium text-black">{email}</span>
+              (<span className="font-medium text-black">{email}</span>)
             </>
           ) : null}{" "}
           so the booking attaches to your account — then you can follow milestones and documents in the portal.
         </p>
+        {confirmNote ? <p className="mt-4 text-sm text-slate-700">{confirmNote}</p> : null}
         <div className="mt-8 flex flex-wrap gap-4">
           <Link to={registerHref} className="rounded-full bg-black text-white px-5 py-2.5 text-sm font-semibold">
             Create a free account
