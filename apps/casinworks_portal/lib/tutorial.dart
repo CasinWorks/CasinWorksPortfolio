@@ -146,8 +146,8 @@ List<TutorialSlide> slidesForRole(String role) {
         kicker: 'CONSULTATIONS',
         title: 'Requests land ',
         italic: 'on the calendar.',
-        body: 'Clients ask for an hour on weekday slots, Manila time. Confirm one to hold '
-            'it, or decline to free the slot.',
+        body: 'Clients ask for an hour on weekday slots, Manila time — exploratory consultation '
+            'is ₱1,000 per hour. Confirm one to hold it, or decline to free the slot.',
         visual: TutorialVisual.book,
       ),
       TutorialSlide(
@@ -200,9 +200,9 @@ List<TutorialSlide> slidesForRole(String role) {
       kicker: 'CONSULTATIONS',
       title: 'Book an hour ',
       italic: 'with the studio.',
-      body: 'Need to talk something through? Ask for a weekday slot in Manila time — '
-          'mornings 9–11 or afternoons 1–4. Once we confirm it, you can save it to your '
-          'calendar.',
+      body: 'Need to talk something through? Exploratory consultation is ₱1,000 per hour. Ask for a '
+          'weekday slot in Manila time — mornings 9–11 or afternoons 1–4. Once we confirm it, you can '
+          'save it to your calendar.',
       visual: TutorialVisual.book,
     ),
     TutorialSlide(

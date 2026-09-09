@@ -1,11 +1,18 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:add_2_calendar/add_2_calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'theme.dart';
 import 'widgets.dart';
+
+const _checkoutUrl = 'https://www.casinworks.com/api/paymongo/checkout';
+const _consultRatePhp = 1000;
 
 const slotHours = [9, 10, 11, 13, 14, 15, 16];
 
@@ -96,6 +103,46 @@ Uri googleCalendarUrl({required DateTime start, required int hours}) {
     'details': '$hours hour${hours == 1 ? '' : 's'} with Christian Joshua Casin.',
     'location': 'Video call — CasinWorks',
   });
+}
+
+Future<String> _startPaymongoCheckout({
+  required String consultationId,
+  required int hours,
+}) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) throw Exception('Sign in again to pay.');
+  final token = await user.getIdToken();
+  if (token == null || token.isEmpty) throw Exception('Sign in again to pay.');
+
+  final client = HttpClient();
+  try {
+    final req = await client.postUrl(Uri.parse(_checkoutUrl));
+    req.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+    req.headers.set(HttpHeaders.acceptHeader, 'application/json');
+    req.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+    req.add(
+      utf8.encode(
+        jsonEncode({
+          'consultationId': consultationId,
+          'hours': hours,
+          'successPath': '/portal/book?paid=1&c=$consultationId',
+          'cancelPath': '/portal/book?paid=0&c=$consultationId',
+        }),
+      ),
+    );
+    final res = await req.close();
+    final body = await res.transform(utf8.decoder).join();
+    final json = jsonDecode(body);
+    if (res.statusCode < 200 || res.statusCode >= 300 || json is! Map || json['ok'] != true) {
+      final message = json is Map && json['error'] is String ? json['error'] as String : 'Could not start payment.';
+      throw Exception(message);
+    }
+    final url = json['checkoutUrl'];
+    if (url is! String || url.isEmpty) throw Exception('Could not start payment.');
+    return url;
+  } finally {
+    client.close(force: true);
+  }
 }
 
 class BookPage extends StatefulWidget {
@@ -244,7 +291,7 @@ class _BookPageState extends State<BookPage> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Weekdays, Manila time. Morning 9–11, afternoon 1–4. After you request a slot, save it to your calendar.',
+                        'Exploratory consultation is ₱1,000 per hour. Weekdays, Manila time. Morning 9–11, afternoon 1–4. You’ll pay with PayMongo, then CasinWorks confirms the slot.',
                         style: bodyStyle,
                       ),
                       if (error != null) ...[
@@ -367,6 +414,11 @@ class _BookPageState extends State<BookPage> {
                             )
                             .toList(),
                       ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Estimated fee: ₱$hours,000',
+                        style: bodyStyle,
+                      ),
                       const SizedBox(height: 20),
                       Text(dateIso == null ? 'PICK A WEEKDAY' : 'TIMES · $dateIso', style: kickerStyle),
                       const SizedBox(height: 10),
@@ -406,7 +458,9 @@ class _BookPageState extends State<BookPage> {
                       PortalField(label: 'Notes', controller: notes),
                       const SizedBox(height: 20),
                       PortalPillButton(
-                        label: sending ? 'Requesting…' : 'Request consultation',
+                        label: sending
+                            ? 'Starting payment…'
+                            : 'Pay ₱$hours,000 & request',
                         enabled: !sending && dateIso != null && hour != null,
                         onPressed: () async {
                           if (dateIso == null || hour == null) return;
@@ -420,7 +474,8 @@ class _BookPageState extends State<BookPage> {
                               throw Exception('That slot was just taken. Pick another time.');
                             }
                             final start = slotStart(dateIso!, hour!);
-                            await FirebaseFirestore.instance.collection('consultations').add({
+                            final amountPhp = hours * _consultRatePhp;
+                            final doc = await FirebaseFirestore.instance.collection('consultations').add({
                               'clientUid': widget.uid,
                               'clientEmail': widget.email.trim().toLowerCase(),
                               'clientName': widget.displayName.trim().isEmpty
@@ -431,24 +486,34 @@ class _BookPageState extends State<BookPage> {
                               'hours': hours,
                               if (notes.text.trim().isNotEmpty) 'notes': notes.text.trim(),
                               'status': 'requested',
+                              'paymentStatus': 'pending',
+                              'amountPhp': amountPhp,
                               'createdAt': DateTime.now().toUtc().toIso8601String(),
                             });
-                            if (!mounted) return;
-                            await _saveToCalendar(start, hours);
+                            final checkoutUrl = await _startPaymongoCheckout(
+                              consultationId: doc.id,
+                              hours: hours,
+                            );
                             if (!mounted) return;
                             setState(() {
                               hour = null;
                               notes.clear();
                             });
-                            messenger.showSnackBar(
-                              SnackBar(
-                                backgroundColor: ink,
-                                content: Text(
-                                  'Requested. Add it to your calendar if the sheet did not open.',
-                                  style: GoogleFonts.dmSans(color: Colors.white),
-                                ),
-                              ),
+                            final opened = await launchUrl(
+                              Uri.parse(checkoutUrl),
+                              mode: LaunchMode.externalApplication,
                             );
+                            if (!opened && mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  backgroundColor: ink,
+                                  content: Text(
+                                    'Open this link to pay: $checkoutUrl',
+                                    style: GoogleFonts.dmSans(color: Colors.white),
+                                  ),
+                                ),
+                              );
+                            }
                           } catch (e) {
                             if (mounted) setState(() => error = e.toString());
                           } finally {
@@ -469,6 +534,9 @@ class _BookPageState extends State<BookPage> {
                           final start = DateTime.tryParse(d['startsAt'] as String? ?? '') ?? DateTime.now();
                           final duration = (d['hours'] as num?)?.toInt() ?? 1;
                           final status = d['status'] as String? ?? 'requested';
+                          final paymentStatus = d['paymentStatus'] as String? ?? '';
+                          final amountPhp = (d['amountPhp'] as num?)?.toInt();
+                          final unpaid = paymentStatus == 'pending' && status == 'requested';
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             child: Column(
@@ -483,6 +551,9 @@ class _BookPageState extends State<BookPage> {
                                   [
                                     '$duration hr${duration == 1 ? '' : 's'}',
                                     status,
+                                    if (paymentStatus == 'paid') 'paid',
+                                    if (paymentStatus == 'pending') 'unpaid',
+                                    if (amountPhp != null) '₱$amountPhp',
                                     if (widget.isAdmin) d['clientName'] as String? ?? '',
                                   ].where((s) => s.toString().isNotEmpty).join(' · '),
                                   style: GoogleFonts.dmSans(fontSize: 12, color: slate),
@@ -511,6 +582,25 @@ class _BookPageState extends State<BookPage> {
                                         ),
                                       ),
                                     ],
+                                    if (!widget.isAdmin && unpaid)
+                                      _MiniPill(
+                                        label: 'Pay',
+                                        filled: true,
+                                        onTap: () async {
+                                          try {
+                                            final url = await _startPaymongoCheckout(
+                                              consultationId: doc.id,
+                                              hours: duration,
+                                            );
+                                            await launchUrl(
+                                              Uri.parse(url),
+                                              mode: LaunchMode.externalApplication,
+                                            );
+                                          } catch (e) {
+                                            if (mounted) setState(() => error = e.toString());
+                                          }
+                                        },
+                                      ),
                                     if (widget.isAdmin && status == 'requested')
                                       _MiniPill(
                                         label: 'Confirm',

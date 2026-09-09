@@ -4,7 +4,7 @@ export const ENGAGEMENT_PIPELINE: { title: string; kind: MilestoneKind; descript
   {
     title: "Consultation",
     kind: "consultation",
-    description: "Discovery call. Log hours and notes, then mark this hole done. The consultation is not billed.",
+    description: "Discovery call billed at ₱1,000 per hour. Log hours and notes, then mark this hole done.",
   },
   {
     title: "Demo",
