@@ -520,7 +520,7 @@ export default function App() {
                   </h3>
                   <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed">
                     Create a free account and choose your own consultation slot — hourly, 9AM to 5PM Manila time.
-                    The slot is held the moment you book it, and the first consultation is not billed.
+                    The slot is held the moment you book it. Exploratory consultation is ₱1,000 per hour.
                   </p>
                   <p className="mt-3 text-sm sm:text-base text-slate-400 leading-relaxed">
                     The same account carries the engagement afterwards: milestone progress, quotations, purchase

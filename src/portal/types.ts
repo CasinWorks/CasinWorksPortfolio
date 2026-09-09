@@ -233,6 +233,7 @@ export interface Gig {
 }
 
 export type ConsultationStatus = "requested" | "confirmed" | "cancelled";
+export type ConsultationPaymentStatus = "pending" | "paid" | "waived";
 
 export interface ConsultationBooking {
   id: string;
@@ -244,6 +245,12 @@ export interface ConsultationBooking {
   hours: number;
   notes?: string;
   status: ConsultationStatus;
+  /** Exploratory fee — pending until PayMongo webhook marks paid. */
+  paymentStatus?: ConsultationPaymentStatus;
+  amountPhp?: number;
+  paymongoSessionId?: string;
+  paymongoReference?: string;
+  paidAt?: string;
 }
 
 export interface GigApplication {

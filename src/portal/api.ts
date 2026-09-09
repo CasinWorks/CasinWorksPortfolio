@@ -787,6 +787,11 @@ function consultationFromData(id: string, data: Record<string, unknown>): Consul
     hours: Number(data.hours ?? 1),
     notes: data.notes ? String(data.notes) : undefined,
     status: (data.status as ConsultationStatus) ?? "requested",
+    paymentStatus: (data.paymentStatus as ConsultationBooking["paymentStatus"]) || undefined,
+    amountPhp: data.amountPhp != null ? Number(data.amountPhp) : undefined,
+    paymongoSessionId: data.paymongoSessionId ? String(data.paymongoSessionId) : undefined,
+    paymongoReference: data.paymongoReference ? String(data.paymongoReference) : undefined,
+    paidAt: data.paidAt ? String(data.paidAt) : undefined,
   };
 }
 
@@ -806,6 +811,7 @@ export async function createConsultation(input: {
   startsAt: string;
   hours: number;
   notes?: string;
+  amountPhp: number;
 }) {
   const refDoc = await addDoc(
     collection(db(), "consultations"),
@@ -818,6 +824,8 @@ export async function createConsultation(input: {
       hours: input.hours,
       notes: input.notes?.trim() || undefined,
       status: "requested",
+      paymentStatus: "pending",
+      amountPhp: input.amountPhp,
       createdAt: serverTimestamp(),
     } as Record<string, unknown>),
   );
@@ -826,6 +834,42 @@ export async function createConsultation(input: {
 
 export async function updateConsultationStatus(id: string, status: ConsultationStatus) {
   await updateDoc(doc(db(), "consultations", id), { status });
+}
+
+/** Starts PayMongo Hosted Checkout for an existing consultation request. */
+export async function startConsultationCheckout(input: {
+  consultationId: string;
+  hours: number;
+  idToken: string;
+}): Promise<{ checkoutUrl: string; sessionId: string; amountPhp: number }> {
+  const res = await fetch("/api/paymongo/checkout", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${input.idToken}`,
+    },
+    body: JSON.stringify({
+      consultationId: input.consultationId,
+      hours: input.hours,
+      successPath: `/portal/book?paid=1&c=${encodeURIComponent(input.consultationId)}`,
+      cancelPath: `/portal/book?paid=0&c=${encodeURIComponent(input.consultationId)}`,
+    }),
+  });
+  const json = (await res.json().catch(() => null)) as {
+    ok?: boolean;
+    checkoutUrl?: string;
+    sessionId?: string;
+    amountPhp?: number;
+    error?: string;
+  } | null;
+  if (!res.ok || !json?.ok || !json.checkoutUrl || !json.sessionId) {
+    throw new Error(json?.error || "Could not start payment.");
+  }
+  return {
+    checkoutUrl: json.checkoutUrl,
+    sessionId: json.sessionId,
+    amountPhp: Number(json.amountPhp ?? 0),
+  };
 }
 
 /* ---------------------------------------------------------------- messaging */

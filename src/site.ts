@@ -10,8 +10,10 @@ export const SITE = {
   description:
     "CasinWorks — mission-critical software, SCADA, and industrial systems. Independent engineering practice of Christian Joshua Casin (C.J. Casin), Mandaluyong, Philippines.",
   location: "Mandaluyong, Philippines",
-  /** Independent consulting, billed hourly in PHP */
+  /** Independent consulting on quotations, billed hourly in PHP */
   consultingHourlyRatePhp: 5000,
+  /** Exploratory / initial consultation, billed hourly in PHP */
+  exploratoryConsultationHourlyRatePhp: 1000,
   /** Client reply SLA shown near contact */
   responseTimePromise: "I reply within 1 business day.",
   ogImagePath: "/og-image.jpg",
@@ -51,7 +53,7 @@ export const FAQS: FaqItem[] = [
   {
     question: "How is consulting billed?",
     answer:
-      "The first consultation is complimentary, whether you book it in the portal or reach out by email. Larger builds are quoted as a fixed scope after we agree what the work is.",
+      "Exploratory and initial consultation is billed at ₱1,000 per hour, whether you book it in the portal or reach out by email. Larger builds are quoted as a fixed scope after we agree what the work is.",
   },
   {
     question: "How quickly will I hear back?",

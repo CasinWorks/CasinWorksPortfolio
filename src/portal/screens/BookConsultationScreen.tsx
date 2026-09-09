@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { usePageMeta } from "../../hooks/usePageMeta";
 import { SITE } from "../../site";
 import {
   createConsultation,
   listenConsultations,
+  startConsultationCheckout,
   updateConsultationStatus,
 } from "../api";
 import { usePortalAuth } from "../auth";
@@ -34,8 +36,9 @@ export function BookConsultationScreen() {
     path: "/portal/book",
     noIndex: true,
   });
-  const { profile } = usePortalAuth();
+  const { profile, firebaseUser } = usePortalAuth();
   const isAdmin = profile?.role === "admin";
+  const [searchParams, setSearchParams] = useSearchParams();
   const todayIso = manilaDateIso();
   const todayParts = todayIso.split("-").map(Number);
   const [cursor, setCursor] = useState({ year: todayParts[0], month: todayParts[1] - 1 });
@@ -47,10 +50,25 @@ export function BookConsultationScreen() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [justBooked, setJustBooked] = useState<ConsultationBooking | null>(null);
+  const [payNotice, setPayNotice] = useState("");
 
   useEffect(() => {
     return listenConsultations(setRows, setError);
   }, []);
+
+  useEffect(() => {
+    const paid = searchParams.get("paid");
+    if (paid !== "1" && paid !== "0") return;
+    setPayNotice(
+      paid === "1"
+        ? "Payment received. CasinWorks will confirm your slot shortly."
+        : "Payment was cancelled. Your slot is still held — tap Pay to finish, or cancel the request.",
+    );
+    const next = new URLSearchParams(searchParams);
+    next.delete("paid");
+    next.delete("c");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const live = useMemo(() => activeBookings(rows), [rows]);
   const mine = useMemo(
@@ -75,6 +93,8 @@ export function BookConsultationScreen() {
     timeZone: "UTC",
   });
 
+  const feePhp = hours * SITE.exploratoryConsultationHourlyRatePhp;
+
   function takenOn(day: string, startHour: number, duration: number) {
     const start = slotStart(day, startHour).toISOString();
     return live.some((b) => slotsOverlap(start, duration, b.startsAt, b.hours));
@@ -86,9 +106,21 @@ export function BookConsultationScreen() {
       )
     : [];
 
+  async function payForConsultation(consultationId: string, bookingHours: number) {
+    const idToken = await firebaseUser?.getIdToken();
+    if (!idToken) throw new Error("Sign in again to pay.");
+    const checkout = await startConsultationCheckout({
+      consultationId,
+      hours: bookingHours,
+      idToken,
+    });
+    window.location.assign(checkout.checkoutUrl);
+  }
+
   async function requestSlot() {
     if (!profile || !dateIso || hour == null) return;
     setError("");
+    setPayNotice("");
     setBusy(true);
     try {
       const startsAt = slotStart(dateIso, hour).toISOString();
@@ -101,6 +133,7 @@ export function BookConsultationScreen() {
         startsAt,
         hours,
         notes,
+        amountPhp: feePhp,
       });
       const booked: ConsultationBooking = {
         id,
@@ -112,19 +145,39 @@ export function BookConsultationScreen() {
         hours,
         notes: notes.trim() || undefined,
         status: "requested",
+        paymentStatus: "pending",
+        amountPhp: feePhp,
       };
       setJustBooked(booked);
       setHour(null);
       setNotes("");
+      await payForConsultation(id, hours);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not book that slot.");
-    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resumePay(row: ConsultationBooking) {
+    setError("");
+    setBusy(true);
+    try {
+      await payForConsultation(row.id, row.hours);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not start payment.");
       setBusy(false);
     }
   }
 
   function saveIcs(row: { startsAt: string; hours: number }) {
     downloadIcs("casinworks-consultation.ics", consultationIcs(row));
+  }
+
+  function paymentLabel(row: ConsultationBooking) {
+    if (row.paymentStatus === "paid") return "paid";
+    if (row.paymentStatus === "waived") return "waived";
+    if (row.paymentStatus === "pending") return "unpaid";
+    return "";
   }
 
   return (
@@ -134,34 +187,20 @@ export function BookConsultationScreen() {
         Book an hour, <span className="italic text-slate-400">on the calendar.</span>
       </h1>
       <p className="mt-3 max-w-xl text-slate-600">
-        Weekdays, Manila time. Morning 9–11, afternoon 1–4. After you request a slot, save it to your calendar — CasinWorks confirms by hand.
+        Exploratory consultation is ₱{SITE.exploratoryConsultationHourlyRatePhp.toLocaleString("en-US")} per hour.
+        Weekdays, Manila time. Morning 9–11, afternoon 1–4. You’ll pay securely with PayMongo, then CasinWorks confirms the slot.
       </p>
       {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
+      {payNotice && <p className="mt-4 text-sm text-slate-700">{payNotice}</p>}
 
       {justBooked && (
         <div className="mt-8 border border-black/10 bg-white px-5 py-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Requested</p>
           <p className="mt-1 font-serif text-2xl font-semibold">{formatConsultWhen(justBooked.startsAt)}</p>
           <p className="mt-1 text-sm text-slate-600">
-            {justBooked.hours} hour{justBooked.hours === 1 ? "" : "s"} · waiting on CasinWorks to confirm
+            {justBooked.hours} hour{justBooked.hours === 1 ? "" : "s"} · ₱
+            {(justBooked.amountPhp ?? feePhp).toLocaleString("en-US")} · redirecting to PayMongo…
           </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => saveIcs(justBooked)}
-              className="rounded-full bg-black text-white px-5 py-2 text-sm font-semibold"
-            >
-              Save to calendar
-            </button>
-            <a
-              href={googleCalendarUrl(justBooked)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full border border-black/15 px-5 py-2 text-sm font-semibold"
-            >
-              Google Calendar
-            </a>
-          </div>
         </div>
       )}
 
@@ -255,6 +294,9 @@ export function BookConsultationScreen() {
               </button>
             ))}
           </div>
+          <p className="mt-2 text-sm text-slate-600">
+            Estimated fee: ₱{feePhp.toLocaleString("en-US")}
+          </p>
 
           <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
             {dateIso ? `Times · ${dateIso}` : "Pick a weekday"}
@@ -296,7 +338,7 @@ export function BookConsultationScreen() {
             onClick={() => void requestSlot()}
             className="mt-5 rounded-full bg-black text-white px-6 py-2.5 text-sm font-semibold disabled:opacity-50"
           >
-            {busy ? "Requesting…" : "Request consultation"}
+            {busy ? "Starting payment…" : `Pay ₱${feePhp.toLocaleString("en-US")} & request`}
           </button>
         </div>
       </div>
@@ -313,6 +355,8 @@ export function BookConsultationScreen() {
                 <div className="font-semibold">{formatConsultWhen(row.startsAt)}</div>
                 <div className="text-xs text-slate-500 mt-0.5">
                   {row.hours} hr{row.hours === 1 ? "" : "s"} · {row.status}
+                  {paymentLabel(row) ? ` · ${paymentLabel(row)}` : ""}
+                  {row.amountPhp != null ? ` · ₱${row.amountPhp.toLocaleString("en-US")}` : ""}
                   {isAdmin ? ` · ${row.clientName}${row.company ? ` · ${row.company}` : ""}` : ""}
                 </div>
                 {row.notes && <p className="mt-1 text-sm text-slate-600">{row.notes}</p>}
@@ -336,6 +380,16 @@ export function BookConsultationScreen() {
                       Google
                     </a>
                   </>
+                )}
+                {!isAdmin && row.status === "requested" && row.paymentStatus === "pending" && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void resumePay(row)}
+                    className="rounded-full bg-black text-white px-4 py-1.5 text-xs font-semibold disabled:opacity-50"
+                  >
+                    Pay
+                  </button>
                 )}
                 {isAdmin && row.status === "requested" && (
                   <button

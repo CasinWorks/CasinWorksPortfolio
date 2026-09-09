@@ -119,7 +119,7 @@ export function CurrentHoleWork({
           ready={hasConsult}
           readyLabel="Consultation is on file."
           idleLabel="Log consultation"
-          idleHint="Hours and notes land on the project records. This consultation is not billed."
+          idleHint="Hours and notes land on the project records. Exploratory consultation is billed at ₱1,000 per hour."
           panel={panel}
           onOpen={() => setPanel("form")}
           onClose={() => setPanel("idle")}

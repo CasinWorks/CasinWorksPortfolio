@@ -38,7 +38,7 @@ export default function ThankYouPage() {
           </h2>
           <p className="mt-3 text-base text-slate-500 leading-relaxed">
             Create a free client portal account and book a consultation slot yourself — hourly, 9AM to 5PM
-            Manila time. The slot is held the moment you book it and the first consultation is not billed.
+            Manila time. The slot is held the moment you book it. Exploratory consultation is ₱1,000 per hour.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
             <Link
