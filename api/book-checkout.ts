@@ -1,5 +1,4 @@
-import { cert, getApp, getApps, initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { createSign } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 type VercelRequest = IncomingMessage & {
@@ -11,7 +10,6 @@ type VercelRequest = IncomingMessage & {
     "x-forwarded-for"?: string;
   };
 };
-
 type VercelResponse = ServerResponse & {
   status: (code: number) => VercelResponse;
   json: (data: unknown) => void;
@@ -26,22 +24,22 @@ type GuestPayload = {
   website?: unknown;
 };
 
+type ServiceAccount = { project_id: string; client_email: string; private_key: string };
+
 const ALLOWED_HOURS = new Set([1, 2, 3]);
 const PAYMONGO_API = "https://api.paymongo.com";
 
 /**
  * POST /api/book-checkout
- * Static firebase-admin imports so Vercel bundles the dependency.
+ * Firestore REST + PayMongo — no firebase-admin.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Cache-Control", "no-store");
-
   try {
     if (req.method !== "POST") {
       res.setHeader("Allow", "POST");
       return res.status(405).json({ ok: false, error: "Method not allowed" });
     }
-
     if (req.headers.origin && req.headers.host) {
       try {
         if (new URL(req.headers.origin).host !== req.headers.host) {
@@ -58,25 +56,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const secretKey = paymongoSecretKey();
-    const admin = getAdminDb();
-    if (!secretKey || !admin.ok) {
-      console.error("[book-checkout] missing PayMongo or Firebase admin", {
-        paymongo: Boolean(secretKey),
-        admin: admin.ok ? "ok" : admin.reason,
-      });
+    const sa = loadServiceAccount();
+    if (!secretKey || !sa.ok) {
       return res.status(503).json({
         ok: false,
         error: "Booking is not configured",
-        reason: !secretKey ? "missing_paymongo" : admin.ok ? "unknown" : admin.reason,
+        reason: !secretKey ? "missing_paymongo" : sa.ok ? "unknown" : sa.reason,
       });
     }
-    const db = admin.db;
 
     const body = (typeof req.body === "string" ? safeParse(req.body) : req.body) as GuestPayload | null;
     if (!body || typeof body !== "object") {
       return res.status(400).json({ ok: false, error: "Invalid request" });
     }
-
     if (typeof body.website === "string" && body.website.trim()) {
       return res.status(200).json({ ok: true, checkoutUrl: "https://www.casinworks.com/book" });
     }
@@ -90,20 +82,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ ok: false, error: "A valid email is required" });
     }
-    if (!notes) {
-      return res.status(400).json({ ok: false, error: "Tell us what you want to talk about" });
-    }
-    if (!ALLOWED_HOURS.has(hours)) {
-      return res.status(400).json({ ok: false, error: "Hours must be 1, 2, or 3" });
-    }
+    if (!notes) return res.status(400).json({ ok: false, error: "Tell us what you want to talk about" });
+    if (!ALLOWED_HOURS.has(hours)) return res.status(400).json({ ok: false, error: "Hours must be 1, 2, or 3" });
     const startMs = Date.parse(startsAt);
     if (!Number.isFinite(startMs) || startMs <= Date.now()) {
       return res.status(400).json({ ok: false, error: "Pick a future weekday slot" });
     }
 
-    const snap = await db.collection("consultations").get();
-    const taken = snap.docs.some((d) => {
-      const row = d.data();
+    const token = await getAccessToken(sa.value);
+    const existing = await listCollection(sa.value.project_id, token, "consultations");
+    const taken = existing.some((row) => {
       const status = String(row.status ?? "");
       if (status !== "requested" && status !== "confirmed") return false;
       return slotsOverlap(startsAt, hours, String(row.startsAt ?? ""), Number(row.hours ?? 1));
@@ -116,11 +104,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const totalPhp = hours * ratePhp;
     const amount = Math.round(totalPhp * 100);
     const siteUrl = (env("APP_URL") || env("SITE_URL") || "https://www.casinworks.com").replace(/\/$/, "");
+    const consultationId = randomId();
+    const referenceNumber = `guest-${consultationId.slice(0, 10)}-${Date.now()}`;
 
-    const consultRef = db.collection("consultations").doc();
-    const referenceNumber = `guest-${consultRef.id.slice(0, 10)}-${Date.now()}`;
-
-    await consultRef.set({
+    await createDocument(sa.value.project_id, token, "consultations", consultationId, {
       clientUid: "",
       clientEmail: email,
       clientName: name || email,
@@ -144,8 +131,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           quantity: 1,
         },
       ],
-      successUrl: `${siteUrl}/book/complete?paid=1&c=${encodeURIComponent(consultRef.id)}&email=${encodeURIComponent(email)}`,
-      cancelUrl: `${siteUrl}/book?paid=0&c=${encodeURIComponent(consultRef.id)}`,
+      successUrl: `${siteUrl}/book/complete?paid=1&c=${encodeURIComponent(consultationId)}&email=${encodeURIComponent(email)}`,
+      cancelUrl: `${siteUrl}/book?paid=0&c=${encodeURIComponent(consultationId)}`,
       referenceNumber,
       description: "CasinWorks exploratory consultation",
       metadata: {
@@ -154,18 +141,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         hours: String(hours),
         ratePhp: String(ratePhp),
         totalPhp: String(totalPhp),
-        consultationId: consultRef.id,
+        consultationId,
         email,
         guest: "1",
       },
     });
 
     if (!created.ok) {
-      await consultRef.delete().catch(() => undefined);
+      await deleteDocument(sa.value.project_id, token, "consultations", consultationId).catch(() => undefined);
       return res.status(502).json({ ok: false, error: "Could not start checkout" });
     }
 
-    await consultRef.update({
+    await patchDocument(sa.value.project_id, token, "consultations", consultationId, {
       paymongoSessionId: created.session.id,
       paymongoReference: referenceNumber,
     });
@@ -174,7 +161,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ok: true,
       checkoutUrl: created.session.checkoutUrl,
       sessionId: created.session.id,
-      consultationId: consultRef.id,
+      consultationId,
       amountPhp: totalPhp,
     });
   } catch (err) {
@@ -194,52 +181,159 @@ function paymongoSecretKey(): string | null {
   return key;
 }
 
-function normalizePrivateKey(raw: string): string {
-  let key = raw.trim();
-  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
-    key = key.slice(1, -1);
-  }
-  return key.replace(/\\n/g, "\n").replace(/\r\n/g, "\n");
-}
-
-function getAdminDb():
-  | { ok: true; db: ReturnType<typeof getFirestore> }
-  | { ok: false; reason: string } {
+function loadServiceAccount(): { ok: true; value: ServiceAccount } | { ok: false; reason: string } {
   const blob = env("FIREBASE_SERVICE_ACCOUNT");
   if (!blob) return { ok: false, reason: "missing_service_account" };
-
-  let parsed: Record<string, unknown>;
   try {
     let raw: unknown = JSON.parse(blob);
     if (typeof raw === "string") raw = JSON.parse(raw);
-    parsed = raw as Record<string, unknown>;
+    const row = raw as Record<string, unknown>;
+    const project_id = String(row.project_id ?? "");
+    const client_email = String(row.client_email ?? "");
+    let private_key = String(row.private_key ?? "").trim();
+    if ((private_key.startsWith('"') && private_key.endsWith('"')) || (private_key.startsWith("'") && private_key.endsWith("'"))) {
+      private_key = private_key.slice(1, -1);
+    }
+    private_key = private_key.replace(/\\n/g, "\n");
+    if (!project_id || !client_email || !private_key.includes("BEGIN")) {
+      return { ok: false, reason: "bad_service_account_fields" };
+    }
+    return { ok: true, value: { project_id, client_email, private_key } };
   } catch {
     return { ok: false, reason: "bad_service_account_json" };
   }
+}
 
-  const projectId = String(parsed.project_id ?? "");
-  const clientEmail = String(parsed.client_email ?? "");
-  const privateKey = normalizePrivateKey(String(parsed.private_key ?? ""));
-  if (!projectId || !clientEmail || !privateKey.includes("BEGIN")) {
-    return { ok: false, reason: "bad_service_account_fields" };
+function b64url(input: string | Buffer) {
+  return Buffer.from(input).toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+
+async function getAccessToken(sa: ServiceAccount): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const header = b64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const claim = b64url(
+    JSON.stringify({
+      iss: sa.client_email,
+      sub: sa.client_email,
+      scope: "https://www.googleapis.com/auth/datastore https://www.googleapis.com/auth/cloud-platform",
+      aud: "https://oauth2.googleapis.com/token",
+      iat: now,
+      exp: now + 3600,
+    }),
+  );
+  const unsigned = `${header}.${claim}`;
+  const signer = createSign("RSA-SHA256");
+  signer.update(unsigned);
+  const signature = signer.sign(sa.private_key, "base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  const jwt = `${unsigned}.${signature}`;
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt,
+    }),
+  });
+  const json = (await res.json()) as { access_token?: string; error?: string };
+  if (!res.ok || !json.access_token) throw new Error(`token_exchange_failed:${json.error || res.status}`);
+  return json.access_token;
+}
+
+function encodeValue(v: unknown): Record<string, unknown> {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (typeof v === "string") return { stringValue: v };
+  if (typeof v === "boolean") return { booleanValue: v };
+  if (typeof v === "number") {
+    return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
   }
+  return { stringValue: String(v) };
+}
 
-  try {
-    const app =
-      getApps().length > 0
-        ? getApp()
-        : initializeApp({
-            credential: cert({ projectId, clientEmail, privateKey }),
-            projectId,
-          });
-    return { ok: true, db: getFirestore(app) };
-  } catch (err) {
-    console.error(
-      "[book-checkout] admin init failed:",
-      err instanceof Error ? err.message : String(err),
+function encodeFields(data: Record<string, unknown>) {
+  const fields: Record<string, Record<string, unknown>> = {};
+  for (const [k, v] of Object.entries(data)) fields[k] = encodeValue(v);
+  return fields;
+}
+
+function decodeValue(v: Record<string, unknown>): unknown {
+  if ("stringValue" in v) return v.stringValue;
+  if ("integerValue" in v) return Number(v.integerValue);
+  if ("doubleValue" in v) return Number(v.doubleValue);
+  if ("booleanValue" in v) return Boolean(v.booleanValue);
+  if ("nullValue" in v) return null;
+  return null;
+}
+
+async function listCollection(projectId: string, token: string, collection: string) {
+  const rows: Record<string, unknown>[] = [];
+  let pageToken = "";
+  do {
+    const url = new URL(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}`,
     );
-    return { ok: false, reason: "admin_init_failed" };
+    url.searchParams.set("pageSize", "300");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const json = (await res.json()) as {
+      documents?: { fields?: Record<string, Record<string, unknown>> }[];
+      nextPageToken?: string;
+      error?: { message?: string };
+    };
+    if (!res.ok) throw new Error(json.error?.message || `firestore_list_${res.status}`);
+    for (const doc of json.documents ?? []) {
+      const row: Record<string, unknown> = {};
+      for (const [k, val] of Object.entries(doc.fields ?? {})) row[k] = decodeValue(val);
+      rows.push(row);
+    }
+    pageToken = json.nextPageToken ?? "";
+  } while (pageToken);
+  return rows;
+}
+
+async function createDocument(
+  projectId: string,
+  token: string,
+  collection: string,
+  id: string,
+  data: Record<string, unknown>,
+) {
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}?documentId=${encodeURIComponent(id)}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ fields: encodeFields(data) }),
+  });
+  if (!res.ok) {
+    const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+    throw new Error(json?.error?.message || `firestore_create_${res.status}`);
   }
+}
+
+async function patchDocument(
+  projectId: string,
+  token: string,
+  collection: string,
+  id: string,
+  data: Record<string, unknown>,
+) {
+  const mask = Object.keys(data)
+    .map((k) => `updateMask.fieldPaths=${encodeURIComponent(k)}`)
+    .join("&");
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${id}?${mask}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ fields: encodeFields(data) }),
+  });
+  if (!res.ok) {
+    const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+    throw new Error(json?.error?.message || `firestore_patch_${res.status}`);
+  }
+}
+
+async function deleteDocument(projectId: string, token: string, collection: string, id: string) {
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${id}`;
+  await fetch(url, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
 }
 
 async function createCheckoutSession(
@@ -281,20 +375,10 @@ async function createCheckoutSession(
       },
     }),
   });
-
   const json = (await res.json().catch(() => null)) as {
     data?: { id?: string; attributes?: { checkout_url?: string } };
-    errors?: { detail?: string }[];
   } | null;
-
-  if (!res.ok) {
-    console.error("[book-checkout] paymongo failed", {
-      status: res.status,
-      detail: json?.errors?.[0]?.detail,
-    });
-    return { ok: false as const };
-  }
-
+  if (!res.ok) return { ok: false as const };
   const id = json?.data?.id ?? "";
   const checkoutUrl = json?.data?.attributes?.checkout_url ?? "";
   if (!id || !checkoutUrl) return { ok: false as const };
@@ -305,9 +389,7 @@ function slotsOverlap(aStart: string, aHours: number, bStart: string, bHours: nu
   const a0 = Date.parse(aStart);
   const b0 = Date.parse(bStart);
   if (!Number.isFinite(a0) || !Number.isFinite(b0)) return false;
-  const a1 = a0 + aHours * 60 * 60 * 1000;
-  const b1 = b0 + bHours * 60 * 60 * 1000;
-  return a0 < b1 && b0 < a1;
+  return a0 < b0 + bHours * 3600000 && b0 < a0 + aHours * 3600000;
 }
 
 function clamp(v: unknown, max: number) {
@@ -327,6 +409,10 @@ function clientIp(req: VercelRequest) {
   const xf = req.headers["x-forwarded-for"];
   if (typeof xf === "string" && xf.trim()) return xf.split(",")[0].trim();
   return "unknown";
+}
+
+function randomId() {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 }
 
 const _rl: Map<string, { count: number; resetAt: number }> =

@@ -1,12 +1,4 @@
 {
-  "functions": {
-    "api/book-*.ts": {
-      "includeFiles": "node_modules/firebase-admin/**"
-    },
-    "api/paymongo/**/*.ts": {
-      "includeFiles": "node_modules/firebase-admin/**"
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",
