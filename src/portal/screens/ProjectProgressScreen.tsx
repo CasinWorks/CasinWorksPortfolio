@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowRight, FileText, MessageSquare } from "lucide-react";
 import { usePageMeta } from "../../hooks/usePageMeta";
 import { SITE } from "../../site";
-import { canDeleteProject, deleteProject, ensureThread, fetchDocuments, fetchMilestones, fetchProject, findUserByEmail, PROJECT_DELETE_LOCKED_MESSAGE, threadIdForProject, updateProject } from "../api";
+import { canDeleteProject, deleteProject, ensureThread, fetchDocuments, fetchMilestones, fetchProject, findUserByEmail, normalizeLiveUrl, PROJECT_DELETE_LOCKED_MESSAGE, threadIdForProject, updateProject } from "../api";
 import { attachmentLabel, docsForHole, resolveAttachmentNeed } from "../pipeline";
 import { usePortalAuth } from "../auth";
 import type { Milestone, Project, ProjectDocument, ProjectStatus } from "../types";
@@ -480,6 +480,16 @@ function ClientProjectHeader({
         {project.timelineEnd ? ` · Target finish ${project.timelineEnd}` : ""}
         {` · ${project.progressPercentage || 0}% complete`}
       </p>
+      {project.liveUrl ? (
+        <a
+          href={project.liveUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex rounded-full bg-black text-white px-5 py-2.5 text-sm font-semibold"
+        >
+          Open live site
+        </a>
+      ) : null}
       {view === "timeline" && (
         <div className="mt-4 max-w-xl">
           <ProgressBar value={project.progressPercentage || 0} />
@@ -509,6 +519,7 @@ function ProjectSettings({
   const [name, setName] = useState(project.name);
   const [email, setEmail] = useState(project.clientEmail);
   const [budget, setBudget] = useState(project.budget ?? "");
+  const [liveUrl, setLiveUrl] = useState(project.liveUrl ?? "");
   const [status, setStatus] = useState<ProjectStatus>(project.status);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -519,6 +530,7 @@ function ProjectSettings({
     setName(project.name);
     setEmail(project.clientEmail);
     setBudget(project.budget ?? "");
+    setLiveUrl(project.liveUrl ?? "");
     setStatus(project.status);
   }, [project]);
 
@@ -529,6 +541,7 @@ function ProjectSettings({
     try {
       const clientEmail = email.trim().toLowerCase();
       const user = await findUserByEmail(clientEmail);
+      const normalizedLive = normalizeLiveUrl(liveUrl);
       await updateProject(project.id, {
         name: name.trim(),
         clientId: user?.uid ?? project.clientId,
@@ -536,6 +549,7 @@ function ProjectSettings({
         clientName: user?.displayName || project.clientName,
         budget: budget.trim(),
         status,
+        liveUrl: normalizedLive ?? "",
       });
       await onSaved();
     } catch (err) {
@@ -577,6 +591,16 @@ function ProjectSettings({
         <option value="blocked">Blocked</option>
         <option value="complete">Complete</option>
       </select>
+      <input
+        value={liveUrl}
+        onChange={(e) => setLiveUrl(e.target.value)}
+        placeholder="Live site URL (https://…)"
+        inputMode="url"
+        className="sm:col-span-2 px-3.5 py-2.5 bg-white border border-black/15 text-sm"
+      />
+      <p className="sm:col-span-2 text-xs text-slate-500 -mt-1">
+        Clients see “Open live site” on this project when set — use staging or production so they can monitor the build.
+      </p>
       <div className="sm:col-span-2 flex flex-wrap gap-2">
         <button type="submit" disabled={saving} className="rounded-full bg-black text-white text-sm font-semibold px-6 py-2.5 disabled:opacity-50">
           {saving ? "Saving…" : "Save"}

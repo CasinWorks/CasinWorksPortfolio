@@ -5,7 +5,9 @@ import { usePageMeta } from "../../hooks/usePageMeta";
 import { SITE } from "../../site";
 import {
   createConsultation,
+  fetchGoogleCalendarStatus,
   listenConsultations,
+  setConsultationStatus,
   startConsultationCheckout,
   updateConsultationStatus,
 } from "../api";
@@ -58,6 +60,7 @@ function AdminConsultationCalendar() {
     noIndex: true,
   });
 
+  const { firebaseUser } = usePortalAuth();
   const todayIso = manilaDateIso();
   const todayParts = todayIso.split("-").map(Number);
   const [cursor, setCursor] = useState({ year: todayParts[0], month: todayParts[1] - 1 });
@@ -65,8 +68,25 @@ function AdminConsultationCalendar() {
   const [rows, setRows] = useState<ConsultationBooking[]>([]);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
+  const [gcalConnected, setGcalConnected] = useState<boolean | null>(null);
+  const [gcalHint, setGcalHint] = useState("");
 
   useEffect(() => listenConsultations(setRows, setError), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const token = await firebaseUser?.getIdToken().catch(() => undefined);
+      if (!token || cancelled) return;
+      const status = await fetchGoogleCalendarStatus(token);
+      if (cancelled) return;
+      setGcalConnected(status.connected);
+      setGcalHint(status.hint || status.error || "");
+    })().catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [firebaseUser]);
 
   const active = useMemo(
     () =>
@@ -107,7 +127,9 @@ function AdminConsultationCalendar() {
     setError("");
     setBusyId(id);
     try {
-      await updateConsultationStatus(id, status);
+      const idToken = await firebaseUser?.getIdToken();
+      if (!idToken) throw new Error("Sign in again to update bookings.");
+      await setConsultationStatus(id, status, idToken);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not update booking.");
     } finally {
@@ -122,8 +144,7 @@ function AdminConsultationCalendar() {
         Your meeting <span className="italic text-slate-400">calendar.</span>
       </h1>
       <p className="mt-3 max-w-xl text-slate-600">
-        See who booked which hour. Confirm or cancel requests — clients book themselves on the public calendar or in
-        their portal.
+        See who booked which hour. Confirm creates a Google Calendar invite with Meet for the client; cancel removes it.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600">
@@ -140,6 +161,18 @@ function AdminConsultationCalendar() {
           <span className="font-semibold text-black">{unpaidCount}</span> unpaid
         </span>
       </div>
+
+      {gcalConnected === false && (
+        <p className="mt-4 text-sm text-amber-900 bg-amber-50 border border-amber-200/80 px-3 py-2 rounded-lg max-w-2xl">
+          Google Calendar is not connected — confirming will fail until you set{" "}
+          <code className="text-xs">GOOGLE_CLIENT_ID</code>, <code className="text-xs">GOOGLE_CLIENT_SECRET</code>, and{" "}
+          <code className="text-xs">GOOGLE_REFRESH_TOKEN</code>
+          {gcalHint ? ` (${gcalHint})` : ""}. Run <code className="text-xs">npm run google-calendar-oauth</code> once.
+        </p>
+      )}
+      {gcalConnected === true && (
+        <p className="mt-4 text-sm text-slate-600">Google Calendar connected — confirm auto-creates Meet and invites the client.</p>
+      )}
 
       {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
 
@@ -237,15 +270,36 @@ function AdminConsultationCalendar() {
                 </p>
                 {row.notes ? <p className="mt-2 text-sm text-slate-600">{row.notes}</p> : null}
                 <div className="mt-3 flex flex-wrap gap-2">
+                  {row.meetUrl ? (
+                    <>
+                      <a
+                        href={row.meetUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-full bg-black text-white px-3 py-1.5 text-xs font-semibold"
+                      >
+                        Join Meet
+                      </a>
+                      <button
+                        type="button"
+                        className="rounded-full border border-black/15 px-3 py-1.5 text-xs font-semibold"
+                        onClick={() => void navigator.clipboard.writeText(row.meetUrl!)}
+                      >
+                        Copy Meet link
+                      </button>
+                    </>
+                  ) : null}
                   <button
                     type="button"
-                    onClick={() => downloadIcs("casinworks-consultation.ics", consultationIcs(row))}
+                    onClick={() =>
+                      downloadIcs("casinworks-consultation.ics", consultationIcs({ ...row, meetUrl: row.meetUrl }))
+                    }
                     className="rounded-full border border-black/15 px-3 py-1.5 text-xs font-semibold"
                   >
                     Save to calendar
                   </button>
                   <a
-                    href={googleCalendarUrl(row)}
+                    href={googleCalendarUrl({ ...row, meetUrl: row.meetUrl })}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="rounded-full border border-black/15 px-3 py-1.5 text-xs font-semibold"
@@ -259,7 +313,7 @@ function AdminConsultationCalendar() {
                       onClick={() => void setStatus(row.id, "confirmed")}
                       className="rounded-full bg-black text-white px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
                     >
-                      Confirm
+                      {busyId === row.id ? "…" : "Confirm + Meet"}
                     </button>
                   )}
                   {row.status !== "cancelled" && (
@@ -670,17 +724,29 @@ function ClientBookConsultation() {
                 {row.notes && <p className="mt-1 text-sm text-slate-600">{row.notes}</p>}
               </div>
               <div className="flex flex-wrap gap-2">
+                {row.meetUrl ? (
+                  <a
+                    href={row.meetUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-black text-white px-4 py-1.5 text-xs font-semibold"
+                  >
+                    Join Meet
+                  </a>
+                ) : null}
                 {row.status !== "cancelled" && (
                   <>
                     <button
                       type="button"
-                      onClick={() => downloadIcs("casinworks-consultation.ics", consultationIcs(row))}
+                      onClick={() =>
+                        downloadIcs("casinworks-consultation.ics", consultationIcs({ ...row, meetUrl: row.meetUrl }))
+                      }
                       className="rounded-full border border-black/15 px-4 py-1.5 text-xs font-semibold"
                     >
                       Save to calendar
                     </button>
                     <a
-                      href={googleCalendarUrl(row)}
+                      href={googleCalendarUrl({ ...row, meetUrl: row.meetUrl })}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="rounded-full border border-black/15 px-4 py-1.5 text-xs font-semibold"

@@ -12,6 +12,7 @@ import {
   setDoc,
   updateDoc,
   where,
+  deleteField,
 } from "firebase/firestore";
 import { type User } from "firebase/auth";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
@@ -354,10 +355,11 @@ export async function createProject(payload: Omit<Project, "id">) {
 }
 
 export async function updateProject(id: string, patch: Partial<Omit<Project, "id">>) {
-  await updateDoc(
-    doc(db(), "projects", id),
-    omitUndefined({ ...patch, updatedAt: serverTimestamp() } as Record<string, unknown>),
-  );
+  const body: Record<string, unknown> = { ...patch, updatedAt: serverTimestamp() };
+  if ("liveUrl" in patch && (patch.liveUrl == null || patch.liveUrl === "")) {
+    body.liveUrl = deleteField();
+  }
+  await updateDoc(doc(db(), "projects", id), omitUndefined(body));
 }
 
 function createShareToken() {
@@ -380,6 +382,14 @@ export async function publishShareSnapshot(projectId: string, token?: string) {
     omitUndefined({
       projectId,
       clientEmail: project.clientEmail,
+      clientName: project.clientName,
+      name: project.name,
+      status: project.status,
+      progressPercentage: project.progressPercentage,
+      currentHoleTitle: project.currentHoleTitle,
+      timelineStart: project.timelineStart,
+      timelineEnd: project.timelineEnd,
+      liveUrl: project.liveUrl,
       updatedAt: serverTimestamp(),
     } as Record<string, unknown>),
   );
@@ -411,8 +421,26 @@ function mapProjectShare(id: string, data: Record<string, unknown>): ProjectShar
     currentHoleTitle: data.currentHoleTitle ? String(data.currentHoleTitle) : "",
     timelineStart: data.timelineStart ? String(data.timelineStart) : "",
     timelineEnd: data.timelineEnd ? String(data.timelineEnd) : "",
+    liveUrl: data.liveUrl ? String(data.liveUrl) : undefined,
     milestones: [...milestones].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
   };
+}
+
+/** Trim and require http(s). Empty string clears the field. Throws if non-empty but invalid. */
+export function normalizeLiveUrl(raw: string): string | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  let parsed: URL;
+  try {
+    parsed = new URL(withProtocol);
+  } catch {
+    throw new Error("Enter a valid live site URL (https://…).");
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Live site URL must start with http:// or https://");
+  }
+  return parsed.toString();
 }
 
 export async function fetchProjectShare(token: string): Promise<ProjectShare | null> {
@@ -812,6 +840,9 @@ function consultationFromData(id: string, data: Record<string, unknown>): Consul
     paymongoSessionId: data.paymongoSessionId ? String(data.paymongoSessionId) : undefined,
     paymongoReference: data.paymongoReference ? String(data.paymongoReference) : undefined,
     paidAt: data.paidAt ? String(data.paidAt) : undefined,
+    meetUrl: data.meetUrl ? String(data.meetUrl) : undefined,
+    googleEventId: data.googleEventId ? String(data.googleEventId) : undefined,
+    googleCalendarSyncedAt: data.googleCalendarSyncedAt ? String(data.googleCalendarSyncedAt) : undefined,
   };
 }
 
@@ -854,6 +885,59 @@ export async function createConsultation(input: {
 
 export async function updateConsultationStatus(id: string, status: ConsultationStatus) {
   await updateDoc(doc(db(), "consultations", id), { status });
+}
+
+/** Admin confirm/cancel via server — creates/cancels Google Meet + Calendar. */
+export async function setConsultationStatus(
+  id: string,
+  status: "confirmed" | "cancelled",
+  idToken: string,
+): Promise<{ meetUrl?: string; googleEventId?: string }> {
+  const res = await fetch("/api/consultation-status", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify({ id, status }),
+  });
+  const json = (await res.json().catch(() => null)) as {
+    ok?: boolean;
+    error?: string;
+    meetUrl?: string;
+    googleEventId?: string;
+  } | null;
+  if (!res.ok || !json?.ok) {
+    throw new Error(json?.error || "Could not update consultation.");
+  }
+  return { meetUrl: json.meetUrl, googleEventId: json.googleEventId };
+}
+
+export async function fetchGoogleCalendarStatus(idToken: string): Promise<{
+  connected: boolean;
+  hint?: string;
+  error?: string;
+  calendarId?: string;
+}> {
+  const res = await fetch("/api/google-calendar-status", {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  const json = (await res.json().catch(() => null)) as {
+    ok?: boolean;
+    connected?: boolean;
+    hint?: string;
+    error?: string;
+    calendarId?: string;
+  } | null;
+  if (!res.ok) {
+    return { connected: false, error: json?.error || "Could not check Google Calendar." };
+  }
+  return {
+    connected: Boolean(json?.connected),
+    hint: json?.hint,
+    error: json?.error,
+    calendarId: json?.calendarId,
+  };
 }
 
 /** Starts PayMongo Hosted Checkout for an existing consultation request. */

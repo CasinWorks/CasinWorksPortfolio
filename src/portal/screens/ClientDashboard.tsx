@@ -109,6 +109,17 @@ export function ClientDashboard() {
                     View records
                   </Link>
                 )}
+                {p.liveUrl ? (
+                  <a
+                    href={p.liveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-semibold underline underline-offset-4 w-fit"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Open live site
+                  </a>
+                ) : null}
                 {p.budget && <StatusPill>{p.budget}</StatusPill>}
               </div>
             </StaggerItem>
