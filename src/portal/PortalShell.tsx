@@ -15,7 +15,7 @@ export function PortalShell() {
 
   const links = [
     showClient ? { to: "/portal/dashboard", label: "Projects" } : null,
-    showClient ? { to: "/portal/book", label: "Book" } : null,
+    showClient ? { to: "/portal/book", label: isAdmin ? "Calendar" : "Book" } : null,
     showGigs ? { to: "/portal/gigs", label: "Gig board" } : null,
     isAdmin ? { to: "/portal/admin/users", label: "Users" } : null,
     isAdmin ? { to: "/portal/admin/clients", label: "Clients" } : null,
