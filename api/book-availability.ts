@@ -1,6 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createRequire } from "node:module";
 
 type VercelRequest = IncomingMessage & {
   method?: string;
@@ -39,23 +37,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    const db = getAdminDb();
-    if (!db) {
-      return res.status(503).json({ ok: false, error: "Booking is not configured" });
+    const admin = await getAdminDb();
+    if (!admin.ok) {
+      console.error("[book-availability]", admin.reason);
+      return res.status(503).json({
+        ok: false,
+        error: "Booking is not configured",
+        reason: admin.reason,
+      });
     }
 
-    const snap = await db.collection("consultations").get();
+    const snap = await admin.db.collection("consultations").get();
     const busy = snap.docs
-      .map((d: { data: () => Record<string, unknown> }) => d.data())
-      .filter((row: Record<string, unknown>) => {
+      .map((d) => d.data())
+      .filter((row) => {
         const status = String(row.status ?? "");
         return status === "requested" || status === "confirmed";
       })
-      .map((row: Record<string, unknown>) => ({
+      .map((row) => ({
         startsAt: String(row.startsAt ?? ""),
         hours: Number(row.hours ?? 1),
       }))
-      .filter((row: { startsAt: string; hours: number }) => row.startsAt && row.hours >= 1);
+      .filter((row) => row.startsAt && row.hours >= 1);
 
     return res.status(200).json({ ok: true, busy });
   } catch (err) {
@@ -73,46 +76,56 @@ function normalizePrivateKey(raw: string): string {
   if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
     key = key.slice(1, -1);
   }
-  key = key.replace(/\\n/g, "\n").replace(/\r\n/g, "\n");
-  return key;
+  return key.replace(/\\n/g, "\n").replace(/\r\n/g, "\n");
 }
 
-function getAdminDb() {
+async function getAdminDb(): Promise<
+  | { ok: true; db: FirebaseFirestore }
+  | { ok: false; reason: string }
+> {
+  const blob = env("FIREBASE_SERVICE_ACCOUNT");
+  if (!blob) return { ok: false, reason: "missing_service_account" };
+
+  let parsed: Record<string, unknown>;
   try {
-    const require = createRequire(import.meta.url);
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const admin = require("firebase-admin") as typeof import("firebase-admin");
-    if (!admin.apps.length) {
-      const blob = env("FIREBASE_SERVICE_ACCOUNT");
-      if (!blob) {
-        console.error("[book-availability] missing FIREBASE_SERVICE_ACCOUNT");
-        return null;
-      }
-      let parsed: Record<string, unknown> = JSON.parse(blob);
-      if (typeof (parsed as unknown) === "string") {
-        parsed = JSON.parse(parsed as unknown as string);
-      }
-      const projectId = String(parsed.project_id ?? "");
-      const clientEmail = String(parsed.client_email ?? "");
-      const privateKey = normalizePrivateKey(String(parsed.private_key ?? ""));
-      if (!projectId || !clientEmail || !privateKey.includes("BEGIN")) {
-        console.error("[book-availability] invalid FIREBASE_SERVICE_ACCOUNT");
-        return null;
-      }
-      admin.initializeApp({
-        credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
-        projectId,
-      });
-    }
-    return admin.firestore();
+    let raw: unknown = JSON.parse(blob);
+    if (typeof raw === "string") raw = JSON.parse(raw);
+    parsed = raw as Record<string, unknown>;
+  } catch {
+    return { ok: false, reason: "bad_service_account_json" };
+  }
+
+  const projectId = String(parsed.project_id ?? "");
+  const clientEmail = String(parsed.client_email ?? "");
+  const privateKey = normalizePrivateKey(String(parsed.private_key ?? ""));
+  if (!projectId || !clientEmail || !privateKey.includes("BEGIN")) {
+    return { ok: false, reason: "bad_service_account_fields" };
+  }
+
+  try {
+    const appMod = await import("firebase-admin/app");
+    const fsMod = await import("firebase-admin/firestore");
+    const app =
+      appMod.getApps().length > 0
+        ? appMod.getApp()
+        : appMod.initializeApp({
+            credential: appMod.cert({ projectId, clientEmail, privateKey }),
+            projectId,
+          });
+    return { ok: true, db: fsMod.getFirestore(app) };
   } catch (err) {
     console.error(
       "[book-availability] admin init failed:",
       err instanceof Error ? err.message : String(err),
     );
-    return null;
+    return { ok: false, reason: "admin_init_failed" };
   }
 }
 
-// Keep timingSafeEqual referenced so crypto stays available if we extend this file.
-void timingSafeEqual;
+type FirebaseFirestore = {
+  collection: (name: string) => {
+    get: () => Promise<{
+      docs: { data: () => Record<string, unknown> }[];
+    }>;
+  };
+};

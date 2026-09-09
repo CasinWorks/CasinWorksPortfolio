@@ -1,6 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createRequire } from "node:module";
 
 type VercelRequest = IncomingMessage & {
   body?: unknown;
@@ -58,11 +57,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const secretKey = paymongoSecretKey();
-    const db = getAdminDb();
-    if (!secretKey || !db) {
-      console.error("[book-checkout] missing PayMongo or Firebase admin");
-      return res.status(503).json({ ok: false, error: "Booking is not configured" });
+    const admin = await getAdminDb();
+    if (!secretKey || !admin.ok) {
+      console.error("[book-checkout] missing PayMongo or Firebase admin", {
+        paymongo: Boolean(secretKey),
+        admin: admin.ok ? "ok" : admin.reason,
+      });
+      return res.status(503).json({
+        ok: false,
+        error: "Booking is not configured",
+        reason: !secretKey ? "missing_paymongo" : admin.ok ? "unknown" : admin.reason,
+      });
     }
+    const db = admin.db;
 
     const body = (typeof req.body === "string" ? safeParse(req.body) : req.body) as GuestPayload | null;
     if (!body || typeof body !== "object") {
@@ -194,33 +201,62 @@ function normalizePrivateKey(raw: string): string {
   return key.replace(/\\n/g, "\n").replace(/\r\n/g, "\n");
 }
 
-function getAdminDb() {
-  try {
-    const require = createRequire(import.meta.url);
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const admin = require("firebase-admin") as typeof import("firebase-admin");
-    if (!admin.apps.length) {
-      const blob = env("FIREBASE_SERVICE_ACCOUNT");
-      if (!blob) return null;
-      let parsed: Record<string, unknown> = JSON.parse(blob);
-      if (typeof (parsed as unknown) === "string") {
-        parsed = JSON.parse(parsed as unknown as string);
-      }
-      const projectId = String(parsed.project_id ?? "");
-      const clientEmail = String(parsed.client_email ?? "");
-      const privateKey = normalizePrivateKey(String(parsed.private_key ?? ""));
-      if (!projectId || !clientEmail || !privateKey.includes("BEGIN")) return null;
-      admin.initializeApp({
-        credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
-        projectId,
-      });
+function getAdminDb(): Promise<
+  | { ok: true; db: AdminDb }
+  | { ok: false; reason: string }
+> {
+  return (async () => {
+    const blob = env("FIREBASE_SERVICE_ACCOUNT");
+    if (!blob) return { ok: false as const, reason: "missing_service_account" };
+
+    let parsed: Record<string, unknown>;
+    try {
+      let raw: unknown = JSON.parse(blob);
+      if (typeof raw === "string") raw = JSON.parse(raw);
+      parsed = raw as Record<string, unknown>;
+    } catch {
+      return { ok: false as const, reason: "bad_service_account_json" };
     }
-    return admin.firestore();
-  } catch (err) {
-    console.error("[book-checkout] admin init failed:", err instanceof Error ? err.message : String(err));
-    return null;
-  }
+
+    const projectId = String(parsed.project_id ?? "");
+    const clientEmail = String(parsed.client_email ?? "");
+    const privateKey = normalizePrivateKey(String(parsed.private_key ?? ""));
+    if (!projectId || !clientEmail || !privateKey.includes("BEGIN")) {
+      return { ok: false as const, reason: "bad_service_account_fields" };
+    }
+
+    try {
+      const appMod = await import("firebase-admin/app");
+      const fsMod = await import("firebase-admin/firestore");
+      const app =
+        appMod.getApps().length > 0
+          ? appMod.getApp()
+          : appMod.initializeApp({
+              credential: appMod.cert({ projectId, clientEmail, privateKey }),
+              projectId,
+            });
+      return { ok: true as const, db: fsMod.getFirestore(app) as unknown as AdminDb };
+    } catch (err) {
+      console.error(
+        "[book-checkout] admin init failed:",
+        err instanceof Error ? err.message : String(err),
+      );
+      return { ok: false as const, reason: "admin_init_failed" };
+    }
+  })();
 }
+
+type AdminDb = {
+  collection: (name: string) => {
+    get: () => Promise<{ docs: { data: () => Record<string, unknown> }[] }>;
+    doc: () => {
+      id: string;
+      set: (data: Record<string, unknown>) => Promise<unknown>;
+      update: (data: Record<string, unknown>) => Promise<unknown>;
+      delete: () => Promise<unknown>;
+    };
+  };
+};
 
 async function createCheckoutSession(
   secretKey: string,
