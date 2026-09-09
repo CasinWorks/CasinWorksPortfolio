@@ -76,15 +76,50 @@ export function BookConsultationScreen() {
   useEffect(() => {
     const paid = searchParams.get("paid");
     if (paid !== "1" && paid !== "0") return;
+    const consultationId = (searchParams.get("c") ?? "").trim();
+
     setPayNotice(
       paid === "1"
-        ? "Payment received. CasinWorks will confirm your slot shortly."
+        ? "Payment received. Confirming with PayMongo…"
         : "Payment was cancelled. Your slot is still held — tap Pay to finish, or cancel the request.",
     );
+
+    let cancelled = false;
+    if (paid === "1" && consultationId) {
+      (async () => {
+        try {
+          const res = await fetch("/api/book-confirm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ consultationId }),
+          });
+          const json = (await res.json().catch(() => null)) as {
+            paymentStatus?: string;
+            paid?: boolean;
+          } | null;
+          if (cancelled) return;
+          if (json?.paymentStatus === "paid") {
+            setPayNotice("Payment confirmed — this booking is marked paid.");
+          } else {
+            setPayNotice(
+              "Payment is still settling. Refresh in a moment, or tap Pay again if it stays unpaid.",
+            );
+          }
+        } catch {
+          if (!cancelled) {
+            setPayNotice("Payment received. Refresh shortly if the status is still unpaid.");
+          }
+        }
+      })();
+    }
+
     const next = new URLSearchParams(searchParams);
     next.delete("paid");
     next.delete("c");
     setSearchParams(next, { replace: true });
+    return () => {
+      cancelled = true;
+    };
   }, [searchParams, setSearchParams]);
 
   const live = useMemo(() => {
