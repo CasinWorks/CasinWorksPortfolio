@@ -3,6 +3,7 @@ import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { SITE } from "../site";
 import { formatConsultWhen } from "../portal/booking";
+import { FadeSwap, PageFade } from "../portal/motion";
 
 type ConfirmState =
   | { status: "loading" }
@@ -96,7 +97,7 @@ export default function BookConfirmedPage() {
 
   if (paidFlag === "0") {
     return (
-      <ConfirmedShell>
+      <ConfirmedShell swapKey="cancelled">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Checkout</p>
         <h1 className="mt-2 font-serif text-4xl sm:text-5xl font-semibold tracking-tight leading-snug">
           Payment was <span className="italic text-slate-500">cancelled.</span>
@@ -118,7 +119,7 @@ export default function BookConfirmedPage() {
 
   if (state.status === "loading") {
     return (
-      <ConfirmedShell>
+      <ConfirmedShell swapKey="loading">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Almost there</p>
         <h1 className="mt-2 font-serif text-4xl sm:text-5xl font-semibold tracking-tight leading-snug">
           Confirming your <span className="italic text-slate-500">payment…</span>
@@ -130,7 +131,7 @@ export default function BookConfirmedPage() {
 
   if (state.status === "failed") {
     return (
-      <ConfirmedShell>
+      <ConfirmedShell swapKey="failed">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Booking</p>
         <h1 className="mt-2 font-serif text-4xl sm:text-5xl font-semibold tracking-tight leading-snug">
           We could not confirm <span className="italic text-slate-500">just yet.</span>
@@ -151,7 +152,7 @@ export default function BookConfirmedPage() {
   const confirmed = state.status === "paid";
 
   return (
-    <ConfirmedShell>
+    <ConfirmedShell swapKey={confirmed ? "paid" : "pending"}>
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
         {confirmed ? "Booking confirmed" : "Payment received"}
       </p>
@@ -215,11 +216,13 @@ export default function BookConfirmedPage() {
   );
 }
 
-function ConfirmedShell({ children }: { children: ReactNode }) {
+function ConfirmedShell({ children, swapKey }: { children: ReactNode; swapKey: string }) {
   return (
-    <div className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a] px-[var(--page-gutter)] py-24">
-      <div className="max-w-lg mx-auto">{children}</div>
-    </div>
+    <PageFade className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a] px-[var(--page-gutter)] py-24">
+      <FadeSwap swapKey={swapKey} className="max-w-lg mx-auto">
+        {children}
+      </FadeSwap>
+    </PageFade>
   );
 }
 

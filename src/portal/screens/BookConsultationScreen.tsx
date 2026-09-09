@@ -29,6 +29,7 @@ import {
   slotStart,
   slotsOverlap,
 } from "../booking";
+import { FadeSwap, MotionChip, PageFade } from "../motion";
 import type { ConsultationBooking } from "../types";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -122,6 +123,7 @@ function AdminConsultationCalendar() {
     year: "numeric",
     timeZone: "UTC",
   });
+  const monthKey = `${cursor.year}-${cursor.month}`;
 
   async function setStatus(id: string, status: "confirmed" | "cancelled") {
     setError("");
@@ -138,7 +140,7 @@ function AdminConsultationCalendar() {
   }
 
   return (
-    <div className="max-w-5xl">
+    <PageFade className="max-w-5xl">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Consultation</p>
       <h1 className="mt-2 font-serif text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.05]">
         Your meeting <span className="italic text-slate-400">calendar.</span>
@@ -179,7 +181,9 @@ function AdminConsultationCalendar() {
       <div className="mt-10 grid lg:grid-cols-12 gap-10">
         <div className="lg:col-span-7">
           <div className="flex items-center justify-between mb-4">
-            <p className="font-serif text-2xl font-semibold">{monthLabel}</p>
+            <FadeSwap swapKey={monthKey}>
+              <p className="font-serif text-2xl font-semibold">{monthLabel}</p>
+            </FadeSwap>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -217,7 +221,7 @@ function AdminConsultationCalendar() {
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1">
+          <FadeSwap swapKey={monthKey} className="grid grid-cols-7 gap-1">
             {cells.map((day, i) => {
               if (!day) return <div key={`e-${i}`} className="aspect-square" />;
               const count = byDay.get(day)?.length ?? 0;
@@ -228,7 +232,7 @@ function AdminConsultationCalendar() {
                   key={day}
                   type="button"
                   onClick={() => setDateIso(day)}
-                  className={`min-h-12 sm:min-h-0 aspect-square rounded-2xl text-sm font-medium flex flex-col items-center justify-center gap-0.5 ${
+                  className={`min-h-12 sm:min-h-0 aspect-square rounded-2xl text-sm font-medium flex flex-col items-center justify-center gap-0.5 transition-colors duration-200 ${
                     selected
                       ? "bg-black text-white"
                       : count > 0
@@ -245,14 +249,14 @@ function AdminConsultationCalendar() {
                 </button>
               );
             })}
-          </div>
+          </FadeSwap>
         </div>
 
         <div className="lg:col-span-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
             {dateIso ? `Meetings · ${dateIso}` : "Pick a day"}
           </p>
-          <div className="mt-3 divide-y divide-black/10 border-y border-black/10">
+          <FadeSwap swapKey={dateIso || "none"} className="mt-3 divide-y divide-black/10 border-y border-black/10">
             {dayRows.length === 0 && (
               <p className="py-6 text-sm text-slate-500">No meetings this day.</p>
             )}
@@ -329,7 +333,7 @@ function AdminConsultationCalendar() {
                 </div>
               </div>
             ))}
-          </div>
+          </FadeSwap>
         </div>
       </div>
 
@@ -366,7 +370,7 @@ function AdminConsultationCalendar() {
           ))}
         </div>
       </section>
-    </div>
+    </PageFade>
   );
 }
 
@@ -467,7 +471,7 @@ function ClientBookConsultation() {
     year: "numeric",
     timeZone: "UTC",
   });
-
+  const monthKey = `${cursor.year}-${cursor.month}`;
   const feePhp = hours * SITE.exploratoryConsultationHourlyRatePhp;
 
   function takenOn(day: string, startHour: number, duration: number) {
@@ -545,7 +549,7 @@ function ClientBookConsultation() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <PageFade className="max-w-4xl">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Consultation</p>
       <h1 className="mt-2 font-serif text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.05]">
         Book an hour, <span className="italic text-slate-400">on the calendar.</span>
@@ -572,7 +576,9 @@ function ClientBookConsultation() {
       <div className="mt-10 grid lg:grid-cols-12 gap-10">
         <div className="lg:col-span-7">
           <div className="flex items-center justify-between mb-4">
-            <p className="font-serif text-2xl font-semibold">{monthLabel}</p>
+            <FadeSwap swapKey={monthKey}>
+              <p className="font-serif text-2xl font-semibold">{monthLabel}</p>
+            </FadeSwap>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -608,7 +614,7 @@ function ClientBookConsultation() {
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-1">
+          <FadeSwap swapKey={monthKey} className="grid grid-cols-7 gap-1">
             {cells.map((day, i) => {
               if (!day) return <div key={`e-${i}`} className="aspect-square" />;
               const weekend = !isWeekday(day);
@@ -625,7 +631,7 @@ function ClientBookConsultation() {
                     setHour(null);
                     setJustBooked(null);
                   }}
-                  className={`min-h-10 sm:min-h-0 aspect-square rounded-full text-sm font-medium ${
+                  className={`min-h-10 sm:min-h-0 aspect-square rounded-full text-sm font-medium transition-colors duration-200 ${
                     selected
                       ? "bg-black text-white"
                       : hasSlot
@@ -637,26 +643,23 @@ function ClientBookConsultation() {
                 </button>
               );
             })}
-          </div>
+          </FadeSwap>
         </div>
 
         <div className="lg:col-span-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Duration</p>
           <div className="mt-2 flex gap-2">
             {[1, 2, 3].map((n) => (
-              <button
+              <MotionChip
                 key={n}
-                type="button"
+                selected={hours === n}
                 onClick={() => {
                   setHours(n);
                   setHour(null);
                 }}
-                className={`rounded-full px-4 py-1.5 text-xs font-semibold ${
-                  hours === n ? "bg-black text-white" : "border border-black/15"
-                }`}
               >
                 {n} hr{n === 1 ? "" : "s"}
-              </button>
+              </MotionChip>
             ))}
           </div>
           <p className="mt-2 text-sm text-slate-600">Estimated fee: ₱{feePhp.toLocaleString("en-US")}</p>
@@ -664,7 +667,10 @@ function ClientBookConsultation() {
           <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
             {dateIso ? `Times · ${dateIso}` : "Pick a weekday"}
           </p>
-          <div className="mt-2 flex flex-wrap gap-2 min-h-[2.5rem]">
+          <FadeSwap
+            swapKey={dateIso ? `${dateIso}-${hours}-${openHours.join(",")}` : "empty"}
+            className="mt-2 flex flex-wrap gap-2 min-h-[2.5rem]"
+          >
             {!dateIso && <p className="text-sm text-slate-500 lg:hidden">Select a date on the calendar.</p>}
             {!dateIso && <p className="text-sm text-slate-500 hidden lg:block">Select a date on the left.</p>}
             {dateIso && openHours.length === 0 && (
@@ -673,18 +679,11 @@ function ClientBookConsultation() {
               </p>
             )}
             {openHours.map((h) => (
-              <button
-                key={h}
-                type="button"
-                onClick={() => setHour(h)}
-                className={`rounded-full px-4 py-1.5 text-xs font-semibold ${
-                  hour === h ? "bg-black text-white" : "border border-black/15"
-                }`}
-              >
+              <MotionChip key={h} selected={hour === h} onClick={() => setHour(h)}>
                 {formatSlotHour(h)}
-              </button>
+              </MotionChip>
             ))}
-          </div>
+          </FadeSwap>
 
           <label className="mt-6 block">
             <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Notes</span>
@@ -779,6 +778,6 @@ function ClientBookConsultation() {
           ))}
         </div>
       </section>
-    </div>
+    </PageFade>
   );
 }
