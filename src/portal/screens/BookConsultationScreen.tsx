@@ -59,7 +59,7 @@ export function BookConsultationScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/book/availability", { headers: { Accept: "application/json" } })
+    fetch("/api/book-availability", { headers: { Accept: "application/json" } })
       .then(async (res) => {
         const json = (await res.json().catch(() => null)) as {
           ok?: boolean;
