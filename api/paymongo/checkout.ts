@@ -1,10 +1,10 @@
-import { env } from "../lib/env";
-import { getClientIp, noStore, sameOrigin, type VercelRequest, type VercelResponse } from "../lib/http";
+import { env } from "../../server/lib/env";
+import { getClientIp, noStore, sameOrigin, type VercelRequest, type VercelResponse } from "../../server/lib/http";
 import {
   createCheckoutSession,
   paymongoSecretKey,
   phpToCentavos,
-} from "../lib/paymongo";
+} from "../../server/lib/paymongo";
 
 type CheckoutPayload = {
   hours?: unknown;
@@ -42,7 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(503).json({ ok: false, error: "Payments are not configured" });
   }
 
-  const { adminDb, verifyIdToken } = await import("../lib/firebaseAdmin");
+  const { adminDb, verifyIdToken } = await import("../../server/lib/firebaseAdmin");
   const uid = await verifyIdToken(req.headers.authorization);
   if (!uid) {
     return res.status(401).json({ ok: false, error: "Sign in required" });

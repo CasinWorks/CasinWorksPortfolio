@@ -1,4 +1,4 @@
-import { getClientIp, noStore, sameOrigin, type VercelRequest, type VercelResponse } from "./lib/http";
+import { getClientIp, noStore, sameOrigin, type VercelRequest, type VercelResponse } from "../server/lib/http";
 
 /**
  * GET /api/book/availability
@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(403).json({ ok: false, error: "Forbidden" });
     }
 
-    const { adminDb, adminInitError } = await import("./lib/firebaseAdmin");
+    const { adminDb, adminInitError } = await import("../server/lib/firebaseAdmin");
     const db = adminDb();
     if (!db) {
       console.error("[book/availability] admin unavailable:", adminInitError() ?? "missing-credentials");
