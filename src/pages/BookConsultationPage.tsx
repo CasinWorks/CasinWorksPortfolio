@@ -46,7 +46,7 @@ export default function BookConsultationPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/book/availability", { headers: { Accept: "application/json" } })
+    fetch("/api/book-availability", { headers: { Accept: "application/json" } })
       .then(async (res) => {
         const json = (await res.json().catch(() => null)) as { ok?: boolean; busy?: BusySlot[] } | null;
         if (!cancelled && json?.ok && Array.isArray(json.busy)) setBusySlots(json.busy);
@@ -92,7 +92,7 @@ export default function BookConsultationPage() {
     try {
       const startsAt = slotStart(dateIso, hour).toISOString();
       if (takenOn(dateIso, hour, hours)) throw new Error("That slot was just taken. Pick another time.");
-      const res = await fetch("/api/book/checkout", {
+      const res = await fetch("/api/book-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
