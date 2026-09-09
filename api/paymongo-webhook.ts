@@ -18,10 +18,10 @@ type VercelResponse = ServerResponse & {
 type ServiceAccount = { project_id: string; client_email: string; private_key: string };
 
 /**
- * POST /api/paymongo/webhook (and /api/paymongo-webhook)
+ * POST /api/paymongo-webhook
  *
  * PayMongo → CasinWorks. Marks consultations paid via Firestore REST.
- * Register in PayMongo (test + live): https://www.casinworks.com/api/paymongo/webhook
+ * Register in PayMongo (test + live): https://www.casinworks.com/api/paymongo-webhook
  * Events: checkout_session.payment.paid, payment.paid
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {

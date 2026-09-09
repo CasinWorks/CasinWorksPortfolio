@@ -104,9 +104,13 @@ export function BookConsultationScreen() {
   const mine = useMemo(
     () =>
       rows
-        .filter((r) => r.clientUid === profile?.uid)
+        .filter(
+          (r) =>
+            r.clientUid === profile?.uid ||
+            (!!profile?.email && r.clientEmail?.toLowerCase() === profile.email.toLowerCase()),
+        )
         .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
-    [rows, profile?.uid],
+    [rows, profile?.uid, profile?.email],
   );
   const inbox = useMemo(
     () =>
