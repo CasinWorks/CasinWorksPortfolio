@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 
 type StickyMobileCtaProps = {
   /** When true (e.g. mobile nav open), hide the bar */
   hidden?: boolean;
-  href?: string;
+  to?: string;
   label?: string;
 };
 
 /** Persistent mobile consultation CTA — hides near the contact section. */
 export function StickyMobileCta({
   hidden = false,
-  href = "#contact",
-  label = "Start a Consultation",
+  to = "/book",
+  label = "Book a consultation",
 }: StickyMobileCtaProps) {
   const [nearContact, setNearContact] = useState(false);
 
@@ -37,13 +38,13 @@ export function StickyMobileCta({
         visible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
       }`}
     >
-      <a
-        href={href}
+      <Link
+        to={to}
         className="flex items-center justify-between gap-4 rounded-full bg-[#1a1a1a] text-white px-6 py-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)]"
       >
         <span className="text-[10px] font-black uppercase tracking-[0.35em]">{label}</span>
         <ArrowRight className="size-5 shrink-0" aria-hidden />
-      </a>
+      </Link>
     </div>
   );
 }

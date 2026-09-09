@@ -150,6 +150,26 @@ export async function fetchProjectsForClient(client: { uid: string; email: strin
   return [...byKey.values()];
 }
 
+/** Attach guest consultations (booked by email before they registered) to this account. */
+export async function claimConsultationsForClient(uid: string, email: string, displayName: string) {
+  const snap = await getDocs(
+    query(collection(db(), "consultations"), where("clientEmail", "==", email.trim().toLowerCase())),
+  );
+  await Promise.all(
+    snap.docs.map((d) => {
+      const data = d.data();
+      const owned = String(data.clientUid ?? "");
+      if (owned === uid) return Promise.resolve();
+      if (owned) return Promise.resolve();
+      return updateDoc(d.ref, {
+        clientUid: uid,
+        clientName: displayName || data.clientName || email,
+        guest: false,
+      });
+    }),
+  );
+}
+
 /** Attach pending projects (created by email before they registered) to this account. */
 export async function claimProjectsForClient(uid: string, email: string, displayName: string) {
   const snap = await getDocs(

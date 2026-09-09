@@ -152,8 +152,30 @@ service cloud.firestore {
       allow delete: if isAdmin() || (signedIn() && resource.data.applicantId == request.auth.uid);
     }
 
+    function canClaimConsultation() {
+      return signedIn()
+        && authEmail() != ''
+        && 'clientEmail' in resource.data
+        && resource.data.clientEmail is string
+        && resource.data.clientEmail.lower() == authEmail()
+        && (resource.data.clientUid == '' || !('clientUid' in resource.data))
+        && request.resource.data.clientUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['clientUid', 'clientName', 'guest']);
+    }
+
     match /consultations/{id} {
-      allow read: if signedIn();
+      allow read: if isAdmin() || (
+        signedIn() && (
+          resource.data.clientUid == request.auth.uid ||
+          (
+            authEmail() != '' &&
+            'clientEmail' in resource.data &&
+            resource.data.clientEmail is string &&
+            resource.data.clientEmail.lower() == authEmail()
+          )
+        )
+      );
       allow create: if signedIn()
         && request.resource.data.clientUid == request.auth.uid
         && request.resource.data.status == 'requested'
@@ -164,7 +186,7 @@ service cloud.firestore {
         && request.resource.data.paymentStatus == 'pending'
         && request.resource.data.amountPhp is number
         && request.resource.data.amountPhp > 0;
-      allow update: if isAdmin() || (
+      allow update: if isAdmin() || canClaimConsultation() || (
         signedIn()
         && resource.data.clientUid == request.auth.uid
         && resource.data.status == 'requested'

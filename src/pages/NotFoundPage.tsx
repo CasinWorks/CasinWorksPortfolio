@@ -30,10 +30,10 @@ export default function NotFoundPage() {
             Home
           </Link>
           <Link
-            to="/#contact"
+            to="/book"
             className="inline-flex items-center gap-3 bg-black text-white px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.4em] hover:bg-slate-800 transition-colors"
           >
-            Consultation
+            Book a consultation
             <ArrowRight className="size-4" aria-hidden />
           </Link>
         </div>

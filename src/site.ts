@@ -14,8 +14,8 @@ export const SITE = {
   consultingHourlyRatePhp: 5000,
   /** Exploratory / initial consultation, billed hourly in PHP */
   exploratoryConsultationHourlyRatePhp: 1000,
-  /** Client reply SLA shown near contact */
-  responseTimePromise: "I reply within 1 business day.",
+  /** Shown near booking CTAs */
+  responseTimePromise: "Book a time on the calendar — no portal account required to start.",
   ogImagePath: "/og-image.jpg",
 } as const;
 
@@ -38,27 +38,27 @@ export const FAQS: FaqItem[] = [
   {
     question: "How do engagements usually start?",
     answer:
-      "Two ways. Send a short brief via the inquiry form or email, or create a free client portal account and book a consultation slot yourself. Either way we clarify scope, constraints, and success criteria, then agree on a focused first phase before any larger commitment.",
+      "Book an exploratory consultation on the public calendar — share what you want to discuss, leave your email, and settle the hour. Afterwards you can create a free portal account so the booking and any later work live in one place.",
   },
   {
-    question: "Can I book a consultation myself instead of waiting for a reply?",
+    question: "Do I need a portal account to book?",
     answer:
-      "Yes. Sign up for a free client portal account and choose your own slot — hourly, 9AM to 5PM Manila time. The slot is held the moment you book it and you get a calendar invite straight away, so nothing waits on an email thread.",
+      "No. The calendar is open. You only need an account if you want the client portal — milestones, documents, and ongoing project tracking. Register after payment with the same email to attach the booking.",
   },
   {
-    question: "What do I get from a client portal account?",
+    question: "What is the client portal for?",
     answer:
-      "It is where an engagement lives. You book and reschedule consultations, follow the project milestone by milestone, and read every quotation, purchase order, invoice, and remittance in one place instead of digging through email. Signing up costs nothing and does not commit you to a project.",
+      "It is where an engagement lives after you are working together: milestones, quotations, purchase orders, invoices, and remittances in one place. Signing up costs nothing and does not commit you to a project.",
   },
   {
     question: "How is consulting billed?",
     answer:
-      "Exploratory and initial consultation is billed at ₱1,000 per hour, whether you book it in the portal or reach out by email. Larger builds are quoted as a fixed scope after we agree what the work is.",
+      "Exploratory and initial consultation is ₱1,000 per hour, settled when you book. Larger builds are quoted as a fixed scope after we agree what the work is.",
   },
   {
-    question: "How quickly will I hear back?",
+    question: "How quickly is a consultation confirmed?",
     answer:
-      "I reply to new consultation inquiries within 1 business day. If you would rather not wait, book a slot in the client portal and it is confirmed on the spot. Complex scopes may need a short follow-up call before a written proposal.",
+      "Once the hour is settled, CasinWorks confirms the appointment by hand. Complex scopes may need a short follow-up before a written proposal.",
   },
   {
     question: "Where are you based, and do you work remotely?",
