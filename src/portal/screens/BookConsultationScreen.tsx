@@ -187,7 +187,6 @@ function AdminConsultationCalendar() {
           <div className="grid grid-cols-7 gap-1">
             {cells.map((day, i) => {
               if (!day) return <div key={`e-${i}`} className="aspect-square" />;
-              const weekend = !isWeekday(day);
               const count = byDay.get(day)?.length ?? 0;
               const selected = dateIso === day;
               const isToday = day === todayIso;
@@ -199,11 +198,9 @@ function AdminConsultationCalendar() {
                   className={`min-h-12 sm:min-h-0 aspect-square rounded-2xl text-sm font-medium flex flex-col items-center justify-center gap-0.5 ${
                     selected
                       ? "bg-black text-white"
-                      : weekend
-                        ? "text-slate-300"
-                        : count > 0
-                          ? "bg-black/[0.06] hover:bg-black/10"
-                          : "hover:bg-black/5 text-slate-700"
+                      : count > 0
+                        ? "bg-black/[0.06] hover:bg-black/10 text-slate-700"
+                        : "hover:bg-black/5 text-slate-700"
                   } ${isToday && !selected ? "ring-1 ring-black/25" : ""}`}
                 >
                   <span>{Number(day.slice(-2))}</span>
