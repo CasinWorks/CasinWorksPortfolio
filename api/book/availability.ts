@@ -1,4 +1,3 @@
-import { adminDb } from "../_lib/firebaseAdmin";
 import { getClientIp, noStore, sameOrigin, type VercelRequest, type VercelResponse } from "../_lib/http";
 
 /**
@@ -18,8 +17,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(403).json({ ok: false, error: "Forbidden" });
     }
 
+    const { adminDb, adminInitError } = await import("../_lib/firebaseAdmin");
     const db = adminDb();
     if (!db) {
+      console.error("[book/availability] admin unavailable:", adminInitError() ?? "missing-credentials");
       return res.status(503).json({ ok: false, error: "Booking is not configured" });
     }
 

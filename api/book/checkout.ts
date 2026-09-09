@@ -1,6 +1,5 @@
 import { env } from "../_lib/env";
-import { adminDb } from "../_lib/firebaseAdmin";
-import { getClientIp, noStore, sameOrigin, type VercelRequest, type VercelResponse } from "../_lib/http";
+import { getClientIp, noStore, sameOrigin, type VercelResponse, type VercelRequest } from "../_lib/http";
 import {
   createCheckoutSession,
   paymongoSecretKey,
@@ -44,9 +43,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const secretKey = paymongoSecretKey();
+    const { adminDb, adminInitError } = await import("../_lib/firebaseAdmin");
     const db = adminDb();
     if (!secretKey || !db) {
-      console.error("[book/checkout] missing PayMongo or Firebase admin");
+      console.error("[book/checkout] missing PayMongo or Firebase admin", {
+        paymongo: Boolean(secretKey),
+        admin: adminInitError() ?? (db ? "ok" : "missing-credentials"),
+      });
       return res.status(503).json({ ok: false, error: "Booking is not configured" });
     }
 

@@ -1,4 +1,3 @@
-import { adminDb } from "../_lib/firebaseAdmin";
 import { noStore, readRawBody, safeJsonParse, type VercelRequest, type VercelResponse } from "../_lib/http";
 import {
   isLiveSecret,
@@ -99,6 +98,7 @@ async function recordEvent(input: {
   resourceId: string;
   attrs: Record<string, unknown>;
 }) {
+  const { adminDb } = await import("../_lib/firebaseAdmin");
   const db = adminDb();
   if (!db) {
     console.error("[paymongo/webhook] firebase admin not configured — event accepted but not stored");
