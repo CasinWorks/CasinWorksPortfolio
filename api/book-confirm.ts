@@ -15,7 +15,7 @@ type ServiceAccount = { project_id: string; client_email: string; private_key: s
 
 /**
  * POST /api/book-confirm
- * Backup when PayMongo redirects to /book/complete before the webhook lands.
+ * Backup when PayMongo redirects to /book/confirmed before the webhook lands.
  * Verifies the checkout session is paid via PayMongo API, then marks Firestore.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -61,8 +61,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const consult = await getConsultation(sa.project_id, token, consultationId);
     if (!consult) return res.status(404).json({ ok: false, error: "Consultation not found" });
 
+    const detail = {
+      startsAt: consult.startsAt ? String(consult.startsAt) : undefined,
+      hours: consult.hours != null ? Number(consult.hours) : undefined,
+      amountPhp: consult.amountPhp != null ? Number(consult.amountPhp) : undefined,
+      email: consult.clientEmail ? String(consult.clientEmail) : undefined,
+    };
+
     if (String(consult.paymentStatus ?? "") === "paid") {
-      return res.status(200).json({ ok: true, paymentStatus: "paid", already: true });
+      return res.status(200).json({ ok: true, paymentStatus: "paid", already: true, ...detail });
     }
 
     const sessionId = String(consult.paymongoSessionId ?? "");
@@ -72,7 +79,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const session = await fetchPaymongoSession(secretKey, sessionId);
     if (!session.paid) {
-      return res.status(200).json({ ok: true, paymentStatus: "pending", paid: false });
+      return res.status(200).json({ ok: true, paymentStatus: "pending", paid: false, ...detail });
     }
 
     const paidAt = new Date().toISOString();
@@ -82,7 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ...(session.reference ? { paymongoReference: session.reference } : {}),
     });
 
-    return res.status(200).json({ ok: true, paymentStatus: "paid", paid: true });
+    return res.status(200).json({ ok: true, paymentStatus: "paid", paid: true, ...detail });
   } catch (err) {
     console.error("[book-confirm]", err instanceof Error ? err.message : String(err));
     return res.status(500).json({ ok: false, error: "Could not confirm payment" });

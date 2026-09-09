@@ -7,7 +7,8 @@ import {MaintenanceNotice} from './components/MaintenanceNotice.tsx';
 import {ScrollToTop} from './components/ScrollToTop.tsx';
 import {SiteSchema} from './components/SiteSchema.tsx';
 import CaseStudyPage from './pages/CaseStudyPage.tsx';
-import BookConsultationPage, { BookCompletePage } from './pages/BookConsultationPage.tsx';
+import BookConsultationPage from './pages/BookConsultationPage.tsx';
+import BookConfirmedPage, { BookCompleteRedirect } from './pages/BookConfirmedPage.tsx';
 import NotFoundPage from './pages/NotFoundPage.tsx';
 import ThankYouPage from './pages/ThankYouPage.tsx';
 import { PortalAuthLayout } from './portal/PortalRoutes.tsx';
@@ -35,7 +36,8 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/book" element={<BookConsultationPage />} />
-        <Route path="/book/complete" element={<BookCompletePage />} />
+        <Route path="/book/confirmed" element={<BookConfirmedPage />} />
+        <Route path="/book/complete" element={<BookCompleteRedirect />} />
         <Route path="/AppsForEveryone" element={<Navigate to={{ pathname: "/", hash: "apps-for-everyone" }} replace />} />
         <Route path="/case-studies/vela-brand-system" element={<Navigate to="/case-studies/vela-private" replace />} />
         <Route path="/case-studies/:slug" element={<CaseStudyPage />} />
