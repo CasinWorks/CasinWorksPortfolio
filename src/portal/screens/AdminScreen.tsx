@@ -7,8 +7,8 @@ import {
   fetchAllProjects,
   fetchDocuments,
   listenConsultations,
+  setConsultationStatus,
   statusLabel,
-  updateConsultationStatus,
   updateDocumentStatus,
 } from "../api";
 import { usePortalAuth } from "../auth";
@@ -21,10 +21,11 @@ export function AdminScreen() {
     path: "/portal/admin",
     noIndex: true,
   });
-  const { profile } = usePortalAuth();
+  const { profile, firebaseUser } = usePortalAuth();
   const [pending, setPending] = useState<ProjectDocument[]>([]);
   const [consults, setConsults] = useState<ConsultationBooking[]>([]);
   const [msg, setMsg] = useState("");
+  const [busyId, setBusyId] = useState("");
 
   async function reload() {
     const list = await fetchAllProjects();
@@ -67,9 +68,9 @@ export function AdminScreen() {
         <p className="mt-1 text-sm text-slate-500">
           Clients book from{" "}
           <Link to="/portal/book" className="underline underline-offset-2">
-            Book
+            Calendar
           </Link>
-          . Confirm a slot, then they keep it on their calendar.
+          . Confirm creates a Google Meet invite on your calendar.
         </p>
         <div className="mt-4 divide-y divide-black/10 border-y border-black/10">
           {consults.filter((c) => c.status === "requested").length === 0 && (
@@ -91,21 +92,43 @@ export function AdminScreen() {
                 <div className="flex gap-2">
                   <button
                     type="button"
+                    disabled={busyId === c.id}
                     onClick={async () => {
-                      await updateConsultationStatus(c.id, "confirmed");
-                      setMsg("Consultation confirmed.");
+                      setBusyId(c.id);
+                      setMsg("");
+                      try {
+                        const idToken = await firebaseUser?.getIdToken();
+                        if (!idToken) throw new Error("Sign in again.");
+                        await setConsultationStatus(c.id, "confirmed", idToken);
+                        setMsg("Consultation confirmed — Meet invite sent.");
+                      } catch (e) {
+                        setMsg(e instanceof Error ? e.message : "Could not confirm.");
+                      } finally {
+                        setBusyId("");
+                      }
                     }}
-                    className="rounded-full bg-black text-white px-4 py-1.5 text-xs font-semibold"
+                    className="rounded-full bg-black text-white px-4 py-1.5 text-xs font-semibold disabled:opacity-50"
                   >
-                    Confirm
+                    {busyId === c.id ? "…" : "Confirm + Meet"}
                   </button>
                   <button
                     type="button"
+                    disabled={busyId === c.id}
                     onClick={async () => {
-                      await updateConsultationStatus(c.id, "cancelled");
-                      setMsg("Consultation cancelled.");
+                      setBusyId(c.id);
+                      setMsg("");
+                      try {
+                        const idToken = await firebaseUser?.getIdToken();
+                        if (!idToken) throw new Error("Sign in again.");
+                        await setConsultationStatus(c.id, "cancelled", idToken);
+                        setMsg("Consultation cancelled.");
+                      } catch (e) {
+                        setMsg(e instanceof Error ? e.message : "Could not cancel.");
+                      } finally {
+                        setBusyId("");
+                      }
                     }}
-                    className="rounded-full border border-black/15 px-4 py-1.5 text-xs font-semibold"
+                    className="rounded-full border border-black/15 px-4 py-1.5 text-xs font-semibold disabled:opacity-50"
                   >
                     Decline
                   </button>

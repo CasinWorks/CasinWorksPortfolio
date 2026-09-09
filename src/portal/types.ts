@@ -142,6 +142,8 @@ export interface Project {
   currentHoleTitle?: string;
   currentHoleKind?: string;
   shareToken?: string;
+  /** Public or staging URL so the client can monitor the live build. */
+  liveUrl?: string;
   /** Set when an invoice or remittance is on file. Blocks project delete. */
   paymentStarted?: boolean;
 }
@@ -173,6 +175,7 @@ export interface ProjectShare {
   currentHoleTitle?: string;
   timelineStart?: string;
   timelineEnd?: string;
+  liveUrl?: string;
   milestones: Milestone[];
 }
 
@@ -251,6 +254,11 @@ export interface ConsultationBooking {
   paymongoSessionId?: string;
   paymongoReference?: string;
   paidAt?: string;
+  /** Google Meet join URL created when admin confirms. */
+  meetUrl?: string;
+  /** Google Calendar event id for cancel/update. */
+  googleEventId?: string;
+  googleCalendarSyncedAt?: string;
 }
 
 export interface GigApplication {

@@ -53,11 +53,20 @@ function icsStamp(d: Date) {
   return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
 }
 
-export function consultationIcs(input: { startsAt: string; hours: number; name?: string }) {
+export function consultationIcs(input: {
+  startsAt: string;
+  hours: number;
+  name?: string;
+  meetUrl?: string;
+}) {
   const start = new Date(input.startsAt);
   const end = new Date(start.getTime() + input.hours * 60 * 60 * 1000);
   const summary = "CasinWorks consultation";
-  const desc = `${input.hours} hour${input.hours === 1 ? "" : "s"} with ${SITE.fullName}.`;
+  const descParts = [
+    `${input.hours} hour${input.hours === 1 ? "" : "s"} with ${SITE.fullName}.`,
+    input.meetUrl ? `Join Meet: ${input.meetUrl}` : "",
+  ].filter(Boolean);
+  const location = input.meetUrl || "Video call — CasinWorks";
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -69,24 +78,30 @@ export function consultationIcs(input: { startsAt: string; hours: number; name?:
     `DTSTART:${icsStamp(start)}`,
     `DTEND:${icsStamp(end)}`,
     `SUMMARY:${summary}`,
-    `DESCRIPTION:${desc.replace(/\n/g, "\\n")}`,
-    `LOCATION:Video call — CasinWorks`,
+    `DESCRIPTION:${descParts.join("\\n")}`,
+    `LOCATION:${location}`,
     `ORGANIZER;CN=${SITE.fullName}:MAILTO:${SITE.email}`,
     "END:VEVENT",
     "END:VCALENDAR",
   ].join("\r\n");
 }
 
-export function googleCalendarUrl(input: { startsAt: string; hours: number }) {
+export function googleCalendarUrl(input: { startsAt: string; hours: number; meetUrl?: string }) {
   const start = new Date(input.startsAt);
   const end = new Date(start.getTime() + input.hours * 60 * 60 * 1000);
   const dates = `${icsStamp(start)}/${icsStamp(end)}`;
+  const details = [
+    `${input.hours} hour${input.hours === 1 ? "" : "s"} with ${SITE.fullName}.`,
+    input.meetUrl ? `Join Meet: ${input.meetUrl}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: "CasinWorks consultation",
     dates,
-    details: `${input.hours} hour${input.hours === 1 ? "" : "s"} with ${SITE.fullName}.`,
-    location: "Video call — CasinWorks",
+    details,
+    location: input.meetUrl || "Video call — CasinWorks",
   });
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
