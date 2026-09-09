@@ -78,49 +78,62 @@ export function BookConsultationScreen() {
     if (paid !== "1" && paid !== "0") return;
     const consultationId = (searchParams.get("c") ?? "").trim();
 
-    setPayNotice(
-      paid === "1"
-        ? "Payment received. Confirming with PayMongo…"
-        : "Payment was cancelled. Your slot is still held — tap Pay to finish, or cancel the request.",
-    );
-
-    let cancelled = false;
-    if (paid === "1" && consultationId) {
-      (async () => {
-        try {
-          const res = await fetch("/api/book-confirm", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ consultationId }),
-          });
-          const json = (await res.json().catch(() => null)) as {
-            paymentStatus?: string;
-            paid?: boolean;
-          } | null;
-          if (cancelled) return;
-          if (json?.paymentStatus === "paid") {
-            setPayNotice("Payment confirmed — this booking is marked paid.");
-          } else {
-            setPayNotice(
-              "Payment is still settling. Refresh in a moment, or tap Pay again if it stays unpaid.",
-            );
-          }
-        } catch {
-          if (!cancelled) {
-            setPayNotice("Payment received. Refresh shortly if the status is still unpaid.");
-          }
-        }
-      })();
-    }
-
+    // Clear query params once up front so this effect does not re-enter and
+    // cancel the in-flight confirm request.
     const next = new URLSearchParams(searchParams);
     next.delete("paid");
     next.delete("c");
     setSearchParams(next, { replace: true });
+
+    if (paid !== "1") {
+      setPayNotice(
+        "Payment was cancelled. Your slot is still held — tap Pay to finish, or cancel the request.",
+      );
+      return;
+    }
+
+    setPayNotice("Payment received. Confirming with PayMongo…");
+    if (!consultationId) {
+      setPayNotice("Payment received. Refresh if the status is still unpaid.");
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/book-confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ consultationId }),
+        });
+        const json = (await res.json().catch(() => null)) as {
+          ok?: boolean;
+          error?: string;
+          paymentStatus?: string;
+        } | null;
+        if (cancelled) return;
+        if (json?.paymentStatus === "paid") {
+          setPayNotice("Payment confirmed — this booking is marked paid.");
+        } else if (json?.error) {
+          setPayNotice(`Could not confirm payment (${json.error}). Try Pay again or refresh.`);
+        } else {
+          setPayNotice(
+            "Payment is still settling. Refresh in a moment, or tap Pay again if it stays unpaid.",
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setPayNotice("Payment received. Refresh shortly if the status is still unpaid.");
+        }
+      }
+    })();
+
     return () => {
       cancelled = true;
     };
-  }, [searchParams, setSearchParams]);
+    // Only react to the paid-return landing, not every searchParam change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get("paid"), searchParams.get("c")]);
 
   const live = useMemo(() => {
     if (busySlots.length > 0) {

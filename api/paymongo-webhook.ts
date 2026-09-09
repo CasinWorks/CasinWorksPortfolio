@@ -28,8 +28,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Cache-Control", "no-store");
 
   try {
+    if (req.method === "GET") {
+      return res.status(200).json({
+        ok: true,
+        endpoint: "/api/paymongo-webhook",
+        hint: "PayMongo must POST signed events here. Opening this URL in a browser is not a payment webhook.",
+      });
+    }
     if (req.method !== "POST") {
-      res.setHeader("Allow", "POST");
+      res.setHeader("Allow", "GET, POST");
       return res.status(405).json({ ok: false, error: "Method not allowed" });
     }
 
