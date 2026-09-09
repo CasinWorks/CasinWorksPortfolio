@@ -1,3 +1,5 @@
+import { cert, getApp, getApps, initializeApp } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 type VercelRequest = IncomingMessage & { method?: string };
@@ -57,8 +59,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const projectId = String(parsed.project_id ?? "");
   const clientEmail = String(parsed.client_email ?? "");
-  let privateKey = String(parsed.private_key ?? "").trim();
-  privateKey = privateKey.replace(/\\n/g, "\n");
+  let privateKey = String(parsed.private_key ?? "").trim().replace(/\\n/g, "\n");
   out.env = {
     ...(out.env as object),
     serviceAccountFields: {
@@ -74,20 +75,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const appMod = await import("firebase-admin/app");
-    const fsMod = await import("firebase-admin/firestore");
     const app =
-      appMod.getApps().length > 0
-        ? appMod.getApp()
-        : appMod.initializeApp({
-            credential: appMod.cert({
-              projectId,
-              clientEmail,
-              privateKey,
-            }),
+      getApps().length > 0
+        ? getApp()
+        : initializeApp({
+            credential: cert({ projectId, clientEmail, privateKey }),
             projectId,
           });
-    const db = fsMod.getFirestore(app);
+    const db = getFirestore(app);
     const snap = await db.collection("consultations").limit(1).get();
     out.admin = "ok";
     out.firestore = { readable: true, sampleSize: snap.size };

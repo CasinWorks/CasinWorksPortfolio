@@ -1,4 +1,5 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { cert, getApp, getApps, initializeApp } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 type VercelRequest = IncomingMessage & {
@@ -30,7 +31,7 @@ const PAYMONGO_API = "https://api.paymongo.com";
 
 /**
  * POST /api/book-checkout
- * Self-contained guest checkout (no local relative imports).
+ * Static firebase-admin imports so Vercel bundles the dependency.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Cache-Control", "no-store");
@@ -57,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const secretKey = paymongoSecretKey();
-    const admin = await getAdminDb();
+    const admin = getAdminDb();
     if (!secretKey || !admin.ok) {
       console.error("[book-checkout] missing PayMongo or Firebase admin", {
         paymongo: Boolean(secretKey),
@@ -101,7 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const snap = await db.collection("consultations").get();
-    const taken = snap.docs.some((d: { data: () => Record<string, unknown> }) => {
+    const taken = snap.docs.some((d) => {
       const row = d.data();
       const status = String(row.status ?? "");
       if (status !== "requested" && status !== "confirmed") return false;
@@ -201,62 +202,45 @@ function normalizePrivateKey(raw: string): string {
   return key.replace(/\\n/g, "\n").replace(/\r\n/g, "\n");
 }
 
-function getAdminDb(): Promise<
-  | { ok: true; db: AdminDb }
-  | { ok: false; reason: string }
-> {
-  return (async () => {
-    const blob = env("FIREBASE_SERVICE_ACCOUNT");
-    if (!blob) return { ok: false as const, reason: "missing_service_account" };
+function getAdminDb():
+  | { ok: true; db: ReturnType<typeof getFirestore> }
+  | { ok: false; reason: string } {
+  const blob = env("FIREBASE_SERVICE_ACCOUNT");
+  if (!blob) return { ok: false, reason: "missing_service_account" };
 
-    let parsed: Record<string, unknown>;
-    try {
-      let raw: unknown = JSON.parse(blob);
-      if (typeof raw === "string") raw = JSON.parse(raw);
-      parsed = raw as Record<string, unknown>;
-    } catch {
-      return { ok: false as const, reason: "bad_service_account_json" };
-    }
+  let parsed: Record<string, unknown>;
+  try {
+    let raw: unknown = JSON.parse(blob);
+    if (typeof raw === "string") raw = JSON.parse(raw);
+    parsed = raw as Record<string, unknown>;
+  } catch {
+    return { ok: false, reason: "bad_service_account_json" };
+  }
 
-    const projectId = String(parsed.project_id ?? "");
-    const clientEmail = String(parsed.client_email ?? "");
-    const privateKey = normalizePrivateKey(String(parsed.private_key ?? ""));
-    if (!projectId || !clientEmail || !privateKey.includes("BEGIN")) {
-      return { ok: false as const, reason: "bad_service_account_fields" };
-    }
+  const projectId = String(parsed.project_id ?? "");
+  const clientEmail = String(parsed.client_email ?? "");
+  const privateKey = normalizePrivateKey(String(parsed.private_key ?? ""));
+  if (!projectId || !clientEmail || !privateKey.includes("BEGIN")) {
+    return { ok: false, reason: "bad_service_account_fields" };
+  }
 
-    try {
-      const appMod = await import("firebase-admin/app");
-      const fsMod = await import("firebase-admin/firestore");
-      const app =
-        appMod.getApps().length > 0
-          ? appMod.getApp()
-          : appMod.initializeApp({
-              credential: appMod.cert({ projectId, clientEmail, privateKey }),
-              projectId,
-            });
-      return { ok: true as const, db: fsMod.getFirestore(app) as unknown as AdminDb };
-    } catch (err) {
-      console.error(
-        "[book-checkout] admin init failed:",
-        err instanceof Error ? err.message : String(err),
-      );
-      return { ok: false as const, reason: "admin_init_failed" };
-    }
-  })();
+  try {
+    const app =
+      getApps().length > 0
+        ? getApp()
+        : initializeApp({
+            credential: cert({ projectId, clientEmail, privateKey }),
+            projectId,
+          });
+    return { ok: true, db: getFirestore(app) };
+  } catch (err) {
+    console.error(
+      "[book-checkout] admin init failed:",
+      err instanceof Error ? err.message : String(err),
+    );
+    return { ok: false, reason: "admin_init_failed" };
+  }
 }
-
-type AdminDb = {
-  collection: (name: string) => {
-    get: () => Promise<{ docs: { data: () => Record<string, unknown> }[] }>;
-    doc: () => {
-      id: string;
-      set: (data: Record<string, unknown>) => Promise<unknown>;
-      update: (data: Record<string, unknown>) => Promise<unknown>;
-      delete: () => Promise<unknown>;
-    };
-  };
-};
 
 async function createCheckoutSession(
   secretKey: string,
@@ -360,7 +344,3 @@ function rateLimit(key: string, opts: { limit: number; windowMs: number }) {
   cur.count += 1;
   return true;
 }
-
-// Silence unused import warnings while keeping crypto available for future webhook reuse.
-void createHmac;
-void timingSafeEqual;

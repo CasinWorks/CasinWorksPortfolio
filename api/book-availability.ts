@@ -1,3 +1,5 @@
+import { cert, getApp, getApps, initializeApp } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 type VercelRequest = IncomingMessage & {
@@ -5,7 +7,6 @@ type VercelRequest = IncomingMessage & {
   headers: IncomingMessage["headers"] & {
     origin?: string;
     host?: string;
-    "x-forwarded-for"?: string;
   };
 };
 
@@ -16,7 +17,7 @@ type VercelResponse = ServerResponse & {
 
 /**
  * GET /api/book-availability
- * Self-contained (no local relative imports) so Vercel NFT always bundles it.
+ * Static firebase-admin imports so Vercel bundles the dependency.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Cache-Control", "no-store");
@@ -37,17 +38,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    const admin = await getAdminDb();
-    if (!admin.ok) {
-      console.error("[book-availability]", admin.reason);
+    const db = getAdminDb();
+    if (!db.ok) {
+      console.error("[book-availability]", db.reason);
       return res.status(503).json({
         ok: false,
         error: "Booking is not configured",
-        reason: admin.reason,
+        reason: db.reason,
       });
     }
 
-    const snap = await admin.db.collection("consultations").get();
+    const snap = await db.db.collection("consultations").get();
     const busy = snap.docs
       .map((d) => d.data())
       .filter((row) => {
@@ -79,10 +80,9 @@ function normalizePrivateKey(raw: string): string {
   return key.replace(/\\n/g, "\n").replace(/\r\n/g, "\n");
 }
 
-async function getAdminDb(): Promise<
-  | { ok: true; db: FirebaseFirestore }
-  | { ok: false; reason: string }
-> {
+function getAdminDb():
+  | { ok: true; db: ReturnType<typeof getFirestore> }
+  | { ok: false; reason: string } {
   const blob = env("FIREBASE_SERVICE_ACCOUNT");
   if (!blob) return { ok: false, reason: "missing_service_account" };
 
@@ -103,16 +103,14 @@ async function getAdminDb(): Promise<
   }
 
   try {
-    const appMod = await import("firebase-admin/app");
-    const fsMod = await import("firebase-admin/firestore");
     const app =
-      appMod.getApps().length > 0
-        ? appMod.getApp()
-        : appMod.initializeApp({
-            credential: appMod.cert({ projectId, clientEmail, privateKey }),
+      getApps().length > 0
+        ? getApp()
+        : initializeApp({
+            credential: cert({ projectId, clientEmail, privateKey }),
             projectId,
           });
-    return { ok: true, db: fsMod.getFirestore(app) };
+    return { ok: true, db: getFirestore(app) };
   } catch (err) {
     console.error(
       "[book-availability] admin init failed:",
@@ -121,11 +119,3 @@ async function getAdminDb(): Promise<
     return { ok: false, reason: "admin_init_failed" };
   }
 }
-
-type FirebaseFirestore = {
-  collection: (name: string) => {
-    get: () => Promise<{
-      docs: { data: () => Record<string, unknown> }[];
-    }>;
-  };
-};
