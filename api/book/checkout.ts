@@ -28,141 +28,146 @@ const ALLOWED_HOURS = new Set([1, 2, 3]);
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   noStore(res);
 
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json({ ok: false, error: "Method not allowed" });
-  }
+  try {
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "POST");
+      return res.status(405).json({ ok: false, error: "Method not allowed" });
+    }
 
-  if (req.headers.origin && !sameOrigin(req)) {
-    return res.status(403).json({ ok: false, error: "Forbidden" });
-  }
+    if (req.headers.origin && !sameOrigin(req)) {
+      return res.status(403).json({ ok: false, error: "Forbidden" });
+    }
 
-  const ip = getClientIp(req);
-  if (!rateLimit(ip, { limit: 8, windowMs: 60_000 })) {
-    return res.status(429).json({ ok: false, error: "Too many requests" });
-  }
+    const ip = getClientIp(req);
+    if (!rateLimit(ip, { limit: 8, windowMs: 60_000 })) {
+      return res.status(429).json({ ok: false, error: "Too many requests" });
+    }
 
-  const secretKey = paymongoSecretKey();
-  const db = adminDb();
-  if (!secretKey || !db) {
-    console.error("[book/checkout] missing PayMongo or Firebase admin");
-    return res.status(503).json({ ok: false, error: "Booking is not configured" });
-  }
+    const secretKey = paymongoSecretKey();
+    const db = adminDb();
+    if (!secretKey || !db) {
+      console.error("[book/checkout] missing PayMongo or Firebase admin");
+      return res.status(503).json({ ok: false, error: "Booking is not configured" });
+    }
 
-  const body = (typeof req.body === "string" ? safeParse(req.body) : req.body) as GuestPayload | null;
-  if (!body || typeof body !== "object") {
-    return res.status(400).json({ ok: false, error: "Invalid request" });
-  }
+    const body = (typeof req.body === "string" ? safeParse(req.body) : req.body) as GuestPayload | null;
+    if (!body || typeof body !== "object") {
+      return res.status(400).json({ ok: false, error: "Invalid request" });
+    }
 
-  // Honeypot
-  if (typeof body.website === "string" && body.website.trim()) {
-    return res.status(200).json({ ok: true, checkoutUrl: "https://www.casinworks.com/book" });
-  }
+    // Honeypot
+    if (typeof body.website === "string" && body.website.trim()) {
+      return res.status(200).json({ ok: true, checkoutUrl: "https://www.casinworks.com/book" });
+    }
 
-  const email = clamp(body.email, 200).toLowerCase();
-  const name = clamp(body.name, 120);
-  const notes = clamp(body.notes, 4000);
-  const startsAt = clamp(body.startsAt, 64);
-  const hours = Number(body.hours);
+    const email = clamp(body.email, 200).toLowerCase();
+    const name = clamp(body.name, 120);
+    const notes = clamp(body.notes, 4000);
+    const startsAt = clamp(body.startsAt, 64);
+    const hours = Number(body.hours);
 
-  if (!email || !isEmail(email)) {
-    return res.status(400).json({ ok: false, error: "A valid email is required" });
-  }
-  if (!notes) {
-    return res.status(400).json({ ok: false, error: "Tell us what you want to talk about" });
-  }
-  if (!ALLOWED_HOURS.has(hours)) {
-    return res.status(400).json({ ok: false, error: "Hours must be 1, 2, or 3" });
-  }
-  const startMs = Date.parse(startsAt);
-  if (!Number.isFinite(startMs) || startMs <= Date.now()) {
-    return res.status(400).json({ ok: false, error: "Pick a future weekday slot" });
-  }
+    if (!email || !isEmail(email)) {
+      return res.status(400).json({ ok: false, error: "A valid email is required" });
+    }
+    if (!notes) {
+      return res.status(400).json({ ok: false, error: "Tell us what you want to talk about" });
+    }
+    if (!ALLOWED_HOURS.has(hours)) {
+      return res.status(400).json({ ok: false, error: "Hours must be 1, 2, or 3" });
+    }
+    const startMs = Date.parse(startsAt);
+    if (!Number.isFinite(startMs) || startMs <= Date.now()) {
+      return res.status(400).json({ ok: false, error: "Pick a future weekday slot" });
+    }
 
-  // Collision check
-  const snap = await db.collection("consultations").get();
-  const taken = snap.docs.some((d) => {
-    const row = d.data();
-    const status = String(row.status ?? "");
-    if (status !== "requested" && status !== "confirmed") return false;
-    return slotsOverlap(startsAt, hours, String(row.startsAt ?? ""), Number(row.hours ?? 1));
-  });
-  if (taken) {
-    return res.status(409).json({ ok: false, error: "That slot was just taken. Pick another time." });
-  }
+    // Collision check
+    const snap = await db.collection("consultations").get();
+    const taken = snap.docs.some((d) => {
+      const row = d.data();
+      const status = String(row.status ?? "");
+      if (status !== "requested" && status !== "confirmed") return false;
+      return slotsOverlap(startsAt, hours, String(row.startsAt ?? ""), Number(row.hours ?? 1));
+    });
+    if (taken) {
+      return res.status(409).json({ ok: false, error: "That slot was just taken. Pick another time." });
+    }
 
-  const ratePhp = Number(env("EXPLORATORY_CONSULTATION_RATE_PHP") || "1000");
-  const totalPhp = hours * ratePhp;
-  const amount = phpToCentavos(totalPhp);
-  const siteUrl = (env("APP_URL") || env("SITE_URL") || "https://www.casinworks.com").replace(/\/$/, "");
+    const ratePhp = Number(env("EXPLORATORY_CONSULTATION_RATE_PHP") || "1000");
+    const totalPhp = hours * ratePhp;
+    const amount = phpToCentavos(totalPhp);
+    const siteUrl = (env("APP_URL") || env("SITE_URL") || "https://www.casinworks.com").replace(/\/$/, "");
 
-  const consultRef = db.collection("consultations").doc();
-  const referenceNumber = `guest-${consultRef.id.slice(0, 10)}-${Date.now()}`;
+    const consultRef = db.collection("consultations").doc();
+    const referenceNumber = `guest-${consultRef.id.slice(0, 10)}-${Date.now()}`;
 
-  await consultRef.set({
-    clientUid: "",
-    clientEmail: email,
-    clientName: name || email,
-    startsAt,
-    hours,
-    notes,
-    status: "requested",
-    paymentStatus: "pending",
-    amountPhp: totalPhp,
-    guest: true,
-    createdAt: new Date().toISOString(),
-  });
+    await consultRef.set({
+      clientUid: "",
+      clientEmail: email,
+      clientName: name || email,
+      startsAt,
+      hours,
+      notes,
+      status: "requested",
+      paymentStatus: "pending",
+      amountPhp: totalPhp,
+      guest: true,
+      createdAt: new Date().toISOString(),
+    });
 
-  const created = await createCheckoutSession(secretKey, {
-    lineItems: [
-      {
-        name: "Exploratory consultation",
-        description: `${hours} hour${hours === 1 ? "" : "s"} × ₱${ratePhp.toLocaleString("en-US")}/hr`,
-        amount,
-        currency: "PHP",
-        quantity: 1,
+    const created = await createCheckoutSession(secretKey, {
+      lineItems: [
+        {
+          name: "Exploratory consultation",
+          description: `${hours} hour${hours === 1 ? "" : "s"} × ₱${ratePhp.toLocaleString("en-US")}/hr`,
+          amount,
+          currency: "PHP",
+          quantity: 1,
+        },
+      ],
+      successUrl: `${siteUrl}/book/complete?paid=1&c=${encodeURIComponent(consultRef.id)}&email=${encodeURIComponent(email)}`,
+      cancelUrl: `${siteUrl}/book?paid=0&c=${encodeURIComponent(consultRef.id)}`,
+      referenceNumber,
+      description: "CasinWorks exploratory consultation",
+      metadata: {
+        kind: "exploratory_consultation",
+        uid: "",
+        hours: String(hours),
+        ratePhp: String(ratePhp),
+        totalPhp: String(totalPhp),
+        consultationId: consultRef.id,
+        email,
+        guest: "1",
       },
-    ],
-    successUrl: `${siteUrl}/book/complete?paid=1&c=${encodeURIComponent(consultRef.id)}&email=${encodeURIComponent(email)}`,
-    cancelUrl: `${siteUrl}/book?paid=0&c=${encodeURIComponent(consultRef.id)}`,
-    referenceNumber,
-    description: "CasinWorks exploratory consultation",
-    metadata: {
-      kind: "exploratory_consultation",
-      uid: "",
-      hours: String(hours),
-      ratePhp: String(ratePhp),
-      totalPhp: String(totalPhp),
+    });
+
+    if (created.ok === false) {
+      await consultRef.delete().catch(() => undefined);
+      return res.status(502).json({ ok: false, error: "Could not start checkout" });
+    }
+
+    await consultRef.update({
+      paymongoSessionId: created.session.id,
+      paymongoReference: referenceNumber,
+    });
+
+    console.info("[book/checkout] guest session", {
       consultationId: consultRef.id,
-      email,
-      guest: "1",
-    },
-  });
+      hours,
+      sessionId: created.session.id,
+      ip,
+    });
 
-  if (created.ok === false) {
-    await consultRef.delete().catch(() => undefined);
-    return res.status(502).json({ ok: false, error: "Could not start checkout" });
+    return res.status(200).json({
+      ok: true,
+      checkoutUrl: created.session.checkoutUrl,
+      sessionId: created.session.id,
+      consultationId: consultRef.id,
+      amountPhp: totalPhp,
+    });
+  } catch (err) {
+    console.error("[book/checkout]", err instanceof Error ? err.message : String(err));
+    return res.status(500).json({ ok: false, error: "Could not start checkout" });
   }
-
-  await consultRef.update({
-    paymongoSessionId: created.session.id,
-    paymongoReference: referenceNumber,
-  });
-
-  console.info("[book/checkout] guest session", {
-    consultationId: consultRef.id,
-    hours,
-    sessionId: created.session.id,
-    ip,
-  });
-
-  return res.status(200).json({
-    ok: true,
-    checkoutUrl: created.session.checkoutUrl,
-    sessionId: created.session.id,
-    consultationId: consultRef.id,
-    amountPhp: totalPhp,
-  });
 }
 
 function slotsOverlap(aStart: string, aHours: number, bStart: string, bHours: number) {

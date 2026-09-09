@@ -58,14 +58,19 @@ let cached: App | null = null;
 
 function adminApp(): App | null {
   if (cached) return cached;
-  if (getApps().length > 0) {
-    cached = getApp();
+  try {
+    if (getApps().length > 0) {
+      cached = getApp();
+      return cached;
+    }
+    const creds = credentials();
+    if (!creds) return null;
+    cached = initializeApp({ credential: cert(creds), projectId: creds.projectId });
     return cached;
+  } catch (err) {
+    console.error("[notify] initializeApp failed:", err instanceof Error ? err.message : String(err));
+    return null;
   }
-  const creds = credentials();
-  if (!creds) return null;
-  cached = initializeApp({ credential: cert(creds), projectId: creds.projectId });
-  return cached;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
