@@ -1,16 +1,17 @@
-import { type Key, type ReactNode } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { type ButtonHTMLAttributes, type Key, type ReactNode } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useLocation, Outlet } from "react-router-dom";
 import type { MilestoneStatus } from "./types";
 
 /** Editorial ease — same curve as portal.css `--press`. */
 export const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
-export const PAGE_MS = 0.24;
+export const PAGE_MS = 0.28;
 export const STAGGER_MS = 0.05;
 export const STAGGER_Y = 24;
 export const FILL_MS = 0.42;
 export const DOT_MS = 0.28;
+export const SWAP_MS = 0.22;
 
 const pageTransition = { duration: PAGE_MS, ease: EASE };
 
@@ -25,7 +26,7 @@ export function PageFade({
   return (
     <motion.div
       className={className}
-      initial={reduce ? false : { opacity: 0, y: 10 }}
+      initial={reduce ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={pageTransition}
     >
@@ -41,12 +42,63 @@ export function AnimatedOutlet() {
   return (
     <motion.div
       key={location.pathname}
-      initial={reduce ? false : { opacity: 0, y: 10 }}
+      initial={reduce ? false : { opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={pageTransition}
     >
       <Outlet />
     </motion.div>
+  );
+}
+
+/** Crossfade when a booking panel key changes (month, selected day, confirm state). */
+export function FadeSwap({
+  swapKey,
+  children,
+  className,
+}: {
+  swapKey: string | number;
+  children: ReactNode;
+  className?: string;
+}) {
+  const reduce = useReducedMotion();
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={swapKey}
+        className={className}
+        initial={reduce ? false : { opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={reduce ? undefined : { opacity: 0, y: -8 }}
+        transition={{ duration: SWAP_MS, ease: EASE }}
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+/** Duration / time pill with a soft press. */
+export function MotionChip({
+  selected,
+  className = "",
+  children,
+  type,
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & { selected?: boolean }) {
+  const reduce = useReducedMotion();
+  return (
+    <motion.button
+      {...rest}
+      type={type ?? "button"}
+      whileTap={reduce || rest.disabled ? undefined : { scale: 0.96 }}
+      transition={{ duration: 0.18, ease: EASE }}
+      className={`rounded-full px-4 py-1.5 text-xs font-semibold ${
+        selected ? "bg-black text-white" : "border border-black/15"
+      } ${className}`}
+    >
+      {children}
+    </motion.button>
   );
 }
 

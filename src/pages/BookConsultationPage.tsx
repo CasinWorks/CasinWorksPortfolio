@@ -15,6 +15,7 @@ import {
   slotStart,
   slotsOverlap,
 } from "../portal/booking";
+import { FadeSwap, MotionChip, PageFade } from "../portal/motion";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -71,6 +72,7 @@ export default function BookConsultationPage() {
     timeZone: "UTC",
   });
   const feePhp = hours * SITE.exploratoryConsultationHourlyRatePhp;
+  const monthKey = `${cursor.year}-${cursor.month}`;
 
   function takenOn(day: string, startHour: number, duration: number) {
     const start = slotStart(day, startHour).toISOString();
@@ -120,7 +122,7 @@ export default function BookConsultationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a]">
+    <PageFade className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a]">
       <header className="border-b border-black/10 px-[var(--page-gutter)] py-5">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           <Link to="/" className="flex flex-col leading-tight hover:opacity-70 transition-opacity">
@@ -153,7 +155,9 @@ export default function BookConsultationPage() {
           <div className="mt-10 grid lg:grid-cols-12 gap-10">
             <div className="lg:col-span-7">
               <div className="flex items-center justify-between mb-4">
-                <p className="font-serif text-2xl font-semibold">{monthLabel}</p>
+                <FadeSwap swapKey={monthKey}>
+                  <p className="font-serif text-2xl font-semibold">{monthLabel}</p>
+                </FadeSwap>
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -189,7 +193,7 @@ export default function BookConsultationPage() {
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 gap-1">
+              <FadeSwap swapKey={monthKey} className="grid grid-cols-7 gap-1">
                 {cells.map((day, i) => {
                   if (!day) return <div key={`e-${i}`} className="aspect-square" />;
                   const weekend = !isWeekday(day);
@@ -205,7 +209,7 @@ export default function BookConsultationPage() {
                         setDateIso(day);
                         setHour(null);
                       }}
-                      className={`min-h-10 sm:min-h-0 aspect-square rounded-full text-sm font-medium ${
+                      className={`min-h-10 sm:min-h-0 aspect-square rounded-full text-sm font-medium transition-colors duration-200 ${
                         selected
                           ? "bg-black text-white"
                           : hasSlot
@@ -217,7 +221,7 @@ export default function BookConsultationPage() {
                     </button>
                   );
                 })}
-              </div>
+              </FadeSwap>
             </div>
 
             <div className="lg:col-span-5 space-y-6">
@@ -225,19 +229,16 @@ export default function BookConsultationPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Duration</p>
                 <div className="mt-2 flex gap-2">
                   {[1, 2, 3].map((n) => (
-                    <button
+                    <MotionChip
                       key={n}
-                      type="button"
+                      selected={hours === n}
                       onClick={() => {
                         setHours(n);
                         setHour(null);
                       }}
-                      className={`rounded-full px-4 py-1.5 text-xs font-semibold ${
-                        hours === n ? "bg-black text-white" : "border border-black/15"
-                      }`}
                     >
                       {n} hr{n === 1 ? "" : "s"}
-                    </button>
+                    </MotionChip>
                   ))}
                 </div>
                 <p className="mt-2 text-sm text-slate-600">
@@ -251,7 +252,10 @@ export default function BookConsultationPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                   {dateIso ? `Times · ${dateIso}` : "Pick a weekday"}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-2 min-h-[2.5rem]">
+                <FadeSwap
+                  swapKey={dateIso ? `${dateIso}-${hours}-${openHours.join(",")}` : "empty"}
+                  className="mt-2 flex flex-wrap gap-2 min-h-[2.5rem]"
+                >
                   {!dateIso && <p className="text-sm text-slate-500">Select a date on the calendar.</p>}
                   {dateIso && openHours.length === 0 && (
                     <p className="text-sm text-slate-500">
@@ -259,18 +263,11 @@ export default function BookConsultationPage() {
                     </p>
                   )}
                   {openHours.map((h) => (
-                    <button
-                      key={h}
-                      type="button"
-                      onClick={() => setHour(h)}
-                      className={`rounded-full px-4 py-1.5 text-xs font-semibold ${
-                        hour === h ? "bg-black text-white" : "border border-black/15"
-                      }`}
-                    >
+                    <MotionChip key={h} selected={hour === h} onClick={() => setHour(h)}>
                       {formatSlotHour(h)}
-                    </button>
+                    </MotionChip>
                   ))}
-                </div>
+                </FadeSwap>
               </div>
 
               <label className="block">
@@ -336,6 +333,6 @@ export default function BookConsultationPage() {
           </div>
         </form>
       </main>
-    </div>
+    </PageFade>
   );
 }
