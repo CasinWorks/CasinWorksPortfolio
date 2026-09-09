@@ -19,7 +19,7 @@ export function PortalShell() {
 
   const candidates: (PortalLink | null)[] = [
     showClient ? { to: "/portal/dashboard", label: "Projects" } : null,
-    showClient ? { to: "/portal/book", label: "Book" } : null,
+    showClient ? { to: "/portal/book", label: isAdmin ? "Calendar" : "Book" } : null,
     { to: "/portal/messages", label: "Messages", badge: unread },
     showGigs ? { to: "/portal/gigs", label: "Gig board" } : null,
     isAdmin ? { to: "/portal/admin/users", label: "Users" } : null,
