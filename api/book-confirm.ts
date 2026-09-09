@@ -21,8 +21,15 @@ type ServiceAccount = { project_id: string; client_email: string; private_key: s
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Cache-Control", "no-store");
   try {
+    if (req.method === "GET") {
+      return res.status(200).json({
+        ok: true,
+        endpoint: "/api/book-confirm",
+        hint: "POST JSON { consultationId } from the booking success page. Browser GET is not a payment.",
+      });
+    }
     if (req.method !== "POST") {
-      res.setHeader("Allow", "POST");
+      res.setHeader("Allow", "GET, POST");
       return res.status(405).json({ ok: false, error: "Method not allowed" });
     }
     if (req.headers.origin && req.headers.host) {
