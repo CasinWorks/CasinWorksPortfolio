@@ -470,6 +470,4 @@ export function isConceptCaseStudy(
   return "kind" in study && study.kind === "concept";
 }
 
-/** Integrated app directory — same origin as main portfolio */
-export const APPS_FOR_EVERYONE_PATH = "/AppsForEveryone";
 export const STUDIO_CONCEPTS_HASH = "/#studio-concepts";
