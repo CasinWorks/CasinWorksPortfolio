@@ -154,8 +154,8 @@ export function PortalSignInScreen() {
             Register
           </Link>
           {" · "}
-          <Link to="/#contact" className="text-black font-medium underline underline-offset-4">
-            Contact CasinWorks
+          <Link to="/book" className="text-black font-medium underline underline-offset-4">
+            Book a consultation
           </Link>
         </p>
       </div>
@@ -173,6 +173,7 @@ export function PortalRegisterScreen() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const invitedEmail = (params.get("email") ?? "").trim().toLowerCase();
+  const fromBook = params.get("from") === "book";
   const nextPath = safeNext(params.get("next"));
   const [role, setRole] = useState<Exclude<PortalRole, "admin">>("client");
   const [displayName, setDisplayName] = useState("");
@@ -188,7 +189,7 @@ export function PortalRegisterScreen() {
     e.preventDefault();
     setError("");
     if (invitedEmail && email.trim().toLowerCase() !== invitedEmail) {
-      setError(`Use ${invitedEmail} so this project attaches to your account.`);
+      setError(`Use ${invitedEmail} so this booking attaches to your account.`);
       return;
     }
     setSending(true);
@@ -197,8 +198,8 @@ export function PortalRegisterScreen() {
         email: invitedEmail || email,
         password,
         displayName,
-        role: invitedEmail ? "client" : role,
-        company: role === "client" || invitedEmail ? company : undefined,
+        role: invitedEmail || fromBook ? "client" : role,
+        company: role === "client" || invitedEmail || fromBook ? company : undefined,
       });
       navigate(nextPath);
     } catch (err) {
@@ -215,7 +216,11 @@ export function PortalRegisterScreen() {
           ← Sign in
         </Link>
         <h1 className="mt-6 font-serif text-4xl font-semibold tracking-tight">
-          {invitedEmail ? (
+          {fromBook ? (
+            <>
+              Attach your <span className="italic text-slate-500">booking.</span>
+            </>
+          ) : invitedEmail ? (
             <>
               Claim <span className="italic text-slate-500">this project.</span>
             </>
@@ -225,13 +230,29 @@ export function PortalRegisterScreen() {
             </>
           )}
         </h1>
-        {invitedEmail && (
+        {(fromBook || invitedEmail) && (
           <p className="mt-3 text-sm text-slate-600">
-            Register with <span className="font-medium text-black">{invitedEmail}</span> so the course attaches to your account. Then you can follow it in the CasinWorks app.
+            {fromBook ? (
+              <>
+                Register with the same email you used when booking
+                {invitedEmail ? (
+                  <>
+                    {" "}
+                    (<span className="font-medium text-black">{invitedEmail}</span>)
+                  </>
+                ) : null}{" "}
+                so the consultation attaches to your portal account.
+              </>
+            ) : (
+              <>
+                Register with <span className="font-medium text-black">{invitedEmail}</span> so the course attaches to your
+                account. Then you can follow it in the CasinWorks app.
+              </>
+            )}
           </p>
         )}
         <form onSubmit={onSubmit} className="mt-8 space-y-4">
-          {!invitedEmail && (
+          {!invitedEmail && !fromBook && (
             <div className="p-1 bg-[var(--page-panel)] border border-black/10 rounded-full flex">
               <button type="button" onClick={() => setRole("client")} className={`flex-1 py-2 rounded-full text-xs font-medium ${role === "client" ? "bg-black text-white" : "text-slate-600"}`}>
                 Client
@@ -242,7 +263,7 @@ export function PortalRegisterScreen() {
             </div>
           )}
           <input required placeholder="Full name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full px-3.5 py-2.5 bg-white border border-black/15 text-sm focus:outline-none focus:border-black" />
-          {(role === "client" || invitedEmail) && (
+          {(role === "client" || invitedEmail || fromBook) && (
             <input
               required
               placeholder="Company"

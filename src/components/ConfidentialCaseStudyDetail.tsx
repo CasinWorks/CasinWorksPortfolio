@@ -100,7 +100,7 @@ export function ConfidentialCaseStudyDetail({ study }: { study: ConfidentialCase
 
       <div className="flex flex-wrap items-center gap-6 pt-4">
         <Link
-          to="/#contact"
+          to="/book"
           className="group inline-flex items-center gap-4 rounded-full border border-white/15 bg-white/10 px-8 py-4 text-[10px] font-black uppercase tracking-[0.4em] hover:bg-white/15 transition-colors"
         >
           Build something similar

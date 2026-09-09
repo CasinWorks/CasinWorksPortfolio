@@ -47,6 +47,7 @@ export function BookConsultationScreen() {
   const [hours, setHours] = useState(1);
   const [notes, setNotes] = useState("");
   const [rows, setRows] = useState<ConsultationBooking[]>([]);
+  const [busySlots, setBusySlots] = useState<{ startsAt: string; hours: number }[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [justBooked, setJustBooked] = useState<ConsultationBooking | null>(null);
@@ -54,6 +55,22 @@ export function BookConsultationScreen() {
 
   useEffect(() => {
     return listenConsultations(setRows, setError);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/book/availability", { headers: { Accept: "application/json" } })
+      .then(async (res) => {
+        const json = (await res.json().catch(() => null)) as {
+          ok?: boolean;
+          busy?: { startsAt: string; hours: number }[];
+        } | null;
+        if (!cancelled && json?.ok && Array.isArray(json.busy)) setBusySlots(json.busy);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -70,7 +87,20 @@ export function BookConsultationScreen() {
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  const live = useMemo(() => activeBookings(rows), [rows]);
+  const live = useMemo(() => {
+    if (busySlots.length > 0) {
+      return busySlots.map((b, i) => ({
+        id: `busy-${i}`,
+        clientUid: "",
+        clientEmail: "",
+        clientName: "",
+        startsAt: b.startsAt,
+        hours: b.hours,
+        status: "requested" as const,
+      }));
+    }
+    return activeBookings(rows);
+  }, [rows, busySlots]);
   const mine = useMemo(
     () =>
       rows
@@ -80,10 +110,11 @@ export function BookConsultationScreen() {
   );
   const inbox = useMemo(
     () =>
-      live
+      rows
+        .filter((r) => r.status === "requested" || r.status === "confirmed")
         .slice()
         .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
-    [live],
+    [rows],
   );
 
   const cells = monthGrid(cursor.year, cursor.month);

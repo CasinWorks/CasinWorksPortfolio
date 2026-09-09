@@ -35,15 +35,11 @@ export function FaqSection() {
             Straight answers.
           </h2>
           <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-sm">
-            {SITE.responseTimePromise} Or{" "}
-            <Link to="/portal/register" className="text-white font-medium underline underline-offset-4 hover:text-slate-300">
-              sign up to the portal
+            {SITE.responseTimePromise}{" "}
+            <Link to="/book" className="text-white font-medium underline underline-offset-4 hover:text-slate-300">
+              Open the calendar
             </Link>{" "}
-            and book a consultation slot yourself. Prefer email?{" "}
-            <a href={`mailto:${SITE.email}`} className="text-white font-medium underline underline-offset-4 hover:text-slate-300">
-              Write directly
-            </a>
-            .
+            to get started.
           </p>
         </div>
 

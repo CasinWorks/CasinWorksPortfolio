@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { 
   ArrowRight, 
@@ -27,8 +27,6 @@ export default function App() {
     description: SITE.description,
     path: "/",
   });
-
-  const navigate = useNavigate();
 
   const navLinks = useMemo(
     () => [
@@ -104,52 +102,6 @@ export default function App() {
     }
   ];
 
-  const [inquiryStatus, setInquiryStatus] = useState<"idle" | "sending" | "error">("idle");
-  const [inquiryError, setInquiryError] = useState<string>("");
-
-  async function handleInquirySubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    const form = e.currentTarget;
-    const data = new FormData(form);
-    const payload = {
-      name: String(data.get("name") ?? "").trim(),
-      organization: String(data.get("organization") ?? "").trim(),
-      email: String(data.get("email") ?? "").trim(),
-      brief: String(data.get("brief") ?? "").trim(),
-      website: String(data.get("website") ?? "").trim(),
-      page: window.location.href,
-      submittedAt: new Date().toISOString(),
-    };
-
-    if (!payload.email) {
-      window.alert("Please enter your email so we can reply.");
-      return;
-    }
-
-    try {
-      setInquiryError("");
-      setInquiryStatus("sending");
-
-      const res = await fetch("/api/inquiry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(text || `Request failed (${res.status})`);
-      }
-
-      form.reset();
-      navigate("/thank-you");
-    } catch (err) {
-      setInquiryStatus("error");
-      setInquiryError(err instanceof Error ? err.message : "Failed to send inquiry.");
-    }
-  }
-
   return (
     <div id="top" className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[var(--page-cream)] text-[#1a1a1a] font-sans selection:bg-black selection:text-white">
       {/* Navigation */}
@@ -176,12 +128,12 @@ export default function App() {
                 </a>
               )
             )}
-            <a
-              href="#contact"
+            <Link
+              to="/book"
               className="px-4 py-2 rounded-full transition-colors text-[15px] font-medium bg-black text-white hover:bg-slate-800"
             >
-              Consultation
-            </a>
+              Book a consultation
+            </Link>
             <Link
               to="/portal/sign-in"
               className="px-4 py-2 rounded-full border border-black/20 transition-colors text-[15px] font-medium text-[#1a1a1a] hover:border-black/50 hover:bg-black/[0.04]"
@@ -255,26 +207,19 @@ export default function App() {
                     </a>
                   )
                 )}
-                <a
-                  href="#contact"
+                <Link
+                  to="/book"
                   className="mt-2 bg-black text-white px-5 py-2.5 rounded-full hover:bg-slate-800 transition-colors font-medium w-fit text-[15px]"
                   onClick={() => setMobileNavOpen(false)}
                 >
-                  Consultation
-                </a>
-                <Link
-                  to="/portal/register"
-                  className="mt-1 w-fit rounded-full border border-black/20 px-5 py-2.5 text-[15px] font-medium text-[#1a1a1a] hover:border-black/50 hover:bg-black/[0.04] transition-colors"
-                  onClick={() => setMobileNavOpen(false)}
-                >
-                  Sign up to the portal
+                  Book a consultation
                 </Link>
                 <Link
                   to="/portal/sign-in"
                   className="text-slate-500 hover:text-black transition-colors w-fit text-[14px]"
                   onClick={() => setMobileNavOpen(false)}
                 >
-                  Client portal sign in
+                  Already have an account? Sign in
                 </Link>
               </div>
             </div>
@@ -312,22 +257,16 @@ export default function App() {
                 </p>
               </div>
               <div className="min-w-0 lg:col-span-5 flex flex-col items-start lg:items-end gap-3">
-                <a
-                  href="#contact"
+                <Link
+                  to="/book"
                   className="group inline-flex items-center gap-3 text-base sm:text-lg font-semibold"
                 >
-                  <span className="border-b-2 border-black pb-0.5">Start a Consultation</span>
+                  <span className="border-b-2 border-black pb-0.5">Book a consultation</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </a>
-                <Link
-                  to="/portal/register"
-                  className="group inline-flex items-center gap-2 text-sm sm:text-base font-medium text-slate-500 hover:text-[#1a1a1a] transition-colors"
-                >
-                  <span className="underline underline-offset-4 decoration-slate-400 group-hover:decoration-[#1a1a1a]">
-                    Or sign up and book your own slot
-                  </span>
-                  <ArrowUpRight className="size-4 shrink-0" aria-hidden />
                 </Link>
+                <p className="text-sm text-slate-500 max-w-xs lg:text-right">
+                  Pick a time on the calendar. No account needed to start.
+                </p>
               </div>
             </div>
 
@@ -488,138 +427,67 @@ export default function App() {
 
         <FaqSection />
 
-        {/* Contact Section */}
+        {/* Contact / book section */}
         <section id="contact" className="overflow-x-hidden bg-[#1a1a1a] text-white section-y px-[var(--page-gutter)]">
           <div className="max-w-[var(--page-max)] mx-auto min-w-0">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 xl:gap-16 min-w-0">
-              <div className="min-w-0 lg:col-span-5 space-y-6 sm:space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 min-w-0 items-end">
+              <div className="min-w-0 lg:col-span-6 space-y-6">
                 <h2 className="max-w-full text-4xl sm:text-5xl lg:text-6xl font-serif font-semibold tracking-tight leading-[1.05] break-words">
-                  Start <br />
-                  <span className="italic">Inquiry.</span>
+                  Book a <br />
+                  <span className="italic">consultation.</span>
                 </h2>
-                <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
-                  I am currently accepting inquiries for high-stakes software contracts. Larger builds are quoted after we agree scope.
+                <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-xl">
+                  Open the calendar, share what you want to discuss, and leave your email. Exploratory consultation is ₱
+                  {SITE.exploratoryConsultationHourlyRatePhp.toLocaleString("en-US")} per hour, settled when you book —
+                  then you can create a portal account if you want to follow the work.
                 </p>
-                <p className="text-sm sm:text-base font-medium text-white">
-                  {SITE.responseTimePromise}
+                <p className="text-sm sm:text-base text-slate-400 leading-relaxed max-w-xl">
+                  The client portal is separate: milestones, quotations, purchase orders, invoices, and remittances once
+                  an engagement is underway.
                 </p>
-                <div className="flex flex-col min-w-0 pt-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 mb-3">Direct Correspondence</span>
-                  <a href={`mailto:${SITE.email}`} className="group flex flex-wrap items-center gap-3 text-lg sm:text-xl lg:text-2xl font-semibold hover:text-slate-300 transition-colors tracking-tight break-all">
-                    {SITE.email}
-                    <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </a>
-                </div>
-
-                <div className="min-w-0 rounded-2xl border border-slate-700 bg-white/[0.04] p-6 sm:p-7">
-                  <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Or skip the wait
-                  </span>
-                  <h3 className="mt-3 font-serif text-2xl sm:text-3xl font-semibold italic tracking-tight leading-snug">
-                    Book it yourself in the portal.
-                  </h3>
-                  <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed">
-                    Create a free account and choose your own consultation slot — hourly, 9AM to 5PM Manila time.
-                    The slot is held the moment you book it. Exploratory consultation is ₱1,000 per hour.
-                  </p>
-                  <p className="mt-3 text-sm sm:text-base text-slate-400 leading-relaxed">
-                    The same account carries the engagement afterwards: milestone progress, quotations, purchase
-                    orders, invoices, and remittances in one place instead of a buried email thread.
-                  </p>
-                  <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
-                    <Link
-                      to="/portal/register"
-                      className="group inline-flex items-center gap-2.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-slate-200 transition-colors"
-                    >
-                      Create a free account
-                      <ArrowRight className="size-4 shrink-0 group-hover:translate-x-1 transition-transform" aria-hidden />
-                    </Link>
-                    <Link
-                      to="/portal/sign-in"
-                      className="text-sm font-medium text-slate-400 underline underline-offset-4 hover:text-white transition-colors"
-                    >
-                      Already have an account? Sign in
-                    </Link>
-                  </div>
-                </div>
               </div>
 
-              <div className="min-w-0 lg:col-span-7">
-                <form className="space-y-6 sm:space-y-8 min-w-0" onSubmit={handleInquirySubmit}>
-                  <input
-                    type="text"
-                    name="website"
-                    tabIndex={-1}
-                    autoComplete="off"
-                    className="hidden"
-                    aria-hidden="true"
-                  />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6 min-w-0">
-                    <div className="min-w-0 space-y-2">
-                      <label htmlFor="inquiry-name" className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Name</label>
-                      <input 
-                        id="inquiry-name"
-                        name="name"
-                        type="text" 
-                        autoComplete="name"
-                        className="w-full min-w-0 max-w-full bg-transparent border-b border-slate-600 py-2 sm:py-2.5 focus:outline-none focus:border-white transition-colors text-base sm:text-lg font-medium tracking-tight text-white placeholder:text-slate-500"
-                        placeholder="Full Name"
-                        disabled={inquiryStatus === "sending"}
-                      />
-                    </div>
-                    <div className="min-w-0 space-y-2">
-                      <label htmlFor="inquiry-org" className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Organization</label>
-                      <input 
-                        id="inquiry-org"
-                        name="organization"
-                        type="text" 
-                        autoComplete="organization"
-                        className="w-full min-w-0 max-w-full bg-transparent border-b border-slate-600 py-2 sm:py-2.5 focus:outline-none focus:border-white transition-colors text-base sm:text-lg font-medium tracking-tight text-white placeholder:text-slate-500"
-                        placeholder="Company Name"
-                        disabled={inquiryStatus === "sending"}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2 min-w-0">
-                    <label htmlFor="inquiry-email" className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Email</label>
-                    <input 
-                      id="inquiry-email"
-                      name="email"
-                      type="email" 
-                      required
-                      autoComplete="email"
-                      className="w-full min-w-0 max-w-full bg-transparent border-b border-slate-600 py-2 sm:py-2.5 focus:outline-none focus:border-white transition-colors text-base sm:text-lg font-medium tracking-tight text-white placeholder:text-slate-500"
-                      placeholder="email@organization.com"
-                      disabled={inquiryStatus === "sending"}
-                    />
-                  </div>
-                  <div className="space-y-2 min-w-0">
-                    <label htmlFor="inquiry-brief" className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Brief</label>
-                    <textarea 
-                      id="inquiry-brief"
-                      name="brief"
-                      rows={3}
-                      className="w-full min-w-0 max-w-full box-border bg-transparent border-b border-slate-600 py-2 sm:py-2.5 focus:outline-none focus:border-white transition-colors text-base sm:text-lg font-medium resize-y min-h-[5rem] tracking-tight text-white placeholder:text-slate-500"
-                      placeholder="Project scope and objectives"
-                      disabled={inquiryStatus === "sending"}
-                    />
-                  </div>
-
-                  {inquiryStatus === "error" && (
-                    <p className="text-sm sm:text-base text-red-400">
-                      Couldn’t send your inquiry{inquiryError ? `: ${inquiryError}` : "."}
-                    </p>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={inquiryStatus === "sending"}
-                    className="group flex flex-wrap items-center gap-4 text-xl sm:text-2xl font-semibold border-b-2 border-white pb-2 hover:border-slate-500 transition-all duration-300 w-full sm:w-auto justify-start disabled:opacity-50 disabled:cursor-not-allowed"
+              <div className="min-w-0 lg:col-span-6">
+                <ol className="space-y-5 border-y border-slate-700 py-8">
+                  {[
+                    { step: "01", title: "Choose a time", body: "Weekdays, Manila time. Morning 9–11 or afternoon 1–4." },
+                    {
+                      step: "02",
+                      title: "Share the brief",
+                      body: "What you want to talk about, concerns, and your email — no account required yet.",
+                    },
+                    {
+                      step: "03",
+                      title: "Settle the hour",
+                      body: `₱${SITE.exploratoryConsultationHourlyRatePhp.toLocaleString("en-US")}/hr via PayMongo. Register for the portal afterwards if you like.`,
+                    },
+                  ].map((item) => (
+                    <li key={item.step} className="flex gap-5 min-w-0">
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 shrink-0 pt-1">
+                        {item.step}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-serif text-2xl font-semibold tracking-tight">{item.title}</p>
+                        <p className="mt-1 text-sm sm:text-base text-slate-400 leading-relaxed">{item.body}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+                <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+                  <Link
+                    to="/book"
+                    className="group inline-flex items-center gap-2.5 rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#1a1a1a] hover:bg-slate-200 transition-colors"
                   >
-                    {inquiryStatus === "sending" ? "Sending…" : "Submit Inquiry"}
-                    <ArrowRight className="w-6 h-6 sm:w-7 sm:h-7 shrink-0 group-hover:translate-x-1.5 transition-transform duration-300" />
-                  </button>
-                </form>
+                    Open the calendar
+                    <ArrowRight className="size-4 shrink-0 group-hover:translate-x-1 transition-transform" aria-hidden />
+                  </Link>
+                  <Link
+                    to="/portal/sign-in"
+                    className="text-sm font-medium text-slate-400 underline underline-offset-4 hover:text-white transition-colors"
+                  >
+                    Client portal sign in
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -647,9 +515,8 @@ export default function App() {
               <a href="#work" className="hover:text-white transition-colors w-fit">Case Studies</a>
               <a href="#studio-concepts" className="hover:text-white transition-colors w-fit">Studio concepts</a>
               <a href="#faq" className="hover:text-white transition-colors w-fit">FAQ</a>
-              <a href="#contact" className="hover:text-white transition-colors w-fit">Consultation</a>
-              <Link to="/portal/register" className="hover:text-white transition-colors w-fit">Sign up to the portal</Link>
-              <Link to="/portal/sign-in" className="hover:text-white transition-colors w-fit">Client portal sign in</Link>
+              <Link to="/book" className="hover:text-white transition-colors w-fit">Book a consultation</Link>
+              <Link to="/portal/sign-in" className="hover:text-white transition-colors w-fit">Client portal</Link>
             </nav>
           </div>
 
@@ -659,7 +526,6 @@ export default function App() {
               {SITE.email}
             </a>
             <p className="mt-2 text-sm text-slate-400">{SITE.location}</p>
-            <p className="mt-1 text-sm text-slate-400">{SITE.responseTimePromise}</p>
             <div className="mt-4 flex items-center gap-6 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
               <a href="/privacy.html" className="hover:text-white transition-colors">Privacy</a>
               <a href="/terms.html" className="hover:text-white transition-colors">Terms</a>
@@ -672,7 +538,7 @@ export default function App() {
         </div>
       </footer>
 
-      <StickyMobileCta hidden={mobileNavOpen} />
+      <StickyMobileCta hidden={mobileNavOpen} to="/book" label="Book a consultation" />
     </div>
   );
 }

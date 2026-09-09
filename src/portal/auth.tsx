@@ -15,6 +15,7 @@ import { FirebaseError } from "firebase/app";
 import { getFirebaseAuth, isFirebaseConfigured, loadFirebase } from "./firebase";
 import {
   claimProjectsForClient,
+  claimConsultationsForClient,
   createUserProfileIfMissing,
   deleteAccountData,
   fetchUserProfile,
@@ -80,6 +81,7 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
               displayName: user.displayName || user.email,
             });
             await claimProjectsForClient(profile.uid, profile.email, profile.displayName);
+            await claimConsultationsForClient(profile.uid, profile.email, profile.displayName);
             await linkCrmClientOnLogin(profile.uid, profile.email);
             setProfile(profile);
           } catch {
@@ -127,6 +129,7 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
           company: company?.trim() || undefined,
         });
         await claimProjectsForClient(profile.uid, profile.email, profile.displayName);
+        await claimConsultationsForClient(profile.uid, profile.email, profile.displayName);
         await linkCrmClientOnLogin(profile.uid, profile.email);
       },
       async logout() {
