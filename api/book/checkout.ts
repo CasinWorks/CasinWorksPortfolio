@@ -1,10 +1,10 @@
-import { env } from "../_lib/env";
-import { getClientIp, noStore, sameOrigin, type VercelResponse, type VercelRequest } from "../_lib/http";
+import { env } from "../lib/env";
+import { getClientIp, noStore, sameOrigin, type VercelResponse, type VercelRequest } from "../lib/http";
 import {
   createCheckoutSession,
   paymongoSecretKey,
   phpToCentavos,
-} from "../_lib/paymongo";
+} from "../lib/paymongo";
 
 type GuestPayload = {
   email?: unknown;
@@ -43,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const secretKey = paymongoSecretKey();
-    const { adminDb, adminInitError } = await import("../_lib/firebaseAdmin");
+    const { adminDb, adminInitError } = await import("../lib/firebaseAdmin");
     const db = adminDb();
     if (!secretKey || !db) {
       console.error("[book/checkout] missing PayMongo or Firebase admin", {
