@@ -137,10 +137,27 @@ async function confirmWithMeet(
       throw err;
     }
 
+    await sendStatusEmail({
+      kind: "confirmed",
+      to: clientEmail,
+      clientName,
+      startsAt,
+      hours,
+      meetUrl,
+    }).catch(() => undefined);
+
     return res.status(200).json({ ok: true, status: "confirmed", meetUrl, googleEventId });
   }
 
   await patchDocument(sa.project_id, fsToken, "consultations", id, { status: "confirmed" });
+  await sendStatusEmail({
+    kind: "confirmed",
+    to: clientEmail,
+    clientName,
+    startsAt,
+    hours,
+    meetUrl: meetUrl || undefined,
+  }).catch(() => undefined);
   return res.status(200).json({
     ok: true,
     status: "confirmed",
@@ -172,6 +189,17 @@ async function cancelWithMeet(
   await patchDocument(sa.project_id, fsToken, "consultations", id, {
     status: "cancelled",
   });
+
+  const clientEmail = String(consult.clientEmail ?? "").trim().toLowerCase();
+  if (clientEmail) {
+    await sendStatusEmail({
+      kind: "cancelled",
+      to: clientEmail,
+      clientName: String(consult.clientName ?? "there"),
+      startsAt: String(consult.startsAt ?? ""),
+      hours: Number(consult.hours ?? 1),
+    }).catch(() => undefined);
+  }
 
   return res.status(200).json({ ok: true, status: "cancelled" });
 }
@@ -429,4 +457,117 @@ async function deleteCalendarEvent(accessToken: string, calendarId: string, even
   );
   if (res.status === 404 || res.status === 410) return;
   if (!res.ok) throw new Error(`calendar_delete_${res.status}`);
+}
+
+function formatWhen(iso: string) {
+  if (!iso) return "your booked slot";
+  try {
+    return new Date(iso).toLocaleString("en-US", {
+      timeZone: "Asia/Manila",
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function siteUrl() {
+  return (env("APP_URL") || env("SITE_URL") || "https://www.casinworks.com").replace(/\/$/, "");
+}
+
+function escapeHtml(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function sendStatusEmail(input: {
+  kind: "confirmed" | "cancelled";
+  to: string;
+  clientName: string;
+  startsAt: string;
+  hours: number;
+  meetUrl?: string;
+}): Promise<boolean> {
+  const apiKey = env("RESEND_API_KEY");
+  const from = env("RESEND_FROM") || "CasinWorks <bookings@casinworks.com>";
+  const notify = (env("BOOKING_NOTIFY_EMAIL") || "christianjoshuacasin@gmail.com").toLowerCase();
+  const to = input.to.trim().toLowerCase();
+  if (!apiKey || !to || !to.includes("@")) return false;
+
+  const when = formatWhen(input.startsAt);
+  const hoursLabel = `${input.hours} hour${input.hours === 1 ? "" : "s"}`;
+  const confirmed = input.kind === "confirmed";
+  const subject = confirmed
+    ? "Consultation confirmed — CasinWorks"
+    : "Consultation cancelled — CasinWorks";
+  const meetBlock =
+    confirmed && input.meetUrl
+      ? `<p><a href="${escapeHtml(input.meetUrl)}" style="display:inline-block;background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:600">Join Google Meet</a></p>
+         <p style="font-size:13px;color:#64748b">Or copy: ${escapeHtml(input.meetUrl)}</p>`
+      : confirmed
+        ? `<p>Your calendar invite from CasinWorks includes the meeting details.</p>`
+        : "";
+
+  const html = confirmed
+    ? `
+    <div style="font-family:Georgia,serif;color:#1a1a1a;line-height:1.5;max-width:520px">
+      <p style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#64748b">CasinWorks</p>
+      <h1 style="font-size:28px;font-weight:600;margin:8px 0 12px">You’re confirmed.</h1>
+      <p>Hi ${escapeHtml(input.clientName || "there")},</p>
+      <p>Your exploratory consultation is on the calendar.</p>
+      <p style="background:#f7f5f0;padding:14px 16px;border:1px solid rgba(0,0,0,0.08)">
+        <strong>${escapeHtml(when)}</strong><br/>
+        ${escapeHtml(hoursLabel)} · Asia/Manila
+      </p>
+      ${meetBlock}
+      <p><a href="${siteUrl()}/portal/book">Open portal bookings</a></p>
+      <p style="color:#64748b;font-size:13px">— Christian Joshua Casin</p>
+    </div>`
+    : `
+    <div style="font-family:Georgia,serif;color:#1a1a1a;line-height:1.5;max-width:520px">
+      <p style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#64748b">CasinWorks</p>
+      <h1 style="font-size:28px;font-weight:600;margin:8px 0 12px">Slot cancelled.</h1>
+      <p>Hi ${escapeHtml(input.clientName || "there")},</p>
+      <p>This consultation request was cancelled:</p>
+      <p style="background:#f7f5f0;padding:14px 16px;border:1px solid rgba(0,0,0,0.08)">
+        <strong>${escapeHtml(when)}</strong><br/>
+        ${escapeHtml(hoursLabel)}
+      </p>
+      <p>You can book another time on the <a href="${siteUrl()}/book">public calendar</a>.</p>
+      <p style="color:#64748b;font-size:13px">— Christian Joshua Casin</p>
+    </div>`;
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        ...(notify && notify !== to ? { bcc: [notify] } : {}),
+        subject,
+        html,
+      }),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error("[consultation-status] resend", res.status, errText.slice(0, 300));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[consultation-status] resend", err instanceof Error ? err.message : String(err));
+    return false;
+  }
 }

@@ -89,6 +89,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ...(session.reference ? { paymongoReference: session.reference } : {}),
     });
 
+    if (!consult.paidEmailSentAt) {
+      const emailed = await sendPaidBookingEmail({
+        to: String(consult.clientEmail ?? ""),
+        clientName: String(consult.clientName ?? "there"),
+        startsAt: String(consult.startsAt ?? ""),
+        hours: Number(consult.hours ?? 1),
+        amountPhp: consult.amountPhp != null ? Number(consult.amountPhp) : undefined,
+      });
+      if (emailed) {
+        await patchDocument(sa.project_id, token, "consultations", consultationId, {
+          paidEmailSentAt: new Date().toISOString(),
+        }).catch(() => undefined);
+      }
+    }
+
     return res.status(200).json({ ok: true, paymentStatus: "paid", paid: true, ...detail });
   } catch (err) {
     console.error("[book-confirm]", err instanceof Error ? err.message : String(err));
@@ -253,4 +268,97 @@ async function fetchPaymongoSession(secretKey: string, sessionId: string) {
     paymentPaid ||
     piStatus === "succeeded";
   return { paid, reference: String(attrs?.reference_number ?? "") };
+}
+
+function formatWhen(iso: string) {
+  if (!iso) return "your booked slot";
+  try {
+    return new Date(iso).toLocaleString("en-US", {
+      timeZone: "Asia/Manila",
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function siteUrl() {
+  return (env("APP_URL") || env("SITE_URL") || "https://www.casinworks.com").replace(/\/$/, "");
+}
+
+/** Best-effort Resend send. Returns true when Resend accepted the message. */
+async function sendPaidBookingEmail(input: {
+  to: string;
+  clientName: string;
+  startsAt: string;
+  hours: number;
+  amountPhp?: number;
+}): Promise<boolean> {
+  const apiKey = env("RESEND_API_KEY");
+  const from = env("RESEND_FROM") || "CasinWorks <bookings@casinworks.com>";
+  const notify = (env("BOOKING_NOTIFY_EMAIL") || "christianjoshuacasin@gmail.com").toLowerCase();
+  const to = input.to.trim().toLowerCase();
+  if (!apiKey || !to || !to.includes("@")) return false;
+
+  const when = formatWhen(input.startsAt);
+  const hoursLabel = `${input.hours} hour${input.hours === 1 ? "" : "s"}`;
+  const amount =
+    input.amountPhp != null && Number.isFinite(input.amountPhp)
+      ? `₱${input.amountPhp.toLocaleString("en-US")}`
+      : null;
+  const subject = `Payment received — CasinWorks consultation`;
+  const html = `
+    <div style="font-family:Georgia,serif;color:#1a1a1a;line-height:1.5;max-width:520px">
+      <p style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#64748b">CasinWorks</p>
+      <h1 style="font-size:28px;font-weight:600;margin:8px 0 12px">Payment received.</h1>
+      <p>Hi ${escapeHtml(input.clientName || "there")},</p>
+      <p>We received your payment for an exploratory consultation.</p>
+      <p style="background:#f7f5f0;padding:14px 16px;border:1px solid rgba(0,0,0,0.08)">
+        <strong>${escapeHtml(when)}</strong><br/>
+        ${escapeHtml(hoursLabel)}${amount ? ` · ${escapeHtml(amount)}` : ""}
+      </p>
+      <p>CasinWorks will confirm the slot by hand. After confirmation you’ll get a Google Meet link by email and calendar invite.</p>
+      <p><a href="${siteUrl()}/book/confirmed">View booking status</a> · <a href="${siteUrl()}/portal/register">Create a portal account</a> with this email to follow the engagement.</p>
+      <p style="color:#64748b;font-size:13px">— Christian Joshua Casin</p>
+    </div>
+  `;
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        ...(notify && notify !== to ? { bcc: [notify] } : {}),
+        subject,
+        html,
+      }),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error("[book-confirm] resend", res.status, errText.slice(0, 300));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[book-confirm] resend", err instanceof Error ? err.message : String(err));
+    return false;
+  }
+}
+
+function escapeHtml(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
