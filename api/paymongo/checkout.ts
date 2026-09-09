@@ -1,5 +1,4 @@
 import { env } from "../_lib/env";
-import { adminDb, verifyIdToken } from "../_lib/firebaseAdmin";
 import { getClientIp, noStore, sameOrigin, type VercelRequest, type VercelResponse } from "../_lib/http";
 import {
   createCheckoutSession,
@@ -43,6 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(503).json({ ok: false, error: "Payments are not configured" });
   }
 
+  const { adminDb, verifyIdToken } = await import("../_lib/firebaseAdmin");
   const uid = await verifyIdToken(req.headers.authorization);
   if (!uid) {
     return res.status(401).json({ ok: false, error: "Sign in required" });

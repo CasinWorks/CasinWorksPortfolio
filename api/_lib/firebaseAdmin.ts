@@ -1,7 +1,8 @@
-import { cert, getApp, getApps, initializeApp, type App } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { createRequire } from "node:module";
 import { env } from "./env";
+
+type App = import("firebase-admin/app").App;
+type Firestore = import("firebase-admin/firestore").Firestore;
 
 type ServiceCreds = {
   projectId: string;
@@ -18,9 +19,7 @@ function normalizePrivateKey(raw: string): string {
   ) {
     key = key.slice(1, -1);
   }
-  // Expand escaped newlines (single or double-escaped).
   key = key.replace(/\\n/g, "\n").replace(/\r\n/g, "\n");
-  // If the PEM was flattened to one line with spaces, restore line breaks.
   if (!key.includes("\n") && key.includes("BEGIN") && key.includes("END")) {
     key = key
       .replace(/-----BEGIN ([A-Z ]+)----- /, "-----BEGIN $1-----\n")
@@ -33,7 +32,6 @@ function normalizePrivateKey(raw: string): string {
 function parseServiceAccountBlob(blob: string): ServiceCreds | null {
   try {
     let parsed: unknown = JSON.parse(blob);
-    // Some dashboards double-encode the JSON string.
     if (typeof parsed === "string") {
       parsed = JSON.parse(parsed);
     }
@@ -68,19 +66,39 @@ function credentials(): ServiceCreds | null {
 
 let cached: App | null = null;
 let initFailed = false;
+let loadError: string | null = null;
+
+/**
+ * Load firebase-admin via createRequire (CJS) to avoid ESM interop crashes
+ * that surface as FUNCTION_INVOCATION_FAILED on Vercel.
+ */
+function loadAdmin() {
+  const require = createRequire(import.meta.url);
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const admin = require("firebase-admin") as typeof import("firebase-admin");
+  return admin;
+}
+
+export function adminInitError(): string | null {
+  return loadError;
+}
 
 export function adminApp(): App | null {
   if (cached) return cached;
   if (initFailed) return null;
   try {
-    if (getApps().length > 0) {
-      cached = getApp();
+    const admin = loadAdmin();
+    if (admin.apps.length > 0) {
+      cached = admin.app();
       return cached;
     }
     const creds = credentials();
-    if (!creds) return null;
-    cached = initializeApp({
-      credential: cert({
+    if (!creds) {
+      loadError = "missing-credentials";
+      return null;
+    }
+    cached = admin.initializeApp({
+      credential: admin.credential.cert({
         projectId: creds.projectId,
         clientEmail: creds.clientEmail,
         privateKey: creds.privateKey,
@@ -90,10 +108,8 @@ export function adminApp(): App | null {
     return cached;
   } catch (err) {
     initFailed = true;
-    console.error(
-      "[firebaseAdmin] initializeApp failed:",
-      err instanceof Error ? err.message : String(err),
-    );
+    loadError = err instanceof Error ? err.message : String(err);
+    console.error("[firebaseAdmin] initializeApp failed:", loadError);
     return null;
   }
 }
@@ -105,22 +121,22 @@ export async function verifyIdToken(authorization: string | undefined): Promise<
   const idToken = bearer.startsWith("Bearer ") ? bearer.slice(7).trim() : "";
   if (!idToken) return null;
   try {
-    return (await getAuth(app).verifyIdToken(idToken)).uid;
+    const admin = loadAdmin();
+    return (await admin.auth(app).verifyIdToken(idToken)).uid;
   } catch {
     return null;
   }
 }
 
-export function adminDb() {
+export function adminDb(): Firestore | null {
   const app = adminApp();
   if (!app) return null;
   try {
-    return getFirestore(app);
+    const admin = loadAdmin();
+    return admin.firestore(app);
   } catch (err) {
-    console.error(
-      "[firebaseAdmin] getFirestore failed:",
-      err instanceof Error ? err.message : String(err),
-    );
+    loadError = err instanceof Error ? err.message : String(err);
+    console.error("[firebaseAdmin] getFirestore failed:", loadError);
     return null;
   }
 }
