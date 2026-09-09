@@ -8,21 +8,21 @@ import { getClientIp, noStore, sameOrigin, type VercelRequest, type VercelRespon
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   noStore(res);
 
-  if (req.method !== "GET") {
-    res.setHeader("Allow", "GET");
-    return res.status(405).json({ ok: false, error: "Method not allowed" });
-  }
-
-  if (req.headers.origin && !sameOrigin(req)) {
-    return res.status(403).json({ ok: false, error: "Forbidden" });
-  }
-
-  const db = adminDb();
-  if (!db) {
-    return res.status(503).json({ ok: false, error: "Booking is not configured" });
-  }
-
   try {
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return res.status(405).json({ ok: false, error: "Method not allowed" });
+    }
+
+    if (req.headers.origin && !sameOrigin(req)) {
+      return res.status(403).json({ ok: false, error: "Forbidden" });
+    }
+
+    const db = adminDb();
+    if (!db) {
+      return res.status(503).json({ ok: false, error: "Booking is not configured" });
+    }
+
     const snap = await db.collection("consultations").get();
     const busy = snap.docs
       .map((d) => d.data())

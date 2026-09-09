@@ -3,47 +3,99 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { env } from "./env";
 
-function credentials() {
+type ServiceCreds = {
+  projectId: string;
+  clientEmail: string;
+  privateKey: string;
+};
+
+/** Vercel often mangles PEM newlines in env values — normalize aggressively. */
+function normalizePrivateKey(raw: string): string {
+  let key = raw.trim();
+  if (
+    (key.startsWith('"') && key.endsWith('"')) ||
+    (key.startsWith("'") && key.endsWith("'"))
+  ) {
+    key = key.slice(1, -1);
+  }
+  // Expand escaped newlines (single or double-escaped).
+  key = key.replace(/\\n/g, "\n").replace(/\r\n/g, "\n");
+  // If the PEM was flattened to one line with spaces, restore line breaks.
+  if (!key.includes("\n") && key.includes("BEGIN") && key.includes("END")) {
+    key = key
+      .replace(/-----BEGIN ([A-Z ]+)----- /, "-----BEGIN $1-----\n")
+      .replace(/ -----END ([A-Z ]+)-----/, "\n-----END $1-----")
+      .replace(/ -----END/, "\n-----END");
+  }
+  return key;
+}
+
+function parseServiceAccountBlob(blob: string): ServiceCreds | null {
+  try {
+    let parsed: unknown = JSON.parse(blob);
+    // Some dashboards double-encode the JSON string.
+    if (typeof parsed === "string") {
+      parsed = JSON.parse(parsed);
+    }
+    if (!parsed || typeof parsed !== "object") return null;
+    const row = parsed as Record<string, unknown>;
+    const projectId = typeof row.project_id === "string" ? row.project_id.trim() : "";
+    const clientEmail = typeof row.client_email === "string" ? row.client_email.trim() : "";
+    const privateKey =
+      typeof row.private_key === "string" ? normalizePrivateKey(row.private_key) : "";
+    if (!projectId || !clientEmail || !privateKey.includes("BEGIN")) return null;
+    return { projectId, clientEmail, privateKey };
+  } catch {
+    return null;
+  }
+}
+
+function credentials(): ServiceCreds | null {
   const blob = env("FIREBASE_SERVICE_ACCOUNT");
   if (blob) {
-    try {
-      const parsed = JSON.parse(blob) as {
-        project_id?: string;
-        client_email?: string;
-        private_key?: string;
-      };
-      if (parsed.project_id && parsed.client_email && parsed.private_key) {
-        return {
-          projectId: parsed.project_id,
-          clientEmail: parsed.client_email,
-          privateKey: parsed.private_key.replace(/\\n/g, "\n"),
-        };
-      }
-    } catch {
-      return null;
-    }
+    const fromBlob = parseServiceAccountBlob(blob);
+    if (fromBlob) return fromBlob;
+    console.error("[firebaseAdmin] FIREBASE_SERVICE_ACCOUNT present but invalid JSON/key");
     return null;
   }
 
   const projectId = env("FIREBASE_PROJECT_ID");
   const clientEmail = env("FIREBASE_CLIENT_EMAIL");
-  const privateKey = env("FIREBASE_PRIVATE_KEY").replace(/\\n/g, "\n");
-  if (!projectId || !clientEmail || !privateKey) return null;
+  const privateKey = normalizePrivateKey(env("FIREBASE_PRIVATE_KEY"));
+  if (!projectId || !clientEmail || !privateKey.includes("BEGIN")) return null;
   return { projectId, clientEmail, privateKey };
 }
 
 let cached: App | null = null;
+let initFailed = false;
 
 export function adminApp(): App | null {
   if (cached) return cached;
-  if (getApps().length > 0) {
-    cached = getApp();
+  if (initFailed) return null;
+  try {
+    if (getApps().length > 0) {
+      cached = getApp();
+      return cached;
+    }
+    const creds = credentials();
+    if (!creds) return null;
+    cached = initializeApp({
+      credential: cert({
+        projectId: creds.projectId,
+        clientEmail: creds.clientEmail,
+        privateKey: creds.privateKey,
+      }),
+      projectId: creds.projectId,
+    });
     return cached;
+  } catch (err) {
+    initFailed = true;
+    console.error(
+      "[firebaseAdmin] initializeApp failed:",
+      err instanceof Error ? err.message : String(err),
+    );
+    return null;
   }
-  const creds = credentials();
-  if (!creds) return null;
-  cached = initializeApp({ credential: cert(creds), projectId: creds.projectId });
-  return cached;
 }
 
 export async function verifyIdToken(authorization: string | undefined): Promise<string | null> {
@@ -62,5 +114,13 @@ export async function verifyIdToken(authorization: string | undefined): Promise<
 export function adminDb() {
   const app = adminApp();
   if (!app) return null;
-  return getFirestore(app);
+  try {
+    return getFirestore(app);
+  } catch (err) {
+    console.error(
+      "[firebaseAdmin] getFirestore failed:",
+      err instanceof Error ? err.message : String(err),
+    );
+    return null;
+  }
 }
