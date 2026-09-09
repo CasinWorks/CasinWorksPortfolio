@@ -1,4 +1,4 @@
-import { noStore, type VercelRequest, type VercelResponse } from "./_lib/http";
+import { noStore, type VercelRequest, type VercelResponse } from "./lib/http";
 
 export default function handler(_req: VercelRequest, res: VercelResponse) {
   noStore(res);
