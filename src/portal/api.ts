@@ -862,7 +862,7 @@ export async function startConsultationCheckout(input: {
   hours: number;
   idToken: string;
 }): Promise<{ checkoutUrl: string; sessionId: string; amountPhp: number }> {
-  const res = await fetch("/api/paymongo/checkout", {
+  const res = await fetch("/api/paymongo-checkout", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
