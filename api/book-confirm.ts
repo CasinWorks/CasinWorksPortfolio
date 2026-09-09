@@ -215,6 +215,7 @@ async function fetchPaymongoSession(secretKey: string, sessionId: string) {
       attributes?: {
         status?: string;
         payments?: { attributes?: { status?: string } }[];
+        payment_intent?: { attributes?: { status?: string } } | string;
         reference_number?: string;
         metadata?: Record<string, string>;
       };
@@ -225,6 +226,17 @@ async function fetchPaymongoSession(secretKey: string, sessionId: string) {
   const status = String(attrs?.status ?? "");
   const payments = attrs?.payments ?? [];
   const paymentPaid = payments.some((p) => String(p.attributes?.status ?? "") === "paid");
-  const paid = status === "paid" || paymentPaid;
+  const pi = attrs?.payment_intent;
+  const piStatus =
+    typeof pi === "object" && pi && "attributes" in pi
+      ? String(pi.attributes?.status ?? "")
+      : "";
+  // PayMongo often leaves checkout session status as "active" after a successful test pay;
+  // the payments[] / payment_intent status is the reliable signal.
+  const paid =
+    status === "paid" ||
+    status === "completed" ||
+    paymentPaid ||
+    piStatus === "succeeded";
   return { paid, reference: String(attrs?.reference_number ?? "") };
 }
