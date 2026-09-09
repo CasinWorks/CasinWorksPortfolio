@@ -154,7 +154,7 @@ export const CONFIDENTIAL_CASE_STUDIES: ConfidentialCaseStudy[] = [
       {
         title: "The Architecture: Built for Severe Environments",
         intro:
-          "Industrial software cannot afford to crash. I designed a redundant, standalone infrastructure engineered for 100% data integrity:",
+          "Industrial software cannot afford to crash. I designed a redundant, standalone infrastructure engineered for maximum data integrity:",
         items: [
           "The Engine: An ultra-fast React.js interface paired with a high-throughput Node.js backend and a highly optimized PostgreSQL database built to withstand relentless transactional write streams.",
           "Zero-Packet-Drop Streaming: Implemented rock-solid real-time data flows to ensure factory-wide monitors update instantly without dropped frames.",
@@ -164,7 +164,7 @@ export const CONFIDENTIAL_CASE_STUDIES: ConfidentialCaseStudy[] = [
     ],
     results: [
       "Instantaneous MTTR: Eradicated manual shouting and paper logs, cutting Mean Time to Resolution down to the absolute minimum through instantaneous digital dispatching.",
-      "100% Production Stability: This custom ecosystem has operated continuously on the production floor for over a year with zero downtime, zero software bugs, and zero defects — proving that custom-built, independent software can carry the weight of a world-class automotive assembly line.",
+      "Maximum Production Stability: This custom ecosystem has operated continuously on the production floor for over a year with zero downtime, zero software bugs, and zero defects — proving that custom-built, independent software can carry the weight of a world-class automotive assembly line.",
     ],
   },
   {
