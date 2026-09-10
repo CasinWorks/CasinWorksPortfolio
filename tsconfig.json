@@ -15,13 +15,9 @@
     "moduleDetection": "force",
     "allowJs": true,
     "jsx": "react-jsx",
-    "paths": {
-      "@/*": [
-        "./*"
-      ]
-    },
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
+  "include": ["src", "index.html"],
   "exclude": ["api", "apps", "dist", "node_modules"]
 }

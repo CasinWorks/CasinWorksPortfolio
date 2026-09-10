@@ -2,8 +2,8 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022"],
-    "module": "CommonJS",
-    "moduleResolution": "node",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "strict": false,
@@ -11,6 +11,5 @@
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": ["./**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": ["./**/*.ts"]
 }
