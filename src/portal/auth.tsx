@@ -131,6 +131,17 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
         await claimProjectsForClient(profile.uid, profile.email, profile.displayName);
         await claimConsultationsForClient(profile.uid, profile.email, profile.displayName);
         await linkCrmClientOnLogin(profile.uid, profile.email);
+        const idToken = await cred.user.getIdToken().catch(() => undefined);
+        if (idToken) {
+          void fetch("/api/welcome-email", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({ displayName: profile.displayName, role: profile.role }),
+          }).catch(() => undefined);
+        }
       },
       async logout() {
         if (!isFirebaseConfigured()) return;
