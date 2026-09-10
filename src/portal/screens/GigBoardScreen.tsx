@@ -4,7 +4,13 @@ import { motion, AnimatePresence } from "motion/react";
 import { StaggerItem, StaggerList, EASE } from "../motion";
 import { usePageMeta } from "../../hooks/usePageMeta";
 import { SITE } from "../../site";
-import { applyToGig, fetchApplicationsForUser, fetchOpenGigs } from "../api";
+import {
+  applicationStatusLabel,
+  applyToGig,
+  listenAllGigs,
+  listenApplicationsForUser,
+  uploadApplicationFile,
+} from "../api";
 import { usePortalAuth } from "../auth";
 import type { Gig, GigApplication } from "../types";
 
@@ -15,20 +21,22 @@ export function GigBoardScreen() {
     noIndex: true,
   });
   const { profile } = usePortalAuth();
-  const [gigs, setGigs] = useState<Gig[]>([]);
+  const [allGigs, setAllGigs] = useState<Gig[]>([]);
   const [apps, setApps] = useState<GigApplication[]>([]);
   const [query, setQuery] = useState("");
   const [discipline, setDiscipline] = useState("All");
   const [selected, setSelected] = useState<Gig | null>(null);
   const [error, setError] = useState("");
 
+  const gigs = useMemo(() => allGigs.filter((g) => g.status === "open"), [allGigs]);
+
   useEffect(() => {
-    fetchOpenGigs()
-      .then(setGigs)
-      .catch((e) => setError(e instanceof Error ? e.message : "Could not load gigs."));
-    if (profile) {
-      fetchApplicationsForUser(profile.uid).then(setApps).catch(() => undefined);
-    }
+    return listenAllGigs(setAllGigs, (message) => setError(message));
+  }, []);
+
+  useEffect(() => {
+    if (!profile) return;
+    return listenApplicationsForUser(profile.uid, setApps);
   }, [profile]);
 
   const disciplines = useMemo(() => {
@@ -47,21 +55,34 @@ export function GigBoardScreen() {
     return matchQ && matchD;
   });
 
-  const appliedIds = new Set(apps.map((a) => a.gigId));
+  const appliedByGig = useMemo(() => {
+    const map = new Map<string, GigApplication>();
+    for (const app of apps) map.set(app.gigId, app);
+    return map;
+  }, [apps]);
 
-  async function onApply(gig: Gig, statement: string) {
+  async function onApply(
+    gig: Gig,
+    input: { statement: string; cv: File; portfolio: File | null },
+  ) {
     if (!profile) return;
+    const cv = await uploadApplicationFile(profile.uid, "cv", input.cv);
+    const portfolio = input.portfolio
+      ? await uploadApplicationFile(profile.uid, "portfolio", input.portfolio)
+      : null;
     await applyToGig({
       gigId: gig.id,
       applicantId: profile.uid,
       applicantName: profile.displayName,
       applicantEmail: profile.email,
-      statement,
+      statement: input.statement,
+      cvUrl: cv.fileUrl,
+      cvName: cv.fileName,
+      portfolioUrl: portfolio?.fileUrl,
+      portfolioName: portfolio?.fileName,
       status: "pending",
       createdAt: new Date().toISOString(),
     });
-    const next = await fetchApplicationsForUser(profile.uid);
-    setApps(next);
     setSelected(null);
   }
 
@@ -74,9 +95,27 @@ export function GigBoardScreen() {
         High-stakes engagements & <span className="italic text-slate-400">open postings.</span>
       </h1>
       <p className="mt-3 max-w-xl text-slate-600">
-        Specialized roles for independent engineers. Apply here; engagement contracts happen off-platform.
+        Specialized roles for independent engineers. Apply with a CV and optional portfolio; engagement contracts happen off-platform.
       </p>
       {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
+
+      {apps.length > 0 && (
+        <section className="mt-8 border border-black/10 bg-white px-5 py-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Your applications</p>
+          <div className="mt-3 divide-y divide-black/10">
+            {apps.map((app) => {
+              const gig = allGigs.find((g) => g.id === app.gigId);
+              return (
+                <div key={app.id} className="py-3 first:pt-0 last:pb-0">
+                  <p className="font-semibold text-sm">{gig?.title || "Posting"}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{applicationStatusLabel(app.status)}</p>
+                  {app.statusNote ? <p className="mt-1 text-sm text-slate-600">{app.statusNote}</p> : null}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="mt-6 relative max-w-xl">
         <input
@@ -130,7 +169,10 @@ export function GigBoardScreen() {
               </div>
               <p className="mt-3 text-sm text-slate-600 line-clamp-2">{gig.description}</p>
               <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold">
-                {appliedIds.has(gig.id) ? "Application sent" : "View dossier"} <ArrowRight className="size-3.5" aria-hidden />
+                {appliedByGig.has(gig.id)
+                  ? applicationStatusLabel(appliedByGig.get(gig.id)!.status)
+                  : "View dossier"}{" "}
+                <ArrowRight className="size-3.5" aria-hidden />
               </span>
             </button>
           </StaggerItem>
@@ -142,7 +184,7 @@ export function GigBoardScreen() {
         {selected && (
           <GigModal
             gig={selected}
-            applied={appliedIds.has(selected.id)}
+            application={appliedByGig.get(selected.id)}
             onClose={() => setSelected(null)}
             onApply={onApply}
           />
@@ -154,18 +196,27 @@ export function GigBoardScreen() {
 
 function GigModal({
   gig,
-  applied,
+  application,
   onClose,
   onApply,
 }: {
   gig: Gig;
-  applied: boolean;
+  application?: GigApplication;
   onClose: () => void;
-  onApply: (gig: Gig, statement: string) => Promise<void>;
+  onApply: (
+    gig: Gig,
+    input: { statement: string; cv: File; portfolio: File | null },
+  ) => Promise<void>;
 }) {
+  const applied = Boolean(application);
   const [statement, setStatement] = useState("");
+  const [cv, setCv] = useState<File | null>(null);
+  const [portfolio, setPortfolio] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+
+  const accept =
+    "application/pdf,.pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*,application/zip,.zip,.ppt,.pptx";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -195,24 +246,56 @@ function GigModal({
               ))}
             </ul>
           )}
+          {applied && application && (
+            <div className="border border-black/10 bg-white px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                {applicationStatusLabel(application.status)}
+              </p>
+              {application.statusNote ? (
+                <p className="mt-2 text-sm text-slate-600 leading-relaxed">{application.statusNote}</p>
+              ) : (
+                <p className="mt-2 text-sm text-slate-600">CasinWorks has your application. Check back here for updates.</p>
+              )}
+            </div>
+          )}
           {!applied && (
-            <textarea
-              value={statement}
-              onChange={(e) => setStatement(e.target.value)}
-              placeholder="Availability and relevant background"
-              rows={4}
-              className="w-full px-3.5 py-2.5 bg-white border border-black/15 text-sm focus:outline-none focus:border-black"
-            />
+            <>
+              <textarea
+                value={statement}
+                onChange={(e) => setStatement(e.target.value)}
+                placeholder="Availability and relevant background"
+                rows={4}
+                className="w-full px-3.5 py-2.5 bg-white border border-black/15 text-sm focus:outline-none focus:border-black"
+              />
+              <FilePick
+                label="CV"
+                required
+                file={cv}
+                accept={accept}
+                onChange={setCv}
+              />
+              <FilePick
+                label="Portfolio"
+                file={portfolio}
+                accept={accept}
+                onChange={setPortfolio}
+              />
+            </>
           )}
           {error && <p className="text-sm text-red-700">{error}</p>}
+          {!applied && (
           <button
             type="button"
-            disabled={sending || applied}
+            disabled={sending}
             onClick={async () => {
+              if (!cv) {
+                setError("Attach a CV (PDF, Word, or image).");
+                return;
+              }
               setSending(true);
               setError("");
               try {
-                await onApply(gig, statement);
+                await onApply(gig, { statement, cv, portfolio });
               } catch (e) {
                 setError(e instanceof Error ? e.message : "Could not apply.");
               } finally {
@@ -221,10 +304,46 @@ function GigModal({
             }}
             className="w-full py-3.5 bg-black text-white rounded-full text-sm font-semibold disabled:opacity-50"
           >
-            {applied ? "Already applied" : sending ? "Sending…" : "Submit application"}
+            {sending ? "Uploading…" : "Submit application"}
           </button>
+          )}
         </div>
       </motion.div>
     </div>
+  );
+}
+
+function FilePick({
+  label,
+  required,
+  file,
+  accept,
+  onChange,
+}: {
+  label: string;
+  required?: boolean;
+  file: File | null;
+  accept: string;
+  onChange: (file: File | null) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+        {label}
+        {required ? " (required)" : " (optional)"}
+      </span>
+      <span className="mt-1.5 flex items-center justify-between gap-3 w-full px-3.5 py-2.5 bg-white border border-black/15 text-sm cursor-pointer hover:border-black">
+        <span className={file ? "text-black truncate" : "text-slate-500 truncate"}>
+          {file ? file.name : "PDF, Word, image, or zip — 15 MB max"}
+        </span>
+        <span className="shrink-0 text-xs font-semibold">{file ? "Change" : "Choose"}</span>
+      </span>
+      <input
+        type="file"
+        accept={accept}
+        className="sr-only"
+        onChange={(e) => onChange(e.target.files?.[0] ?? null)}
+      />
+    </label>
   );
 }

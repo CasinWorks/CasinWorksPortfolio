@@ -39,7 +39,7 @@ export type DocumentStatus =
 
 export type GigStatus = "open" | "closed";
 
-export type ApplicationStatus = "pending" | "accepted" | "rejected";
+export type ApplicationStatus = "pending" | "reviewing" | "accepted" | "rejected";
 
 export type WorkType = "Remote" | "On-site" | "Hybrid";
 
@@ -268,7 +268,14 @@ export interface GigApplication {
   applicantName: string;
   applicantEmail: string;
   statement?: string;
+  cvUrl: string;
+  cvName: string;
+  portfolioUrl?: string;
+  portfolioName?: string;
   status: ApplicationStatus;
+  /** Short note from the studio, visible to the applicant. */
+  statusNote?: string;
+  statusUpdatedAt?: string;
   createdAt: string;
 }
 

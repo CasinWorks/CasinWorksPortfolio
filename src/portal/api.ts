@@ -86,7 +86,7 @@ export async function fetchUserProfile(uid: string): Promise<PortalUser | null> 
 }
 
 const STORED_DATA_NOTICE =
-  "CasinWorks stores your name, email address, and company so your account can be attached to the right engagement and so consultation requests can be answered. Nothing is sold, and nothing is shared for advertising.";
+  "CasinWorks stores your name, email address, and company so your account can be attached to the right engagement and so consultation requests can be answered. Subcontractor applications also store a CV and, if you attach one, a portfolio. Nothing is sold, and nothing is shared for advertising.";
 
 export const ACCOUNT_PRIVACY_URL = "https://www.casinworks.com/privacy.html";
 export const ACCOUNT_STORED_DATA_NOTICE = STORED_DATA_NOTICE;
@@ -301,6 +301,17 @@ export async function updateDocumentStatus(id: string, status: DocumentStatus, e
   await updateDoc(doc(db(), "documents", id), { status, ...extra });
 }
 
+export async function uploadApplicationFile(uid: string, kind: "cv" | "portfolio", file: File) {
+  const maxBytes = 15 * 1024 * 1024;
+  if (file.size > maxBytes) throw new Error("Each file must be 15 MB or smaller.");
+  const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+  const path = `applications/${uid}/${Date.now()}-${kind}-${safeName}`;
+  const storageRef = ref(getFirebaseStorage(), path);
+  await uploadBytes(storageRef, file, { contentType: file.type || "application/octet-stream" });
+  const fileUrl = await getDownloadURL(storageRef);
+  return { fileUrl, fileName: file.name };
+}
+
 export async function fetchOpenGigs(): Promise<Gig[]> {
   const q = query(collection(db(), "gigs"), where("status", "==", "open"));
   const snap = await getDocs(q);
@@ -319,27 +330,111 @@ export async function createGig(payload: Omit<Gig, "id">) {
   );
 }
 
+export async function updateGig(id: string, patch: Partial<Omit<Gig, "id">>) {
+  await updateDoc(doc(db(), "gigs", id), omitUndefined({ ...patch, updatedAt: serverTimestamp() } as Record<string, unknown>));
+}
+
+export async function deleteGig(id: string) {
+  const apps = await getDocs(query(collection(db(), "applications"), where("gigId", "==", id)));
+  await Promise.all(apps.docs.map((d) => deleteDoc(d.ref)));
+  await deleteDoc(doc(db(), "gigs", id));
+}
+
 export async function fetchApplicationsForUser(applicantId: string): Promise<GigApplication[]> {
   const q = query(collection(db(), "applications"), where("applicantId", "==", applicantId));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<GigApplication, "id">) }));
+  return snap.docs.map((d) => applicationFromData(d.id, d.data() as Record<string, unknown>));
+}
+
+export async function fetchAllApplications(): Promise<GigApplication[]> {
+  const snap = await getDocs(collection(db(), "applications"));
+  return snap.docs
+    .map((d) => applicationFromData(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function listenAllGigs(cb: (gigs: Gig[]) => void, onError?: (message: string) => void) {
+  return onSnapshot(
+    collection(db(), "gigs"),
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Gig, "id">) }))),
+    (err) => onError?.(err.message),
+  );
+}
+
+export function listenApplicationsForUser(
+  applicantId: string,
+  cb: (apps: GigApplication[]) => void,
+  onError?: (message: string) => void,
+) {
+  return onSnapshot(
+    query(collection(db(), "applications"), where("applicantId", "==", applicantId)),
+    (snap) => cb(snap.docs.map((d) => applicationFromData(d.id, d.data() as Record<string, unknown>))),
+    (err) => onError?.(err.message),
+  );
+}
+
+export function listenAllApplications(cb: (apps: GigApplication[]) => void, onError?: (message: string) => void) {
+  return onSnapshot(
+    collection(db(), "applications"),
+    (snap) =>
+      cb(
+        snap.docs
+          .map((d) => applicationFromData(d.id, d.data() as Record<string, unknown>))
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      ),
+    (err) => onError?.(err.message),
+  );
+}
+
+function applicationFromData(id: string, data: Record<string, unknown>): GigApplication {
+  return {
+    id,
+    gigId: String(data.gigId ?? ""),
+    applicantId: String(data.applicantId ?? ""),
+    applicantName: String(data.applicantName ?? ""),
+    applicantEmail: String(data.applicantEmail ?? ""),
+    statement: data.statement ? String(data.statement) : undefined,
+    cvUrl: String(data.cvUrl ?? ""),
+    cvName: String(data.cvName ?? "CV"),
+    portfolioUrl: data.portfolioUrl ? String(data.portfolioUrl) : undefined,
+    portfolioName: data.portfolioName ? String(data.portfolioName) : undefined,
+    status: (data.status as GigApplication["status"]) ?? "pending",
+    statusNote: data.statusNote ? String(data.statusNote) : undefined,
+    statusUpdatedAt: data.statusUpdatedAt ? String(data.statusUpdatedAt) : undefined,
+    createdAt: String(data.createdAt ?? ""),
+  };
 }
 
 export async function fetchApplicationsForGig(gigId: string): Promise<GigApplication[]> {
   const q = query(collection(db(), "applications"), where("gigId", "==", gigId));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<GigApplication, "id">) }));
+  return snap.docs.map((d) => applicationFromData(d.id, d.data() as Record<string, unknown>));
 }
 
 export async function applyToGig(payload: Omit<GigApplication, "id">) {
-  await addDoc(collection(db(), "applications"), {
-    ...payload,
-    createdAt: new Date().toISOString(),
-  });
+  if (!payload.cvUrl) throw new Error("Attach a CV to apply.");
+  await addDoc(
+    collection(db(), "applications"),
+    omitUndefined({
+      ...payload,
+      createdAt: payload.createdAt || new Date().toISOString(),
+    } as Record<string, unknown>),
+  );
 }
 
-export async function updateApplicationStatus(id: string, status: GigApplication["status"]) {
-  await updateDoc(doc(db(), "applications", id), { status });
+export async function updateApplicationStatus(
+  id: string,
+  status: GigApplication["status"],
+  statusNote?: string,
+) {
+  await updateDoc(
+    doc(db(), "applications", id),
+    omitUndefined({
+      status,
+      statusNote: statusNote?.trim() || deleteField(),
+      statusUpdatedAt: new Date().toISOString(),
+    } as Record<string, unknown>),
+  );
 }
 
 export async function updateGigStatus(id: string, status: Gig["status"]) {
@@ -765,6 +860,21 @@ export function statusLabel(status: DocumentStatus) {
       return "Accepted";
     case "expired":
       return "Expired";
+    default:
+      return status;
+  }
+}
+
+export function applicationStatusLabel(status: GigApplication["status"]) {
+  switch (status) {
+    case "pending":
+      return "Received";
+    case "reviewing":
+      return "In review";
+    case "accepted":
+      return "Accepted";
+    case "rejected":
+      return "Not selected";
     default:
       return status;
   }
