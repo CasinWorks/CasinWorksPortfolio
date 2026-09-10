@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { usePageMeta } from "../../hooks/usePageMeta";
 import { SITE } from "../../site";
 import { PageFade } from "../motion";
 
-/** Public landing after a portal account was deleted. No auth required. */
+/** Public landing after a portal account was deleted. Matches site 404 composition. */
 export function AccountDeletedScreen() {
   usePageMeta({
     title: `Account deleted — ${SITE.name}`,
@@ -12,52 +13,36 @@ export function AccountDeletedScreen() {
   });
 
   return (
-    <PageFade className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a]">
-      <header className="border-b border-black/10">
-        <div className="max-w-[var(--page-max)] mx-auto px-[var(--page-gutter)] py-4 flex flex-wrap items-center justify-between gap-3">
-          <Link to="/" className="flex flex-col leading-tight">
-            <span className="text-lg font-semibold tracking-tight">{SITE.brand}</span>
-            <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Client portal</span>
-          </Link>
-          <Link to="/" className="text-sm text-slate-500 hover:text-black">
-            Site
-          </Link>
-        </div>
-      </header>
-
-      <main className="max-w-lg mx-auto px-[var(--page-gutter)] py-16 sm:py-24">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Account</p>
-        <h1 className="mt-3 font-serif text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.05]">
-          Your account is <span className="italic font-normal text-slate-400">gone.</span>
+    <PageFade className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a] px-6 sm:px-8 lg:px-16 py-32 sm:py-40">
+      <div className="max-w-[1800px] mx-auto">
+        <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-400 mb-10">Account</p>
+        <h1 className="font-serif text-5xl sm:text-7xl lg:text-8xl font-bold italic tracking-tighter leading-[0.9] mb-8">
+          Account deleted.
         </h1>
-        <p className="mt-4 text-slate-600 leading-relaxed">
-          Sign-in for this portal account has been removed. Engagement records CasinWorks keeps for active work may
-          still exist on the studio side — they are no longer tied to a login.
+        <p className="max-w-xl text-xl sm:text-2xl text-slate-500 leading-snug tracking-tight mb-6">
+          Sign-in for this portal account has been removed. Studio records for active work may remain, but they are no
+          longer tied to a login.
         </p>
-        <p className="mt-3 text-slate-600 leading-relaxed">
-          If you change your mind later, you can create a new account with the same email. Past bookings may reattach
-          when you register again.
+        <p className="max-w-xl text-lg text-slate-500 leading-snug tracking-tight mb-16">
+          You can create a new account with the same email anytime — past bookings may reattach when you register again.
         </p>
-
-        <div className="mt-10 flex flex-wrap gap-3">
-          <Link to="/" className="rounded-full bg-black text-white px-6 py-3 text-sm font-semibold">
-            Back to CasinWorks
+        <div className="flex flex-wrap items-center gap-8">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.4em] hover:opacity-60 transition-opacity"
+          >
+            <ArrowLeft className="size-4" aria-hidden />
+            Home
           </Link>
           <Link
             to="/portal/register"
-            className="rounded-full border border-black/15 px-6 py-3 text-sm font-semibold"
+            className="inline-flex items-center gap-3 bg-black text-white px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.4em] hover:bg-slate-800 transition-colors"
           >
             Create a new account
+            <ArrowRight className="size-4" aria-hidden />
           </Link>
         </div>
-
-        <p className="mt-10 text-sm text-slate-500">
-          Questions?{" "}
-          <a href={`mailto:${SITE.email}`} className="underline underline-offset-4 hover:text-black">
-            {SITE.email}
-          </a>
-        </p>
-      </main>
+      </div>
     </PageFade>
   );
 }
