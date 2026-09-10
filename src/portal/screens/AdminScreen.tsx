@@ -38,8 +38,15 @@ export function AdminScreen() {
 
   useEffect(() => {
     reload().catch(() => undefined);
-    return listenConsultations(setConsults);
   }, []);
+
+  useEffect(() => {
+    if (!profile) return;
+    return listenConsultations(
+      { role: profile.role, uid: profile.uid, email: profile.email },
+      setConsults,
+    );
+  }, [profile]);
 
   useEffect(() => {
     if (!profile) return;

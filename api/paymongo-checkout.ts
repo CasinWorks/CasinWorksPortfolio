@@ -1,4 +1,4 @@
-import { createSign } from "node:crypto";
+import { createHmac, createSign } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 type VercelRequest = IncomingMessage & {
@@ -91,6 +91,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const totalPhp = hours * ratePhp;
     const amount = Math.round(totalPhp * 100);
     const siteUrl = (env("APP_URL") || env("SITE_URL") || "https://www.casinworks.com").replace(/\/$/, "");
+    const confirmTok = issueConfirmToken(consultationId);
 
     const successPath =
       typeof body.successPath === "string" &&
@@ -115,7 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           quantity: 1,
         },
       ],
-      successUrl: `${siteUrl}${successPath}`,
+      successUrl: appendQuery(`${siteUrl}${successPath}`, "t", confirmTok),
       cancelUrl: `${siteUrl}${cancelPath}`,
       referenceNumber,
       description: "CasinWorks exploratory consultation",
@@ -155,6 +156,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 function env(name: string) {
   return (process.env[name] ?? "").trim();
+}
+
+function confirmSecret() {
+  return env("PAYMONGO_WEBHOOK_SECRET") || env("PAYMONGO_SECRET_KEY");
+}
+
+function issueConfirmToken(consultationId: string) {
+  const secret = confirmSecret();
+  if (!secret) return "";
+  return createHmac("sha256", secret).update(`confirm:${consultationId}`).digest("hex").slice(0, 32);
+}
+
+function appendQuery(url: string, key: string, value: string) {
+  if (!value) return url;
+  const join = url.includes("?") ? "&" : "?";
+  return `${url}${join}${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
 }
 
 function paymongoSecretKey(): string | null {

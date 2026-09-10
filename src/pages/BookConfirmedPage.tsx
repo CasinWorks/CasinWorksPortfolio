@@ -18,6 +18,7 @@ export default function BookConfirmedPage() {
   const [params] = useSearchParams();
   const paidFlag = params.get("paid");
   const consultationId = (params.get("c") ?? "").trim();
+  const confirmToken = (params.get("t") ?? "").trim();
   const emailParam = (params.get("email") ?? "").trim().toLowerCase();
   const fromPortal = params.get("from") === "portal";
   const [state, setState] = useState<ConfirmState>({ status: "loading" });
@@ -41,7 +42,7 @@ export default function BookConfirmedPage() {
         const res = await fetch("/api/book-confirm", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ consultationId }),
+          body: JSON.stringify({ consultationId, token: confirmToken }),
         });
         const json = (await res.json().catch(() => null)) as {
           ok?: boolean;
@@ -84,7 +85,7 @@ export default function BookConfirmedPage() {
     return () => {
       cancelled = true;
     };
-  }, [paidFlag, consultationId, emailParam]);
+  }, [paidFlag, consultationId, confirmToken, emailParam]);
 
   const registerHref = useMemo(() => {
     const q = new URLSearchParams();

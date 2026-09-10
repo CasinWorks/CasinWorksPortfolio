@@ -69,6 +69,7 @@ export function localApiPlugin(): Plugin {
 
 const API_ALIASES: Record<string, string> = {
   "/api/paymongo/webhook": "/api/paymongo-webhook",
+  "/api/paymongo/checkout": "/api/paymongo-checkout",
 };
 
 function resolveApiFile(root: string, pathname: string): string | null {

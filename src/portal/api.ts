@@ -846,41 +846,105 @@ function consultationFromData(id: string, data: Record<string, unknown>): Consul
   };
 }
 
-export function listenConsultations(cb: (rows: ConsultationBooking[]) => void, onError?: (message: string) => void) {
-  return onSnapshot(
-    collection(db(), "consultations"),
-    (snap) => cb(snap.docs.map((d) => consultationFromData(d.id, d.data() as Record<string, unknown>))),
+/**
+ * Admins list the whole collection.
+ * Clients query by uid and email — an unfiltered collection listen is denied.
+ */
+export function listenConsultations(
+  viewer: { role: PortalRole; uid: string; email: string },
+  cb: (rows: ConsultationBooking[]) => void,
+  onError?: (message: string) => void,
+) {
+  const toRows = (snap: { docs: { id: string; data: () => Record<string, unknown> }[] }) =>
+    snap.docs.map((d) => consultationFromData(d.id, d.data()));
+
+  if (viewer.role === "admin") {
+    return onSnapshot(
+      collection(db(), "consultations"),
+      (snap) => cb(toRows(snap)),
+      (err) => onError?.(err.message),
+    );
+  }
+
+  if (!viewer.uid) {
+    cb([]);
+    return () => undefined;
+  }
+
+  const email = viewer.email.trim().toLowerCase();
+  const byUid = new Map<string, ConsultationBooking>();
+  const byEmail = new Map<string, ConsultationBooking>();
+  const emit = () => {
+    const merged = new Map(byEmail);
+    for (const [id, row] of byUid) merged.set(id, row);
+    cb([...merged.values()]);
+  };
+
+  const unsubUid = onSnapshot(
+    query(collection(db(), "consultations"), where("clientUid", "==", viewer.uid)),
+    (snap) => {
+      byUid.clear();
+      for (const row of toRows(snap)) byUid.set(row.id, row);
+      emit();
+    },
     (err) => onError?.(err.message),
   );
+
+  const unsubEmail = email
+    ? onSnapshot(
+        query(collection(db(), "consultations"), where("clientEmail", "==", email)),
+        (snap) => {
+          byEmail.clear();
+          for (const row of toRows(snap)) byEmail.set(row.id, row);
+          emit();
+        },
+        (err) => onError?.(err.message),
+      )
+    : () => undefined;
+
+  return () => {
+    unsubUid();
+    unsubEmail();
+  };
 }
 
-export async function createConsultation(input: {
-  clientUid: string;
-  clientEmail: string;
-  clientName: string;
-  company?: string;
+export async function requestConsultationCheckout(input: {
   startsAt: string;
   hours: number;
   notes?: string;
-  amountPhp: number;
-}) {
-  const refDoc = await addDoc(
-    collection(db(), "consultations"),
-    omitUndefined({
-      clientUid: input.clientUid,
-      clientEmail: input.clientEmail.trim().toLowerCase(),
-      clientName: input.clientName.trim(),
-      company: input.company?.trim() || undefined,
+  name?: string;
+  company?: string;
+  idToken: string;
+}): Promise<{ checkoutUrl: string; consultationId: string; amountPhp: number }> {
+  const res = await fetch("/api/book-checkout", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${input.idToken}`,
+    },
+    body: JSON.stringify({
       startsAt: input.startsAt,
       hours: input.hours,
-      notes: input.notes?.trim() || undefined,
-      status: "requested",
-      paymentStatus: "pending",
-      amountPhp: input.amountPhp,
-      createdAt: serverTimestamp(),
-    } as Record<string, unknown>),
-  );
-  return refDoc.id;
+      notes: input.notes ?? "",
+      name: input.name ?? "",
+      company: input.company ?? "",
+    }),
+  });
+  const json = (await res.json().catch(() => null)) as {
+    ok?: boolean;
+    checkoutUrl?: string;
+    consultationId?: string;
+    amountPhp?: number;
+    error?: string;
+  } | null;
+  if (!res.ok || !json?.ok || !json.checkoutUrl || !json.consultationId) {
+    throw new Error(json?.error || "Could not start checkout.");
+  }
+  return {
+    checkoutUrl: json.checkoutUrl,
+    consultationId: json.consultationId,
+    amountPhp: Number(json.amountPhp ?? 0),
+  };
 }
 
 export async function updateConsultationStatus(id: string, status: ConsultationStatus) {

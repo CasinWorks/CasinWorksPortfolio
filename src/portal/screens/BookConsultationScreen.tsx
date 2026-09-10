@@ -4,9 +4,9 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { usePageMeta } from "../../hooks/usePageMeta";
 import { SITE } from "../../site";
 import {
-  createConsultation,
   fetchGoogleCalendarStatus,
   listenConsultations,
+  requestConsultationCheckout,
   setConsultationStatus,
   startConsultationCheckout,
   updateConsultationStatus,
@@ -61,7 +61,7 @@ function AdminConsultationCalendar() {
     noIndex: true,
   });
 
-  const { firebaseUser } = usePortalAuth();
+  const { profile, firebaseUser } = usePortalAuth();
   const todayIso = manilaDateIso();
   const todayParts = todayIso.split("-").map(Number);
   const [cursor, setCursor] = useState({ year: todayParts[0], month: todayParts[1] - 1 });
@@ -72,7 +72,14 @@ function AdminConsultationCalendar() {
   const [gcalConnected, setGcalConnected] = useState<boolean | null>(null);
   const [gcalHint, setGcalHint] = useState("");
 
-  useEffect(() => listenConsultations(setRows, setError), []);
+  useEffect(() => {
+    if (!profile) return;
+    return listenConsultations(
+      { role: profile.role, uid: profile.uid, email: profile.email },
+      setRows,
+      setError,
+    );
+  }, [profile]);
 
   useEffect(() => {
     let cancelled = false;
@@ -397,7 +404,14 @@ function ClientBookConsultation() {
   const [justBooked, setJustBooked] = useState<ConsultationBooking | null>(null);
   const [payNotice, setPayNotice] = useState("");
 
-  useEffect(() => listenConsultations(setRows, setError), []);
+  useEffect(() => {
+    if (!profile) return;
+    return listenConsultations(
+      { role: profile.role, uid: profile.uid, email: profile.email },
+      setRows,
+      setError,
+    );
+  }, [profile]);
 
   useEffect(() => {
     let cancelled = false;
@@ -424,6 +438,8 @@ function ClientBookConsultation() {
       const q = new URLSearchParams();
       q.set("paid", "1");
       if (consultationId) q.set("c", consultationId);
+      const confirmTok = (searchParams.get("t") ?? "").trim();
+      if (confirmTok) q.set("t", confirmTok);
       q.set("from", "portal");
       window.location.replace(`/book/confirmed?${q.toString()}`);
       return;
@@ -504,18 +520,18 @@ function ClientBookConsultation() {
     try {
       const startsAt = slotStart(dateIso, hour).toISOString();
       if (takenOn(dateIso, hour, hours)) throw new Error("That slot was just taken. Pick another time.");
-      const id = await createConsultation({
-        clientUid: profile.uid,
-        clientEmail: profile.email,
-        clientName: profile.displayName || profile.email,
-        company: profile.company,
+      const idToken = await firebaseUser?.getIdToken();
+      if (!idToken) throw new Error("Sign in again to book.");
+      const checkout = await requestConsultationCheckout({
         startsAt,
         hours,
         notes,
-        amountPhp: feePhp,
+        name: profile.displayName || profile.email,
+        company: profile.company,
+        idToken,
       });
       const booked: ConsultationBooking = {
-        id,
+        id: checkout.consultationId,
         clientUid: profile.uid,
         clientEmail: profile.email,
         clientName: profile.displayName || profile.email,
@@ -525,12 +541,12 @@ function ClientBookConsultation() {
         notes: notes.trim() || undefined,
         status: "requested",
         paymentStatus: "pending",
-        amountPhp: feePhp,
+        amountPhp: checkout.amountPhp || feePhp,
       };
       setJustBooked(booked);
       setHour(null);
       setNotes("");
-      await payForConsultation(id, hours);
+      window.location.assign(checkout.checkoutUrl);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not book that slot.");
       setBusy(false);

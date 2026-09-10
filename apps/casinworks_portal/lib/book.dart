@@ -11,7 +11,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
-const _checkoutUrl = 'https://www.casinworks.com/api/paymongo/checkout';
+const _bookCheckoutUrl = 'https://www.casinworks.com/api/book-checkout';
+const _paymongoCheckoutUrl = 'https://www.casinworks.com/api/paymongo-checkout';
 const _consultRatePhp = 1000;
 
 const slotHours = [9, 10, 11, 13, 14, 15, 16];
@@ -105,6 +106,50 @@ Uri googleCalendarUrl({required DateTime start, required int hours}) {
   });
 }
 
+Future<String> _startBookCheckout({
+  required String startsAt,
+  required int hours,
+  required String notes,
+  required String name,
+  required String company,
+}) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) throw Exception('Sign in again to book.');
+  final token = await user.getIdToken();
+  if (token == null || token.isEmpty) throw Exception('Sign in again to book.');
+
+  final client = HttpClient();
+  try {
+    final req = await client.postUrl(Uri.parse(_bookCheckoutUrl));
+    req.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+    req.headers.set(HttpHeaders.acceptHeader, 'application/json');
+    req.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+    req.add(
+      utf8.encode(
+        jsonEncode({
+          'startsAt': startsAt,
+          'hours': hours,
+          'notes': notes,
+          'name': name,
+          'company': company,
+        }),
+      ),
+    );
+    final res = await req.close();
+    final body = await res.transform(utf8.decoder).join();
+    final json = jsonDecode(body);
+    if (res.statusCode < 200 || res.statusCode >= 300 || json is! Map || json['ok'] != true) {
+      final message = json is Map && json['error'] is String ? json['error'] as String : 'Could not start checkout.';
+      throw Exception(message);
+    }
+    final url = json['checkoutUrl'];
+    if (url is! String || url.isEmpty) throw Exception('Could not start checkout.');
+    return url;
+  } finally {
+    client.close(force: true);
+  }
+}
+
 Future<String> _startPaymongoCheckout({
   required String consultationId,
   required int hours,
@@ -116,7 +161,7 @@ Future<String> _startPaymongoCheckout({
 
   final client = HttpClient();
   try {
-    final req = await client.postUrl(Uri.parse(_checkoutUrl));
+    final req = await client.postUrl(Uri.parse(_paymongoCheckoutUrl));
     req.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
     req.headers.set(HttpHeaders.acceptHeader, 'application/json');
     req.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
@@ -125,7 +170,7 @@ Future<String> _startPaymongoCheckout({
         jsonEncode({
           'consultationId': consultationId,
           'hours': hours,
-          'successPath': '/portal/book?paid=1&c=$consultationId',
+          'successPath': '/book/confirmed?paid=1&c=$consultationId&from=portal',
           'cancelPath': '/portal/book?paid=0&c=$consultationId',
         }),
       ),
@@ -171,12 +216,42 @@ class _BookPageState extends State<BookPage> {
   final notes = TextEditingController();
   String? error;
   bool sending = false;
+  final busyRemote = <({DateTime start, int hours})>[];
 
   @override
   void initState() {
     super.initState();
     final today = DateTime.parse('${manilaDateIso(DateTime.now())}T12:00:00+08:00');
     cursor = DateTime(today.year, today.month, 1);
+    _loadBusy();
+  }
+
+  Future<void> _loadBusy() async {
+    final client = HttpClient();
+    try {
+      final req = await client.getUrl(Uri.parse('https://www.casinworks.com/api/book-availability'));
+      req.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      final res = await req.close();
+      final body = await res.transform(utf8.decoder).join();
+      final json = jsonDecode(body);
+      if (json is! Map || json['ok'] != true || json['busy'] is! List) return;
+      final next = <({DateTime start, int hours})>[];
+      for (final row in json['busy'] as List) {
+        if (row is! Map) continue;
+        final start = DateTime.tryParse('${row['startsAt']}');
+        final hours = (row['hours'] as num?)?.toInt() ?? 1;
+        if (start != null) next.add((start: start, hours: hours));
+      }
+      if (mounted) setState(() {
+        busyRemote
+          ..clear()
+          ..addAll(next);
+      });
+    } catch (_) {
+      // Calendar still works from the user's own bookings if availability is down.
+    } finally {
+      client.close(force: true);
+    }
   }
 
   @override
@@ -231,7 +306,12 @@ class _BookPageState extends State<BookPage> {
             ),
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance.collection('consultations').snapshots(),
+                stream: widget.isAdmin
+                    ? FirebaseFirestore.instance.collection('consultations').snapshots()
+                    : FirebaseFirestore.instance
+                        .collection('consultations')
+                        .where('clientUid', isEqualTo: widget.uid)
+                        .snapshots(),
                 builder: (context, snap) {
                   final docs = snap.data?.docs ?? [];
                   final live = docs.where((d) {
@@ -241,6 +321,9 @@ class _BookPageState extends State<BookPage> {
 
                   bool taken(String day, int startHour, int duration) {
                     final start = slotStart(day, startHour);
+                    if (!widget.isAdmin && busyRemote.isNotEmpty) {
+                      return busyRemote.any((b) => slotsOverlap(start, duration, b.start, b.hours));
+                    }
                     return live.any((d) {
                       final otherStart = DateTime.tryParse(d.data()['startsAt'] as String? ?? '');
                       if (otherStart == null) return false;
@@ -474,25 +557,12 @@ class _BookPageState extends State<BookPage> {
                               throw Exception('That slot was just taken. Pick another time.');
                             }
                             final start = slotStart(dateIso!, hour!);
-                            final amountPhp = hours * _consultRatePhp;
-                            final doc = await FirebaseFirestore.instance.collection('consultations').add({
-                              'clientUid': widget.uid,
-                              'clientEmail': widget.email.trim().toLowerCase(),
-                              'clientName': widget.displayName.trim().isEmpty
-                                  ? widget.email
-                                  : widget.displayName.trim(),
-                              if (widget.company.trim().isNotEmpty) 'company': widget.company.trim(),
-                              'startsAt': start.toUtc().toIso8601String(),
-                              'hours': hours,
-                              if (notes.text.trim().isNotEmpty) 'notes': notes.text.trim(),
-                              'status': 'requested',
-                              'paymentStatus': 'pending',
-                              'amountPhp': amountPhp,
-                              'createdAt': DateTime.now().toUtc().toIso8601String(),
-                            });
-                            final checkoutUrl = await _startPaymongoCheckout(
-                              consultationId: doc.id,
+                            final checkoutUrl = await _startBookCheckout(
+                              startsAt: start.toUtc().toIso8601String(),
                               hours: hours,
+                              notes: notes.text.trim(),
+                              name: widget.displayName.trim().isEmpty ? widget.email : widget.displayName.trim(),
+                              company: widget.company.trim(),
                             );
                             if (!mounted) return;
                             setState(() {

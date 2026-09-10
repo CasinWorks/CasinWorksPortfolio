@@ -143,23 +143,21 @@ service cloud.firestore {
           .hasOnly(['clientUid', 'clientName', 'guest']);
     }
 
-    match /consultations/{id} {
-      allow read: if isAdmin() || (
-        signedIn() && (
-          resource.data.clientUid == request.auth.uid ||
-          (authEmail() != '' && resource.data.clientEmail == authEmail())
-        )
+    function ownsConsultation() {
+      return signedIn() && (
+        resource.data.clientUid == request.auth.uid ||
+        (authEmail() != '' && resource.data.clientEmail == authEmail())
       );
-      allow create: if signedIn()
-        && request.resource.data.clientUid == request.auth.uid
-        && request.resource.data.status == 'requested'
-        && request.resource.data.startsAt is string
-        && request.resource.data.hours is number
-        && request.resource.data.hours >= 1
-        && request.resource.data.hours <= 3
-        && request.resource.data.paymentStatus == 'pending'
-        && request.resource.data.amountPhp is number
-        && request.resource.data.amountPhp > 0;
+    }
+
+    match /consultations/{id} {
+      allow get: if isAdmin() || ownsConsultation();
+      // Do not OR isAdmin() into a client list rule — get(users/{uid}) poisons queries.
+      allow list: if isAdmin();
+      allow list: if signedIn() && resource.data.clientUid == request.auth.uid;
+      allow list: if signedIn() && authEmail() != '' && resource.data.clientEmail == authEmail();
+      // Creates go through POST /api/book-checkout (overlap check + PayMongo).
+      allow create: if false;
       allow update: if isAdmin() || canClaimConsultation() || (
         signedIn()
         && resource.data.clientUid == request.auth.uid
