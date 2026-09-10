@@ -35,7 +35,7 @@ export function AccountScreen() {
     setWorking(true);
     try {
       await deleteAccount(password);
-      navigate("/portal/sign-in", { replace: true });
+      navigate("/portal/account-deleted", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete the account.");
     } finally {

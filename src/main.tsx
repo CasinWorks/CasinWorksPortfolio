@@ -25,6 +25,7 @@ import { GigBoardScreen } from './portal/screens/GigBoardScreen.tsx';
 import { ProjectProgressScreen } from './portal/screens/ProjectProgressScreen.tsx';
 import { SharedProjectScreen } from './portal/screens/SharedProjectScreen.tsx';
 import { AccountScreen } from './portal/screens/AccountScreen.tsx';
+import { AccountDeletedScreen } from './portal/screens/AccountDeletedScreen.tsx';
 import { MessagesScreen, ThreadScreen } from './portal/screens/MessagesScreens.tsx';
 import './index.css';
 
@@ -46,6 +47,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/portal" element={<PortalAuthLayout />}>
           <Route path="sign-in" element={<PortalSignInScreen />} />
           <Route path="register" element={<PortalRegisterScreen />} />
+          <Route path="account-deleted" element={<AccountDeletedScreen />} />
           <Route path="view/:token" element={<SharedProjectScreen />} />
           <Route element={<RequireAuth />}>
             <Route element={<PortalShell />}>
