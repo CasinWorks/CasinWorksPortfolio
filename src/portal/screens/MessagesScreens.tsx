@@ -64,7 +64,7 @@ export function MessagesScreen() {
 
   useEffect(() => {
     if (!profile) return;
-    return listenThreads({ role: profile.role, email: profile.email }, setThreads, setError);
+    return listenThreads({ role: profile.role, uid: profile.uid, email: profile.email }, setThreads, setError);
   }, [profile]);
 
   async function startOwnThread() {

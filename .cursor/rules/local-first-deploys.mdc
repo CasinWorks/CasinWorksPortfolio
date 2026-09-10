@@ -1,0 +1,16 @@
+---
+description: Test on localhost and plan production deploys; never push to main to “try it”
+alwaysApply: true
+---
+
+# Local first, then production
+
+Do not push to `main` (or otherwise trigger a Vercel production deploy) to see if something works.
+
+1. **Plan** the change and the deploy with the user before touching `main`.
+2. **Run it on localhost** (`npm run dev`, hit the real flow, check APIs/edge cases).
+3. **Push to production only when the user asks**, after local verification.
+
+`dev` is for staging/preview, not a substitute for localhost. Failed and duplicate Vercel deploys still count toward Hobby’s **100 deployments / rolling 24h** (Git integration **and** GitHub Actions both deploy this repo). Do not retry-fix by pushing.
+
+When a deploy is needed, batch the work into **one** production push, not a series of “maybe this” commits.

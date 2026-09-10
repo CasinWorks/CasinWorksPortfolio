@@ -43,7 +43,7 @@ export function AdminScreen() {
 
   useEffect(() => {
     if (!profile) return;
-    return listenThreads({ role: profile.role, email: profile.email }, setThreads);
+    return listenThreads({ role: profile.role, uid: profile.uid, email: profile.email }, setThreads);
   }, [profile]);
 
   const unanswered = threads.filter((t) => threadHasUnread(t, "admin"));

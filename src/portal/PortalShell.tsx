@@ -152,6 +152,13 @@ function UnreadBadge({ count }: { count: number }) {
 
 export function RequireAuth() {
   const { configured, loading, profile } = usePortalAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[var(--page-cream)] text-slate-500 px-[var(--page-gutter)] py-16 sm:py-24">
+        Loading portal…
+      </div>
+    );
+  }
   if (!configured) {
     return (
       <div className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a] px-[var(--page-gutter)] py-16 sm:py-24">
@@ -160,13 +167,6 @@ export function RequireAuth() {
         <p className="mt-4 max-w-xl text-slate-600">
           Add FIREBASE_* keys on the server (Vercel / .env.local), then reload.
         </p>
-      </div>
-    );
-  }
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[var(--page-cream)] text-slate-500 px-[var(--page-gutter)] py-16 sm:py-24">
-        Loading portal…
       </div>
     );
   }
