@@ -1,10 +1,15 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createSign } from "node:crypto";
+import { createHmac, createSign, timingSafeEqual } from "node:crypto";
 
 type VercelRequest = IncomingMessage & {
   body?: unknown;
   method?: string;
-  headers: IncomingMessage["headers"] & { origin?: string; host?: string };
+  headers: IncomingMessage["headers"] & {
+    origin?: string;
+    host?: string;
+    authorization?: string;
+    "x-forwarded-for"?: string;
+  };
 };
 type VercelResponse = ServerResponse & {
   status: (code: number) => VercelResponse;
@@ -25,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({
         ok: true,
         endpoint: "/api/book-confirm",
-        hint: "POST JSON { consultationId } from the booking success page. Browser GET is not a payment.",
+        hint: "POST JSON { consultationId, token } from the booking success page. Browser GET is not a payment.",
       });
     }
     if (req.method !== "POST") {
@@ -42,13 +47,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    if (!rateLimit(clientIp(req), { limit: 20, windowMs: 60_000 })) {
+      return res.status(429).json({ ok: false, error: "Too many requests" });
+    }
+
     const body = (typeof req.body === "string" ? safeParse(req.body) : req.body) as {
       consultationId?: unknown;
+      token?: unknown;
     } | null;
     const consultationId =
       typeof body?.consultationId === "string" ? body.consultationId.trim() : "";
+    const confirmToken = typeof body?.token === "string" ? body.token.trim() : "";
     if (!consultationId || consultationId.length > 128) {
       return res.status(400).json({ ok: false, error: "Missing consultation" });
+    }
+
+    const hmacOk = confirmTokenOk(consultationId, confirmToken);
+    const caller = await lookupCaller(req.headers.authorization);
+    if (!hmacOk && !caller) {
+      return res.status(401).json({ ok: false, error: "Missing booking proof" });
     }
 
     const secretKey = paymongoSecretKey();
@@ -61,11 +78,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const consult = await getConsultation(sa.project_id, token, consultationId);
     if (!consult) return res.status(404).json({ ok: false, error: "Consultation not found" });
 
+    if (!hmacOk && caller) {
+      const ownsUid = String(consult.clientUid ?? "") === caller.uid;
+      const ownsEmail =
+        !!caller.email && String(consult.clientEmail ?? "").toLowerCase() === caller.email;
+      if (!ownsUid && !ownsEmail) {
+        return res.status(403).json({ ok: false, error: "Forbidden" });
+      }
+    }
+
     const detail = {
       startsAt: consult.startsAt ? String(consult.startsAt) : undefined,
       hours: consult.hours != null ? Number(consult.hours) : undefined,
       amountPhp: consult.amountPhp != null ? Number(consult.amountPhp) : undefined,
-      email: consult.clientEmail ? String(consult.clientEmail) : undefined,
     };
 
     if (String(consult.paymentStatus ?? "") === "paid") {
@@ -113,6 +138,78 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 function env(name: string) {
   return (process.env[name] ?? "").trim();
+}
+
+function confirmSecret() {
+  return env("PAYMONGO_WEBHOOK_SECRET") || env("PAYMONGO_SECRET_KEY");
+}
+
+function issueConfirmToken(consultationId: string) {
+  const secret = confirmSecret();
+  if (!secret) return "";
+  return createHmac("sha256", secret).update(`confirm:${consultationId}`).digest("hex").slice(0, 32);
+}
+
+function confirmTokenOk(consultationId: string, token: string) {
+  const expected = issueConfirmToken(consultationId);
+  if (!expected || !token || token.length !== expected.length) return false;
+  try {
+    return timingSafeEqual(Buffer.from(expected, "utf8"), Buffer.from(token, "utf8"));
+  } catch {
+    return false;
+  }
+}
+
+async function lookupCaller(
+  authorization: string | undefined,
+): Promise<{ uid: string; email: string } | null> {
+  const bearer = authorization ?? "";
+  const idToken = bearer.startsWith("Bearer ") ? bearer.slice(7).trim() : "";
+  if (!idToken) return null;
+  const apiKey = env("FIREBASE_API_KEY");
+  if (!apiKey) return null;
+  try {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      },
+    );
+    const json = (await res.json()) as {
+      users?: { localId?: string; email?: string }[];
+    };
+    const row = json.users?.[0];
+    const uid = String(row?.localId ?? "");
+    const email = String(row?.email ?? "").trim().toLowerCase();
+    if (!uid) return null;
+    return { uid, email };
+  } catch {
+    return null;
+  }
+}
+
+function clientIp(req: VercelRequest) {
+  const xf = req.headers["x-forwarded-for"];
+  if (typeof xf === "string" && xf.trim()) return xf.split(",")[0].trim();
+  return "unknown";
+}
+
+const _rl: Map<string, { count: number; resetAt: number }> =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ((globalThis as any).__bookConfirmRateLimit ??= new Map());
+
+function rateLimit(key: string, opts: { limit: number; windowMs: number }) {
+  const now = Date.now();
+  const cur = _rl.get(key);
+  if (!cur || cur.resetAt <= now) {
+    _rl.set(key, { count: 1, resetAt: now + opts.windowMs });
+    return true;
+  }
+  if (cur.count >= opts.limit) return false;
+  cur.count += 1;
+  return true;
 }
 
 function paymongoSecretKey(): string | null {

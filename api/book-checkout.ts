@@ -1,4 +1,4 @@
-import { createSign } from "node:crypto";
+import { createHmac, createSign } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 type VercelRequest = IncomingMessage & {
@@ -8,6 +8,7 @@ type VercelRequest = IncomingMessage & {
     origin?: string;
     host?: string;
     "x-forwarded-for"?: string;
+    authorization?: string;
   };
 };
 type VercelResponse = ServerResponse & {
@@ -22,7 +23,11 @@ type GuestPayload = {
   hours?: unknown;
   notes?: unknown;
   website?: unknown;
+  company?: unknown;
 };
+
+const HOLD_MS = 45 * 60 * 1000;
+const MAX_PENDING_PER_UID = 2;
 
 type ServiceAccount = { project_id: string; client_email: string; private_key: string };
 
@@ -72,16 +77,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ ok: true, checkoutUrl: "https://www.casinworks.com/book" });
     }
 
-    const email = clamp(body.email, 200).toLowerCase();
-    const name = clamp(body.name, 120);
+    const caller = await lookupCaller(req.headers.authorization);
+    const email = (caller?.email || clamp(body.email, 200)).toLowerCase();
+    const name = clamp(body.name, 120) || caller?.displayName || "";
     const notes = clamp(body.notes, 4000);
+    const company = clamp(body.company, 160);
     const startsAt = clamp(body.startsAt, 64);
     const hours = Number(body.hours);
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ ok: false, error: "A valid email is required" });
     }
-    if (!notes) return res.status(400).json({ ok: false, error: "Tell us what you want to talk about" });
+    if (!caller && !notes) {
+      return res.status(400).json({ ok: false, error: "Tell us what you want to talk about" });
+    }
     if (!ALLOWED_HOURS.has(hours)) return res.status(400).json({ ok: false, error: "Hours must be 1, 2, or 3" });
     const startMs = Date.parse(startsAt);
     if (!Number.isFinite(startMs) || startMs <= Date.now()) {
@@ -90,13 +99,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const token = await getAccessToken(sa.value);
     const existing = await listCollection(sa.value.project_id, token, "consultations");
-    const taken = existing.some((row) => {
-      const status = String(row.status ?? "");
-      if (status !== "requested" && status !== "confirmed") return false;
-      return slotsOverlap(startsAt, hours, String(row.startsAt ?? ""), Number(row.hours ?? 1));
-    });
+    const taken = existing.some(
+      (row) =>
+        holdsCalendarSlot(row) &&
+        slotsOverlap(startsAt, hours, String(row.startsAt ?? ""), Number(row.hours ?? 1)),
+    );
     if (taken) {
       return res.status(409).json({ ok: false, error: "That slot was just taken. Pick another time." });
+    }
+
+    if (caller) {
+      const pendingMine = existing.filter(
+        (row) =>
+          String(row.clientUid ?? "") === caller.uid &&
+          String(row.status ?? "") === "requested" &&
+          String(row.paymentStatus ?? "") === "pending" &&
+          holdsCalendarSlot(row),
+      );
+      if (pendingMine.length >= MAX_PENDING_PER_UID) {
+        return res.status(429).json({
+          ok: false,
+          error: "Finish or cancel an unpaid booking before requesting another slot.",
+        });
+      }
     }
 
     const ratePhp = Number(env("EXPLORATORY_CONSULTATION_RATE_PHP") || "1000");
@@ -104,21 +129,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const amount = Math.round(totalPhp * 100);
     const siteUrl = (env("APP_URL") || env("SITE_URL") || "https://www.casinworks.com").replace(/\/$/, "");
     const consultationId = randomId();
-    const referenceNumber = `guest-${consultationId.slice(0, 10)}-${Date.now()}`;
+    const confirmTok = issueConfirmToken(consultationId);
+    const referenceNumber = caller
+      ? `consult-${consultationId.slice(0, 12)}-${Date.now()}`
+      : `guest-${consultationId.slice(0, 10)}-${Date.now()}`;
 
     await createDocument(sa.value.project_id, token, "consultations", consultationId, {
-      clientUid: "",
+      clientUid: caller?.uid ?? "",
       clientEmail: email,
       clientName: name || email,
+      ...(company ? { company } : {}),
       startsAt,
       hours,
       notes,
       status: "requested",
       paymentStatus: "pending",
       amountPhp: totalPhp,
-      guest: true,
+      guest: !caller,
       createdAt: new Date().toISOString(),
     });
+
+    const successUrl = caller
+      ? `${siteUrl}/book/confirmed?paid=1&c=${encodeURIComponent(consultationId)}&from=portal&t=${encodeURIComponent(confirmTok)}`
+      : `${siteUrl}/book/confirmed?paid=1&c=${encodeURIComponent(consultationId)}&email=${encodeURIComponent(email)}&t=${encodeURIComponent(confirmTok)}`;
+    const cancelUrl = caller
+      ? `${siteUrl}/portal/book?paid=0&c=${encodeURIComponent(consultationId)}`
+      : `${siteUrl}/book?paid=0&c=${encodeURIComponent(consultationId)}`;
 
     const created = await createCheckoutSession(secretKey, {
       lineItems: [
@@ -130,19 +166,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           quantity: 1,
         },
       ],
-      successUrl: `${siteUrl}/book/confirmed?paid=1&c=${encodeURIComponent(consultationId)}&email=${encodeURIComponent(email)}`,
-      cancelUrl: `${siteUrl}/book?paid=0&c=${encodeURIComponent(consultationId)}`,
+      successUrl,
+      cancelUrl,
       referenceNumber,
       description: "CasinWorks exploratory consultation",
       metadata: {
         kind: "exploratory_consultation",
-        uid: "",
+        uid: caller?.uid ?? "",
         hours: String(hours),
         ratePhp: String(ratePhp),
         totalPhp: String(totalPhp),
         consultationId,
         email,
-        guest: "1",
+        guest: caller ? "0" : "1",
       },
     });
 
@@ -171,6 +207,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 function env(name: string) {
   return (process.env[name] ?? "").trim();
+}
+
+function confirmSecret() {
+  return env("PAYMONGO_WEBHOOK_SECRET") || env("PAYMONGO_SECRET_KEY");
+}
+
+function issueConfirmToken(consultationId: string) {
+  const secret = confirmSecret();
+  if (!secret) return "";
+  return createHmac("sha256", secret).update(`confirm:${consultationId}`).digest("hex").slice(0, 32);
+}
+
+function createdAtMs(row: Record<string, unknown>): number | null {
+  const raw = row.createdAt;
+  if (typeof raw !== "string" || !raw) return null;
+  const n = Date.parse(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function holdsCalendarSlot(row: Record<string, unknown>, now = Date.now()) {
+  const status = String(row.status ?? "");
+  if (status === "confirmed") return true;
+  if (status !== "requested") return false;
+  const payment = String(row.paymentStatus ?? "");
+  if (payment === "paid" || payment === "waived") return true;
+  const created = createdAtMs(row);
+  if (created == null) return false;
+  return now - created < HOLD_MS;
+}
+
+async function lookupCaller(
+  authorization: string | undefined,
+): Promise<{ uid: string; email: string; displayName: string } | null> {
+  const bearer = authorization ?? "";
+  const idToken = bearer.startsWith("Bearer ") ? bearer.slice(7).trim() : "";
+  if (!idToken) return null;
+  const apiKey = env("FIREBASE_API_KEY");
+  if (!apiKey) return null;
+  try {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      },
+    );
+    const json = (await res.json()) as {
+      users?: { localId?: string; email?: string; displayName?: string }[];
+    };
+    const row = json.users?.[0];
+    const uid = String(row?.localId ?? "");
+    const email = String(row?.email ?? "").trim().toLowerCase();
+    if (!uid) return null;
+    return { uid, email, displayName: String(row?.displayName ?? "").trim() };
+  } catch {
+    return null;
+  }
 }
 
 function paymongoSecretKey(): string | null {
@@ -260,6 +354,7 @@ function decodeValue(v: Record<string, unknown>): unknown {
   if ("doubleValue" in v) return Number(v.doubleValue);
   if ("booleanValue" in v) return Boolean(v.booleanValue);
   if ("nullValue" in v) return null;
+  if ("timestampValue" in v) return String(v.timestampValue);
   return null;
 }
 

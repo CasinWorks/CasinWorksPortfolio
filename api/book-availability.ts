@@ -12,6 +12,8 @@ type VercelResponse = ServerResponse & {
 
 type ServiceAccount = { project_id: string; client_email: string; private_key: string };
 
+const HOLD_MS = 45 * 60 * 1000;
+
 /**
  * GET /api/book-availability
  * Uses Firestore REST (no firebase-admin — that package crashes on this Vercel runtime).
@@ -41,14 +43,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const token = await getAccessToken(sa.value);
     const docs = await listCollection(sa.value.project_id, token, "consultations");
     const busy = docs
+      .filter((row) => holdsCalendarSlot(row))
       .map((row) => ({
-        status: String(row.status ?? ""),
         startsAt: String(row.startsAt ?? ""),
         hours: Number(row.hours ?? 1),
       }))
-      .filter((row) => row.status === "requested" || row.status === "confirmed")
-      .filter((row) => row.startsAt && row.hours >= 1)
-      .map((row) => ({ startsAt: row.startsAt, hours: row.hours }));
+      .filter((row) => row.startsAt && row.hours >= 1);
 
     return res.status(200).json({ ok: true, busy });
   } catch (err) {
@@ -59,6 +59,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 function env(name: string) {
   return (process.env[name] ?? "").trim();
+}
+
+function createdAtMs(row: Record<string, unknown>): number | null {
+  const raw = row.createdAt;
+  if (typeof raw !== "string" || !raw) return null;
+  const n = Date.parse(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function holdsCalendarSlot(row: Record<string, unknown>, now = Date.now()) {
+  const status = String(row.status ?? "");
+  if (status === "confirmed") return true;
+  if (status !== "requested") return false;
+  const payment = String(row.paymentStatus ?? "");
+  if (payment === "paid" || payment === "waived") return true;
+  const created = createdAtMs(row);
+  if (created == null) return false;
+  return now - created < HOLD_MS;
 }
 
 function loadServiceAccount(): { ok: true; value: ServiceAccount } | { ok: false; reason: string } {
