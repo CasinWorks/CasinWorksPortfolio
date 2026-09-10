@@ -4,13 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "engines": {
-    "node": "24.x"
-  },
-  "allowScripts": {
-    "@firebase/util": true,
-    "core-js": true,
-    "esbuild": true,
-    "protobufjs": true
+    "node": "20.x"
   },
   "scripts": {
     "dev": "vite --port=3000",
