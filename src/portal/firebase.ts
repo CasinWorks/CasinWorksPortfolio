@@ -48,6 +48,10 @@ export async function loadFirebase(): Promise<boolean> {
   return loadPromise;
 }
 
+if (typeof window !== "undefined") {
+  void loadFirebase();
+}
+
 function getApp() {
   if (!isFirebaseConfigured() || !config) {
     throw new Error("Firebase is not configured on the server.");

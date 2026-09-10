@@ -14,8 +14,13 @@
  * Paste the printed GOOGLE_REFRESH_TOKEN into .env.local and Vercel Production.
  */
 
+import fs from "node:fs";
 import http from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { URL } from "node:url";
+
+loadEnvLocal();
 
 const CLIENT_ID = (process.env.GOOGLE_CLIENT_ID ?? "").trim();
 const CLIENT_SECRET = (process.env.GOOGLE_CLIENT_SECRET ?? "").trim();
@@ -110,3 +115,23 @@ server.listen(PORT, () => {
   console.log(authUrl.toString());
   console.log(`\nWaiting on ${REDIRECT_URI} …`);
 });
+
+function loadEnvLocal() {
+  const envPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", ".env.local");
+  if (!fs.existsSync(envPath)) return;
+  for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
+    const eq = trimmed.indexOf("=");
+    const key = trimmed.slice(0, eq).trim();
+    if (!key.startsWith("GOOGLE_")) continue;
+    let value = trimmed.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (!process.env[key]) process.env[key] = value;
+  }
+}

@@ -5,8 +5,9 @@ service cloud.firestore {
       return request.auth != null;
     }
     function isAdmin() {
-      return signedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     function authEmail() {
       return request.auth.token.email != null
@@ -16,12 +17,7 @@ service cloud.firestore {
     function ownsProject() {
       return signedIn() && (
         resource.data.clientId == request.auth.uid ||
-        (
-          authEmail() != '' &&
-          'clientEmail' in resource.data &&
-          resource.data.clientEmail is string &&
-          resource.data.clientEmail.lower() == authEmail()
-        )
+        (authEmail() != '' && resource.data.clientEmail == authEmail())
       );
     }
     function canAccessProject(projectId) {
@@ -32,9 +28,7 @@ service cloud.firestore {
           get(/databases/$(database)/documents/projects/$(projectId)).data.clientId == request.auth.uid
           || (
             authEmail() != ''
-            && 'clientEmail' in get(/databases/$(database)/documents/projects/$(projectId)).data
-            && get(/databases/$(database)/documents/projects/$(projectId)).data.clientEmail is string
-            && get(/databases/$(database)/documents/projects/$(projectId)).data.clientEmail.lower() == authEmail()
+            && get(/databases/$(database)/documents/projects/$(projectId)).data.clientEmail == authEmail()
           )
         )
       );
@@ -49,12 +43,7 @@ service cloud.firestore {
     function ownsThreadDoc(data) {
       return signedIn() && (
         data.clientUid == request.auth.uid ||
-        (
-          authEmail() != '' &&
-          'clientEmail' in data &&
-          data.clientEmail is string &&
-          data.clientEmail.lower() == authEmail()
-        )
+        (authEmail() != '' && data.clientEmail == authEmail())
       );
     }
     function ownsThread(threadId) {
@@ -65,9 +54,7 @@ service cloud.firestore {
     function canClaimProject() {
       return signedIn()
         && authEmail() != ''
-        && 'clientEmail' in resource.data
-        && resource.data.clientEmail is string
-        && resource.data.clientEmail.lower() == authEmail()
+        && resource.data.clientEmail == authEmail()
         && request.resource.data.clientId == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['clientId', 'clientName']);
@@ -87,16 +74,12 @@ service cloud.firestore {
 
     match /clients/{id} {
       allow read: if isAdmin() || (
-        signedIn() &&
-        'email' in resource.data &&
-        resource.data.email is string &&
-        resource.data.email.lower() == authEmail()
+        signedIn() && resource.data.email == authEmail()
       );
       allow create, delete: if isAdmin();
       allow update: if isAdmin() || (
         signedIn()
-        && resource.data.email is string
-        && resource.data.email.lower() == authEmail()
+        && resource.data.email == authEmail()
         && request.resource.data.authUid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authUid'])
       );
@@ -128,9 +111,7 @@ service cloud.firestore {
       allow get: if isAdmin() || (
         signedIn()
         && authEmail() != ''
-        && 'clientEmail' in resource.data
-        && resource.data.clientEmail is string
-        && resource.data.clientEmail.lower() == authEmail()
+        && resource.data.clientEmail == authEmail()
       );
       allow list: if false;
       allow create, update, delete: if isAdmin();
@@ -155,9 +136,7 @@ service cloud.firestore {
     function canClaimConsultation() {
       return signedIn()
         && authEmail() != ''
-        && 'clientEmail' in resource.data
-        && resource.data.clientEmail is string
-        && resource.data.clientEmail.lower() == authEmail()
+        && resource.data.clientEmail == authEmail()
         && (resource.data.clientUid == '' || !('clientUid' in resource.data))
         && request.resource.data.clientUid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys()
@@ -168,12 +147,7 @@ service cloud.firestore {
       allow read: if isAdmin() || (
         signedIn() && (
           resource.data.clientUid == request.auth.uid ||
-          (
-            authEmail() != '' &&
-            'clientEmail' in resource.data &&
-            resource.data.clientEmail is string &&
-            resource.data.clientEmail.lower() == authEmail()
-          )
+          (authEmail() != '' && resource.data.clientEmail == authEmail())
         )
       );
       allow create: if signedIn()
@@ -206,9 +180,15 @@ service cloud.firestore {
     }
 
     match /threads/{threadId} {
-      // Covers get and list. A list query only succeeds when every document it
-      // returns passes, so a client must constrain by their own uid or email.
-      allow read: if isAdmin() || ownsThreadDoc(resource.data);
+      // List may only use isAdmin() — OR-ing it with clientUid/email still
+      // embeds get(users/{uid}) and Firestore rejects every client collection
+      // query. Clients read known document ids (c_<uid>, p_<projectId>).
+      allow get: if signedIn() && (
+        !exists(/databases/$(database)/documents/threads/$(threadId))
+        || isAdmin()
+        || ownsThreadDoc(resource.data)
+      );
+      allow list: if isAdmin();
 
       // A client may only open their own thread, and cannot pre-mark it read for
       // the studio — that would hide it from the admin inbox.

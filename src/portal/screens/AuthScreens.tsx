@@ -20,7 +20,7 @@ export function PortalSignInScreen() {
     noIndex: true,
   });
 
-  const { configured, profile, signIn } = usePortalAuth();
+  const { configured, loading, profile, signIn } = usePortalAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const nextPath = safeNext(params.get("next"));
@@ -67,7 +67,7 @@ export function PortalSignInScreen() {
           {SITE.tagline}.
         </p>
 
-        {!configured && (
+        {!loading && !configured && (
           <p className="mt-6 text-sm text-red-700">
             Firebase is not configured on the server. The portal cannot sign anyone in until FIREBASE_* keys are set.
           </p>

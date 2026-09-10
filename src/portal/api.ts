@@ -1040,28 +1040,73 @@ function sortThreads(rows: MessageThread[]) {
   return [...rows].sort((a, b) => (a.lastMessageAt < b.lastMessageAt ? 1 : -1));
 }
 
+function threadsFromSnap(snap: { docs: { id: string; data: () => Record<string, unknown> }[] }) {
+  return snap.docs.map((d) => messageThreadFromData(d.id, d.data()));
+}
+
 /**
- * Admins watch every thread; clients watch their own by email, which also picks
- * up threads the studio opened before they had registered.
- *
- * Sorting happens here rather than in the query so neither call needs a
- * composite index deployed.
+ * Admins list the whole collection (rules: list if isAdmin).
+ * Clients cannot collection-query threads — isAdmin() uses get() and that
+ * poisons list rules — so they subscribe to known ids only.
  */
 export function listenThreads(
-  viewer: { role: PortalRole; email: string },
+  viewer: { role: PortalRole; uid: string; email: string },
   cb: (rows: MessageThread[]) => void,
   onError?: (message: string) => void,
 ) {
-  const base = collection(db(), "threads");
-  const q =
-    viewer.role === "admin"
-      ? query(base)
-      : query(base, where("clientEmail", "==", viewer.email.trim().toLowerCase()));
-  return onSnapshot(
-    q,
-    (snap) => cb(sortThreads(snap.docs.map((d) => messageThreadFromData(d.id, d.data() as Record<string, unknown>)))),
-    (err) => onError?.(err.message),
-  );
+  if (viewer.role === "admin") {
+    return onSnapshot(
+      query(collection(db(), "threads")),
+      (snap) => cb(sortThreads(threadsFromSnap(snap))),
+      (err) => onError?.(err.message),
+    );
+  }
+
+  if (!viewer.uid) {
+    cb([]);
+    return () => undefined;
+  }
+
+  const rows = new Map<string, MessageThread>();
+  const watched = new Map<string, () => void>();
+  let cancelled = false;
+
+  const emit = () => cb(sortThreads([...rows.values()]));
+
+  function watch(id: string) {
+    if (cancelled || watched.has(id)) return;
+    const unsub = onSnapshot(
+      doc(db(), "threads", id),
+      (snap) => {
+        if (snap.exists()) {
+          rows.set(id, messageThreadFromData(id, snap.data() as Record<string, unknown>));
+        } else {
+          rows.delete(id);
+        }
+        emit();
+      },
+      () => {
+        rows.delete(id);
+        emit();
+      },
+    );
+    watched.set(id, unsub);
+  }
+
+  watch(threadIdForClient(viewer.uid));
+  emit();
+
+  void fetchProjectsForClient({ uid: viewer.uid, email: viewer.email })
+    .then((projects) => {
+      if (cancelled) return;
+      for (const project of projects) watch(threadIdForProject(project.id));
+    })
+    .catch(() => undefined);
+
+  return () => {
+    cancelled = true;
+    for (const unsub of watched.values()) unsub();
+  };
 }
 
 export function listenThread(

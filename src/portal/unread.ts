@@ -19,7 +19,7 @@ export function useUnreadThreadCount() {
     }
     const viewer = profile.role === "admin" ? "admin" : "client";
     return listenThreads(
-      { role: profile.role, email: profile.email },
+      { role: profile.role, uid: profile.uid, email: profile.email },
       (rows) => setCount(countUnreadThreads(rows, viewer)),
       // A rules or network error must not break the chrome it renders into.
       () => setCount(0),
