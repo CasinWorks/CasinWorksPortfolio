@@ -28,5 +28,14 @@ service firebase.storage {
           '^(application/pdf|image/.*|application/msword|application/vnd\\..*|application/zip|application/x-zip-compressed|text/plain|text/csv|application/octet-stream)$'
         );
     }
+
+    match /applications/{uid}/{fileName} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow write: if signedIn() && request.auth.uid == uid
+        && request.resource.size < 15 * 1024 * 1024
+        && request.resource.contentType.matches(
+          '^(application/pdf|image/.*|application/msword|application/vnd\\..*|application/zip|application/x-zip-compressed|application/octet-stream)$'
+        );
+    }
   }
 }

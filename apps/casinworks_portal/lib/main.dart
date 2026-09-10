@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -944,6 +946,19 @@ class DocumentsPage extends StatelessWidget {
   }
 }
 
+String _applicationStatusLabel(String status) {
+  switch (status) {
+    case 'reviewing':
+      return 'In review';
+    case 'accepted':
+      return 'Accepted';
+    case 'rejected':
+      return 'Not selected';
+    default:
+      return 'Received';
+  }
+}
+
 class GigBoard extends StatelessWidget {
   const GigBoard({super.key, required this.uid, required this.email});
   final String uid;
@@ -959,10 +974,30 @@ class GigBoard extends StatelessWidget {
             const PortalHeader(),
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance.collection('gigs').where('status', isEqualTo: 'open').snapshots(),
+                stream: FirebaseFirestore.instance
+                    .collection('applications')
+                    .where('applicantId', isEqualTo: uid)
+                    .snapshots(),
+                builder: (context, appSnap) {
+                  final appByGig = <String, Map<String, dynamic>>{};
+                  for (final doc in appSnap.data?.docs ?? []) {
+                    appByGig[doc.data()['gigId'] as String? ?? ''] = {
+                      ...doc.data(),
+                      'id': doc.id,
+                    };
+                  }
+                  return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: FirebaseFirestore.instance.collection('gigs').snapshots(),
                 builder: (context, snap) {
                   if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-                  final gigs = snap.data!.docs;
+                  final allGigs = snap.data!.docs;
+                  final gigs = allGigs.where((doc) => (doc.data()['status'] as String? ?? 'open') == 'open').toList();
+                  String gigTitle(String id) {
+                    for (final gigDoc in allGigs) {
+                      if (gigDoc.id == id) return gigDoc.data()['title'] as String? ?? 'Posting';
+                    }
+                    return 'Posting';
+                  }
                   return ListView(
                     padding: const EdgeInsets.fromLTRB(24, 28, 24, 40),
                     children: [
@@ -982,10 +1017,36 @@ class GigBoard extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Specialized roles for independent engineers. Apply here; engagement contracts happen off-platform.',
+                        'Specialized roles for independent engineers. Apply with a CV and optional portfolio; engagement contracts happen off-platform.',
                         style: bodyStyle,
                       ),
                       const SizedBox(height: 28),
+                      if (appByGig.isNotEmpty) ...[
+                        Text('YOUR APPLICATIONS', style: kickerStyle),
+                        const SizedBox(height: 8),
+                        ...appByGig.entries.map((e) {
+                          final app = e.value;
+                          final status = app['status'] as String? ?? 'pending';
+                          final note = app['statusNote'] as String? ?? '';
+                          String title = gigTitle(e.key);
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(title, style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600, color: ink)),
+                                Text(_applicationStatusLabel(status), style: GoogleFonts.dmSans(fontSize: 12, color: slate)),
+                                if (note.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(note, style: bodyStyle),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 16),
+                      ],
                       HairlineList(
                         empty: Text('No open postings.', style: bodyStyle),
                         children: gigs.map((doc) {
@@ -1017,28 +1078,22 @@ class GigBoard extends StatelessWidget {
                                 const SizedBox(height: 14),
                                 Align(
                                   alignment: Alignment.centerLeft,
-                                  child: FilledButton(
-                                    onPressed: () async {
-                                      await FirebaseFirestore.instance.collection('applications').add({
-                                        'gigId': doc.id,
-                                        'applicantId': uid,
-                                        'applicantEmail': email,
-                                        'applicantName': email,
-                                        'status': 'pending',
-                                        'createdAt': DateTime.now().toIso8601String(),
-                                      });
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            backgroundColor: ink,
-                                            content: Text(
-                                              'Application sent',
-                                              style: GoogleFonts.dmSans(color: Colors.white),
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    },
+                                  child: appByGig[doc.id] != null
+                                      ? Text(
+                                          _applicationStatusLabel(appByGig[doc.id]?['status'] as String? ?? 'pending'),
+                                          style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600, color: ink),
+                                        )
+                                      : FilledButton(
+                                    onPressed: () => showModalBottomSheet<void>(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      backgroundColor: cream,
+                                      builder: (_) => ApplyGigSheet(
+                                        gigId: doc.id,
+                                        uid: uid,
+                                        email: email,
+                                      ),
+                                    ),
                                     style: FilledButton.styleFrom(
                                       backgroundColor: ink,
                                       foregroundColor: Colors.white,
@@ -1058,10 +1113,164 @@ class GigBoard extends StatelessWidget {
                     ],
                   );
                 },
+              );
+                },
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class ApplyGigSheet extends StatefulWidget {
+  const ApplyGigSheet({
+    super.key,
+    required this.gigId,
+    required this.uid,
+    required this.email,
+  });
+  final String gigId;
+  final String uid;
+  final String email;
+
+  @override
+  State<ApplyGigSheet> createState() => _ApplyGigSheetState();
+}
+
+class _ApplyGigSheetState extends State<ApplyGigSheet> {
+  final statement = TextEditingController();
+  PlatformFile? cv;
+  PlatformFile? portfolio;
+  bool sending = false;
+  String? error;
+
+  @override
+  void dispose() {
+    statement.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pick(bool forCv) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'zip', 'ppt', 'pptx'],
+      withData: true,
+    );
+    final file = result?.files.single;
+    if (file == null) return;
+    if (file.size > 15 * 1024 * 1024) {
+      setState(() => error = 'Each file must be 15 MB or smaller.');
+      return;
+    }
+    setState(() {
+      error = null;
+      if (forCv) {
+        cv = file;
+      } else {
+        portfolio = file;
+      }
+    });
+  }
+
+  Future<({String url, String name})> _upload(String kind, PlatformFile file) async {
+    final bytes = file.bytes;
+    if (bytes == null) throw Exception('Could not read ${file.name}.');
+    final safe = file.name.replaceAll(RegExp(r'[^\w.\-]+'), '_');
+    final path = 'applications/${widget.uid}/${DateTime.now().millisecondsSinceEpoch}-$kind-$safe';
+    final ref = FirebaseStorage.instance.ref(path);
+    await ref.putData(
+      bytes,
+      SettableMetadata(contentType: file.extension == 'pdf' ? 'application/pdf' : 'application/octet-stream'),
+    );
+    return (url: await ref.getDownloadURL(), name: file.name);
+  }
+
+  Future<void> _submit() async {
+    final cvFile = cv;
+    if (cvFile == null) {
+      setState(() => error = 'Attach a CV (PDF, Word, or image).');
+      return;
+    }
+    setState(() {
+      sending = true;
+      error = null;
+    });
+    try {
+      final cvUp = await _upload('cv', cvFile);
+      final portfolioUp = portfolio == null ? null : await _upload('portfolio', portfolio!);
+      final user = FirebaseAuth.instance.currentUser;
+      await FirebaseFirestore.instance.collection('applications').add({
+        'gigId': widget.gigId,
+        'applicantId': widget.uid,
+        'applicantEmail': widget.email,
+        'applicantName': user?.displayName?.trim().isNotEmpty == true ? user!.displayName : widget.email,
+        'statement': statement.text.trim(),
+        'cvUrl': cvUp.url,
+        'cvName': cvUp.name,
+        if (portfolioUp != null) 'portfolioUrl': portfolioUp.url,
+        if (portfolioUp != null) 'portfolioName': portfolioUp.name,
+        'status': 'pending',
+        'createdAt': DateTime.now().toIso8601String(),
+      });
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: ink,
+          content: Text('Application sent', style: GoogleFonts.dmSans(color: Colors.white)),
+        ),
+      );
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
+    } finally {
+      if (mounted) setState(() => sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pad = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + pad),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('APPLY', style: kickerStyle),
+          const SizedBox(height: 8),
+          Text('CV is required. Portfolio is optional.', style: bodyStyle),
+          const SizedBox(height: 16),
+          TextField(
+            controller: statement,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: 'Availability and background',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: sending ? null : () => _pick(true),
+            child: Text(cv == null ? 'Choose CV' : 'CV: ${cv!.name}'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: sending ? null : () => _pick(false),
+            child: Text(portfolio == null ? 'Choose portfolio (optional)' : 'Portfolio: ${portfolio!.name}'),
+          ),
+          if (error != null) ...[
+            const SizedBox(height: 12),
+            Text(error!, style: GoogleFonts.dmSans(fontSize: 13, color: errorRed)),
+          ],
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: sending ? null : _submit,
+            style: FilledButton.styleFrom(backgroundColor: ink, foregroundColor: Colors.white),
+            child: Text(sending ? 'Uploading…' : 'Submit application'),
+          ),
+        ],
       ),
     );
   }

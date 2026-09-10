@@ -655,6 +655,107 @@ class AdminInboxPage extends StatelessWidget {
         ),
         const SizedBox(height: 36),
         const _SectionTitle('Post a gig', note: 'Publishes to the subcontractor board.'),
+        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance.collection('gigs').snapshots(),
+          builder: (context, snap) {
+            final docs = snap.data?.docs ?? [];
+            final titles = {for (final d in docs) d.id: d.data()['title'] as String? ?? ''};
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (docs.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 16),
+                    child: Text('No postings yet.', style: bodyStyle),
+                  )
+                else
+                  ...docs.map((doc) {
+                    final g = doc.data();
+                    final open = (g['status'] as String? ?? 'open') == 'open';
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(g['title'] as String? ?? '', style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600, color: ink)),
+                          Text(open ? 'Open' : 'Closed', style: GoogleFonts.dmSans(fontSize: 12, color: slate)),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _SmallButton(
+                                label: 'Edit',
+                                filled: false,
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => PostGigPage(gigId: doc.id, initial: g),
+                                  ),
+                                ),
+                              ),
+                              _SmallButton(
+                                label: open ? 'Close' : 'Reopen',
+                                filled: false,
+                                onPressed: () => doc.reference.update({'status': open ? 'closed' : 'open'}),
+                              ),
+                              _SmallButton(
+                                label: 'Delete',
+                                filled: false,
+                                onPressed: () async {
+                                  final ok = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Delete posting?'),
+                                      content: const Text('Applications for this posting are removed too.'),
+                                      actions: [
+                                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+                                      ],
+                                    ),
+                                  );
+                                  if (ok != true) return;
+                                  final apps = await FirebaseFirestore.instance.collection('applications').where('gigId', isEqualTo: doc.id).get();
+                                  final batch = FirebaseFirestore.instance.batch();
+                                  for (final app in apps.docs) {
+                                    batch.delete(app.reference);
+                                  }
+                                  batch.delete(doc.reference);
+                                  await batch.commit();
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                const SizedBox(height: 24),
+                const _SectionTitle('Applications', note: 'Status and notes are visible to the applicant.'),
+                StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance.collection('applications').snapshots(),
+                  builder: (context, appSnap) {
+                    final appDocs = appSnap.data?.docs ?? [];
+                    if (appDocs.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8, bottom: 16),
+                        child: Text('No applications yet.', style: bodyStyle),
+                      );
+                    }
+                    return Column(
+                      children: appDocs
+                          .map((doc) => _AdminApplicationTile(
+                                doc: doc,
+                                gigTitle: titles[doc.data()['gigId'] as String? ?? ''],
+                              ))
+                          .toList(),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        ),
         Align(
           alignment: Alignment.centerLeft,
           child: _SmallButton(
@@ -671,20 +772,35 @@ class AdminInboxPage extends StatelessWidget {
 }
 
 class PostGigPage extends StatefulWidget {
-  const PostGigPage({super.key});
+  const PostGigPage({super.key, this.gigId, this.initial});
+  final String? gigId;
+  final Map<String, dynamic>? initial;
 
   @override
   State<PostGigPage> createState() => _PostGigPageState();
 }
 
 class _PostGigPageState extends State<PostGigPage> {
-  final title = TextEditingController();
-  final description = TextEditingController();
-  final discipline = TextEditingController();
-  final location = TextEditingController(text: 'Remote');
-  final rate = TextEditingController();
+  late final TextEditingController title;
+  late final TextEditingController description;
+  late final TextEditingController discipline;
+  late final TextEditingController location;
+  late final TextEditingController rate;
   String? error;
   bool saving = false;
+
+  bool get isEdit => widget.gigId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final g = widget.initial ?? {};
+    title = TextEditingController(text: g['title'] as String? ?? '');
+    description = TextEditingController(text: g['description'] as String? ?? '');
+    discipline = TextEditingController(text: g['discipline'] as String? ?? '');
+    location = TextEditingController(text: g['location'] as String? ?? 'Remote');
+    rate = TextEditingController(text: g['rate'] as String? ?? '');
+  }
 
   @override
   void dispose() {
@@ -706,21 +822,34 @@ class _PostGigPageState extends State<PostGigPage> {
       if (description.text.trim().isEmpty) throw Exception('Enter a description.');
 
       final where = location.text.trim();
-      final postedBy = PortalGuideScope.maybeOf(context)?.session?.displayName ?? 'CasinWorks';
-      await FirebaseFirestore.instance.collection('gigs').add({
+      final postedBy = widget.initial?['postedBy'] as String? ??
+          PortalGuideScope.maybeOf(context)?.session?.displayName ??
+          'CasinWorks';
+      final payload = {
         'title': title.text.trim(),
         'description': description.text.trim(),
-        'status': 'open',
         'postedBy': postedBy.isEmpty ? 'CasinWorks' : postedBy,
         if (discipline.text.trim().isNotEmpty) 'discipline': discipline.text.trim(),
         'location': where,
         'workType': where.toLowerCase().contains('remote') ? 'Remote' : 'Hybrid',
         if (rate.text.trim().isNotEmpty) 'rate': rate.text.trim(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      if (isEdit) {
+        await FirebaseFirestore.instance.collection('gigs').doc(widget.gigId).update({
+          ...payload,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        await FirebaseFirestore.instance.collection('gigs').add({
+          ...payload,
+          'status': 'open',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       if (!mounted) return;
-      _toast(context, 'Gig posted.');
+      _toast(context, isEdit ? 'Posting updated.' : 'Gig posted.');
       Navigator.pop(context);
     } catch (e) {
       if (mounted) {
@@ -735,9 +864,10 @@ class _PostGigPageState extends State<PostGigPage> {
   Widget build(BuildContext context) {
     return _AdminPage(
       kicker: 'ADMIN',
-      title: 'Post a gig.',
-      intro: 'Goes straight onto the subcontractor board. Rates and contracts are still '
-          'agreed off-platform.',
+      title: isEdit ? 'Edit posting.' : 'Post a gig.',
+      intro: isEdit
+          ? 'Changes show on the subcontractor board immediately.'
+          : 'Goes straight onto the subcontractor board. Rates and contracts are still agreed off-platform.',
       children: [
         PortalField(label: 'Title', controller: title),
         const SizedBox(height: 16),
@@ -766,11 +896,111 @@ class _PostGigPageState extends State<PostGigPage> {
         ],
         const SizedBox(height: 24),
         PortalPillButton(
-          label: saving ? 'Publishing…' : 'Publish',
+          label: saving ? 'Saving…' : (isEdit ? 'Save posting' : 'Publish'),
           enabled: !saving,
           onPressed: _publish,
         ),
       ],
     );
+  }
+}
+
+class _AdminApplicationTile extends StatefulWidget {
+  const _AdminApplicationTile({required this.doc, this.gigTitle});
+  final QueryDocumentSnapshot<Map<String, dynamic>> doc;
+  final String? gigTitle;
+
+  @override
+  State<_AdminApplicationTile> createState() => _AdminApplicationTileState();
+}
+
+class _AdminApplicationTileState extends State<_AdminApplicationTile> {
+  late final TextEditingController note;
+
+  @override
+  void initState() {
+    super.initState();
+    note = TextEditingController(text: widget.doc.data()['statusNote'] as String? ?? '');
+  }
+
+  @override
+  void dispose() {
+    note.dispose();
+    super.dispose();
+  }
+
+  Future<void> _setStatus(String status) async {
+    final trimmed = note.text.trim();
+    await widget.doc.reference.update({
+      'status': status,
+      'statusUpdatedAt': DateTime.now().toIso8601String(),
+      'statusNote': trimmed.isEmpty ? FieldValue.delete() : trimmed,
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final a = widget.doc.data();
+    final status = a['status'] as String? ?? 'pending';
+    final gigTitle = widget.gigTitle;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            a['applicantName'] as String? ?? a['applicantEmail'] as String? ?? '',
+            style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600, color: ink),
+          ),
+          Text(
+            [
+              if (gigTitle != null && gigTitle.isNotEmpty) gigTitle,
+              a['applicantEmail'] ?? '',
+              _adminApplicationStatusLabel(status),
+            ].where((s) => s.toString().isNotEmpty).join(' · '),
+            style: GoogleFonts.dmSans(fontSize: 12, color: slate),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: note,
+            maxLines: 2,
+            cursorColor: ink,
+            style: GoogleFonts.dmSans(fontSize: 13, color: ink),
+            decoration: InputDecoration(
+              hintText: 'Note for the applicant — next step, timing, why…',
+              hintStyle: GoogleFonts.dmSans(fontSize: 13, color: slate),
+              enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: fieldBorder)),
+              focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: ink)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final s in ['pending', 'reviewing', 'accepted', 'rejected'])
+                _SmallButton(
+                  label: _adminApplicationStatusLabel(s),
+                  filled: status == s,
+                  onPressed: () => _setStatus(s),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _adminApplicationStatusLabel(String status) {
+  switch (status) {
+    case 'reviewing':
+      return 'In review';
+    case 'accepted':
+      return 'Accepted';
+    case 'rejected':
+      return 'Not selected';
+    default:
+      return 'Received';
   }
 }

@@ -127,7 +127,9 @@ service cloud.firestore {
     }
 
     match /applications/{id} {
-      allow read: if isAdmin() || (signedIn() && resource.data.applicantId == request.auth.uid);
+      allow get: if isAdmin() || (signedIn() && resource.data.applicantId == request.auth.uid);
+      allow list: if isAdmin();
+      allow list: if signedIn() && resource.data.applicantId == request.auth.uid;
       allow create: if signedIn() && request.resource.data.applicantId == request.auth.uid;
       allow update: if isAdmin();
       allow delete: if isAdmin() || (signedIn() && resource.data.applicantId == request.auth.uid);
