@@ -67,8 +67,12 @@ export function localApiPlugin(): Plugin {
   };
 }
 
+const API_ALIASES: Record<string, string> = {
+  "/api/paymongo/webhook": "/api/paymongo-webhook",
+};
+
 function resolveApiFile(root: string, pathname: string): string | null {
-  const rel = pathname.replace(/^\/+/, "");
+  const rel = (API_ALIASES[pathname] ?? pathname).replace(/^\/+/, "");
   const candidates = [`${rel}.ts`, `${rel}.js`, path.join(rel, "index.ts")];
   for (const candidate of candidates) {
     const abs = path.join(root, candidate);

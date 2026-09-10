@@ -39,5 +39,8 @@
       ]
     }
   ],
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/api/paymongo/webhook", "destination": "/api/paymongo-webhook" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
