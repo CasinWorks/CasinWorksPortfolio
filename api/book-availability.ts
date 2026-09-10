@@ -34,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const sa = loadServiceAccount();
-    if (!sa.ok) {
+    if (sa.ok === false) {
       return res.status(503).json({ ok: false, error: "Booking is not configured", reason: sa.reason });
     }
 

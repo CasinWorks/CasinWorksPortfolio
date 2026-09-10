@@ -57,12 +57,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const secretKey = paymongoSecretKey();
     const sa = loadServiceAccount();
-    if (!secretKey || !sa.ok) {
-      return res.status(503).json({
-        ok: false,
-        error: "Booking is not configured",
-        reason: !secretKey ? "missing_paymongo" : sa.ok ? "unknown" : sa.reason,
-      });
+    if (!secretKey) {
+      return res.status(503).json({ ok: false, error: "Booking is not configured", reason: "missing_paymongo" });
+    }
+    if (sa.ok === false) {
+      return res.status(503).json({ ok: false, error: "Booking is not configured", reason: sa.reason });
     }
 
     const body = (typeof req.body === "string" ? safeParse(req.body) : req.body) as GuestPayload | null;
