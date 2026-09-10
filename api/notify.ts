@@ -124,6 +124,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const senderRole = String(message.senderRole ?? "client");
   const senderName = String(message.senderName ?? "");
   const preview = String(message.body ?? "").slice(0, 160);
+  const projectName = String(thread.projectName ?? thread.subject ?? "CasinWorks");
+  const clientEmail = String(thread.clientEmail ?? "").trim().toLowerCase();
+  const threadHref = `${siteUrl()}/portal/messages/${encodeURIComponent(threadId)}`;
+  const projectId = String(thread.projectId ?? "");
+  const projectHref = projectId
+    ? `${siteUrl()}/portal/projects/${encodeURIComponent(projectId)}`
+    : threadHref;
+
+  // Email first so studio/client still get notified when FCM tokens are missing.
+  const emailed = await sendCommentEmail({
+    senderRole,
+    senderName,
+    preview,
+    projectName,
+    clientEmail,
+    threadHref,
+    projectHref,
+  }).catch((err) => {
+    console.error("[notify] email", err instanceof Error ? err.message : String(err));
+    return false;
+  });
 
   const recipientUids =
     senderRole === "admin"
@@ -132,7 +153,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Never notify the author, even if they are also an admin.
   const targets = recipientUids.filter((uid) => uid !== callerUid);
-  if (targets.length === 0) return res.status(200).json({ ok: true, delivered: 0 });
+  if (targets.length === 0) {
+    return res.status(200).json({ ok: true, delivered: 0, emailed });
+  }
 
   const tokensByUid = new Map<string, string[]>();
   for (const uid of targets) {
@@ -143,19 +166,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const allTokens = [...new Set([...tokensByUid.values()].flat())];
-  if (allTokens.length === 0) return res.status(200).json({ ok: true, delivered: 0 });
+  if (allTokens.length === 0) {
+    return res.status(200).json({ ok: true, delivered: 0, emailed });
+  }
 
   const title =
     senderRole === "admin"
       ? "CasinWorks"
-      : `${senderName || String(thread.clientName ?? "A client")} sent a message`;
+      : `${senderName || String(thread.clientName ?? "A client")} commented`;
 
   const result = await getMessaging(app).sendEachForMulticast({
     tokens: allTokens,
     notification: { title, body: preview },
     data: { kind: "message", threadId, messageId },
-    // No content-available: these are plain alerts, so the app does not need
-    // the remote-notification background mode Apple asks questions about.
     apns: {
       payload: { aps: { sound: "default", badge: 1 } },
     },
@@ -164,7 +187,76 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   await pruneDeadTokens(db, tokensByUid, allTokens, result.responses);
 
-  return res.status(200).json({ ok: true, delivered: result.successCount });
+  return res.status(200).json({ ok: true, delivered: result.successCount, emailed });
+}
+
+function siteUrl() {
+  return (env("APP_URL") || env("SITE_URL") || "https://www.casinworks.com").replace(/\/$/, "");
+}
+
+function escapeHtml(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function sendCommentEmail(input: {
+  senderRole: string;
+  senderName: string;
+  preview: string;
+  projectName: string;
+  clientEmail: string;
+  threadHref: string;
+  projectHref: string;
+}): Promise<boolean> {
+  const apiKey = env("RESEND_API_KEY");
+  const from = env("RESEND_FROM") || "CasinWorks <bookings@casinworks.com>";
+  const studio = (env("BOOKING_NOTIFY_EMAIL") || "christianjoshuacasin@gmail.com").toLowerCase();
+  if (!apiKey) return false;
+
+  const fromClient = input.senderRole !== "admin";
+  const to = fromClient ? studio : input.clientEmail;
+  if (!to || !to.includes("@")) return false;
+
+  const who = fromClient ? input.senderName || "Your client" : "CasinWorks";
+  const subject = fromClient
+    ? `New comment on ${input.projectName}`
+    : `CasinWorks replied on ${input.projectName}`;
+  const html = `
+    <div style="font-family:Georgia,serif;color:#1a1a1a;line-height:1.5;max-width:520px">
+      <p style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#64748b">CasinWorks · Project</p>
+      <h1 style="font-size:26px;font-weight:600;margin:8px 0 12px">${escapeHtml(subject)}</h1>
+      <p><strong>${escapeHtml(who)}</strong> wrote:</p>
+      <p style="background:#f7f5f0;padding:14px 16px;border:1px solid rgba(0,0,0,0.08);white-space:pre-wrap">${escapeHtml(input.preview)}</p>
+      <p>
+        <a href="${escapeHtml(input.projectHref)}" style="display:inline-block;background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:600">Open project</a>
+      </p>
+      <p style="font-size:13px;color:#64748b"><a href="${escapeHtml(input.threadHref)}">Open in Messages</a></p>
+    </div>
+  `;
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      ...(fromClient && studio === to ? {} : !fromClient && studio && studio !== to ? { bcc: [studio] } : {}),
+      subject,
+      html,
+    }),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    console.error("[notify] resend", res.status, errText.slice(0, 300));
+    return false;
+  }
+  return true;
 }
 
 async function adminUids(db: ReturnType<typeof getFirestore>): Promise<string[]> {
