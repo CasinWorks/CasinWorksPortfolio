@@ -71,12 +71,12 @@ export const APPS_DATA: AppItem[] = [
   {
     id: "kinsenas",
     name: "KinsenasApp",
-    category: "CONSUMER FINANCE",
+    category: "PERSONAL FINANCE",
     status: "LIVE",
     demoLabel: "LIVE DEMO",
     caseStudy: true,
     description:
-      "A cutoff-based personal finance tracker for everyday Filipinos — with an AI-ready briefing prompt for guidance.",
+      "A cutoff-based personal finance tracker — 15th/30th payroll-cycle budgeting with an AI-ready briefing prompt, built to exercise real workflow design.",
     url: "https://kinsenas-app-virid.vercel.app",
     technologies: [
       "15th/30th cutoffs",
@@ -132,7 +132,7 @@ export const APPS_DATA: AppItem[] = [
     status: "LIVE",
     demoLabel: "LIVE DEMO",
     description:
-      "A point-of-sale workspace for everyday retail — checkout, inventory, and sales records built for Philippine shops. Live on pos.casinworks.com; coming soon on iOS and Android.",
+      "A point-of-sale workspace for retail checkout, inventory, and sales records. Live on pos.casinworks.com; iOS and Android forthcoming.",
     url: "https://pos.casinworks.com",
     image: "/apps/casinpos.png",
     platforms: "iOS and Android soon",
@@ -173,7 +173,7 @@ export const DESIGN_TYPOGRAPHY: DesignTypo[] = [
     fontFamily: "Cormorant Garamond (Serif)",
     size: "3.5rem - 4.25rem",
     weight: "Light (300) / Regular (400)",
-    useCase: "Hero showcase heading 'Apps For Everyone' and branding headers.",
+    useCase: "Hero showcase heading 'Applied R&D' and branding headers.",
   },
   {
     level: "Section Title (H2)",
@@ -206,11 +206,11 @@ export const DESIGN_TYPOGRAPHY: DesignTypo[] = [
 ];
 
 export const GENERAL_SPECS = {
-  appName: "Casin Works — Apps For Everyone",
+  appName: "CasinWorks — Applied R&D",
   developerName: "C.J. Casin",
   location: "Mandaluyong, Philippines",
   missionStatement:
-    "Designing lightweight, high-utility, and privacy-first software tools for everyday Filipinos — free consumer apps alongside business products with subscription plans.",
+    "Independent products shipped to test ideas, sharpen tooling, and stay hands-on with real-world software problems outside of client engagements.",
   hostingHint:
     "CasinWorks products run on casinworks.com subdomains. This dashboard is the directory that unifies access.",
   securityStatement:

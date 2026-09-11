@@ -35,7 +35,7 @@ export default function App() {
       { href: "#partners", label: "Partners" },
       { href: "#work", label: "Case Studies" },
       { href: "#studio-concepts", label: "Studio" },
-      { href: "#apps-for-everyone", label: "Apps For Everyone" },
+      { href: "#apps-for-everyone", label: "R&D" },
       { href: "#faq", label: "FAQ" },
     ],
     []
@@ -415,12 +415,20 @@ export default function App() {
                 <h3 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-semibold italic leading-[1.05] tracking-tight">Proven.</h3>
               </div>
               <p className="text-slate-300 max-w-sm text-sm sm:text-base leading-relaxed border-l border-slate-600 pl-5">
-                Enterprise NDA engagements — purchased, production work with client identity withheld. Studio demos live further down.
+                Enterprise NDA engagements — purchased, production work with client identity withheld. Studio concepts and independent R&D sit below, separate from client work.
               </p>
             </div>
 
             <CaseStudySnippetList />
             <StudioConceptsSection />
+          </div>
+        </section>
+
+        <section
+          id="apps-for-everyone"
+          className="bg-[#1a1a1a] text-white section-y px-[var(--page-gutter)] border-t border-slate-700/80"
+        >
+          <div className="max-w-[var(--page-max)] mx-auto">
             <AppsForEveryoneSection />
           </div>
         </section>
@@ -514,6 +522,7 @@ export default function App() {
               <a href="#expertise" className="hover:text-white transition-colors w-fit">Expertise</a>
               <a href="#work" className="hover:text-white transition-colors w-fit">Case Studies</a>
               <a href="#studio-concepts" className="hover:text-white transition-colors w-fit">Studio concepts</a>
+              <a href="#apps-for-everyone" className="hover:text-white transition-colors w-fit">R&D</a>
               <a href="#faq" className="hover:text-white transition-colors w-fit">FAQ</a>
               <Link to="/book" className="hover:text-white transition-colors w-fit">Book a consultation</Link>
               <Link to="/portal/sign-in" className="hover:text-white transition-colors w-fit">Client portal</Link>
