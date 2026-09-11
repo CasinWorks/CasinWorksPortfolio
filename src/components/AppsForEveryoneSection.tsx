@@ -2,26 +2,19 @@ import { motion } from "motion/react";
 import { ArrowUpRight } from "lucide-react";
 import { APPS_DATA } from "../apps-for-everyone/data";
 
-function Mark({ children }: { children: string }) {
-  return (
-    <strong className="font-semibold text-white underline decoration-white/45 underline-offset-[5px] decoration-[1.5px]">
-      {children}
-    </strong>
-  );
-}
-
 export function AppsForEveryoneSection() {
   return (
-    <div id="apps-for-everyone" className="mt-16 sm:mt-20 pt-16 sm:pt-20 border-t border-slate-700/80">
+    <div>
       <div className="max-w-3xl mb-10 sm:mb-12">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300 mb-4">
-          Shipped Products
+          Independent practice
         </p>
         <h3 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-semibold italic leading-[1.05] tracking-tight">
-          Apps For Everyone.
+          Applied R&D.
         </h3>
         <p className="mt-5 text-base sm:text-lg text-slate-300 leading-relaxed max-w-2xl">
-          Independent software built for everyday <Mark>Filipinos</Mark> — designed for real workflows, from free tools to business software.
+          Smaller products built and shipped independently — to test ideas, sharpen tooling, and stay hands-on with
+          real-world software problems outside of client engagements.
         </p>
       </div>
 
