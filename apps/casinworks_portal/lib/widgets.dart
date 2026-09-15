@@ -45,7 +45,19 @@ class PortalSession {
 }
 
 /// Everywhere the header menu can send you. Kept in step with the web portal's nav.
-enum PortalDestination { projects, book, gigs, clients, users, adminInbox, account, guide, website, signOut }
+enum PortalDestination {
+  projects,
+  book,
+  messages,
+  gigs,
+  clients,
+  users,
+  adminInbox,
+  account,
+  guide,
+  website,
+  signOut,
+}
 
 /// Menu entries for [session], in the order they appear.
 List<(PortalDestination, String)> destinationsFor(PortalSession session) {
@@ -53,6 +65,7 @@ List<(PortalDestination, String)> destinationsFor(PortalSession session) {
     if (session.seesClientArea) (PortalDestination.projects, 'Projects'),
     if (session.seesClientArea)
       (PortalDestination.book, session.isAdmin ? 'Consultation calendar' : 'Book a consultation'),
+    (PortalDestination.messages, session.isAdmin ? 'Client messages' : 'Messages'),
     if (session.seesGigBoard) (PortalDestination.gigs, 'Gig board'),
     if (session.isAdmin) (PortalDestination.clients, 'Clients'),
     if (session.isAdmin) (PortalDestination.users, 'Users'),
@@ -70,6 +83,7 @@ class PortalGuideScope extends InheritedWidget {
     required this.session,
     required this.setSession,
     required this.go,
+    this.unreadMessages,
     required super.child,
   });
 
@@ -79,6 +93,10 @@ class PortalGuideScope extends InheritedWidget {
   /// Routing lives in main.dart, which is the only place that knows every page.
   final Future<void> Function(BuildContext context, PortalDestination destination) go;
 
+  /// Conversations waiting on this account. Supplied by main.dart so this file
+  /// does not need to know how messages are stored.
+  final Stream<int>? unreadMessages;
+
   String? get role => session?.role;
 
   static PortalGuideScope? maybeOf(BuildContext context) {
@@ -87,6 +105,26 @@ class PortalGuideScope extends InheritedWidget {
 
   @override
   bool updateShouldNotify(PortalGuideScope oldWidget) => session != oldWidget.session;
+}
+
+/// Small dark count used on the menu and its rows.
+class UnreadBadge extends StatelessWidget {
+  const UnreadBadge({super.key, required this.count});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(color: ink, borderRadius: BorderRadius.circular(999)),
+      child: Text(
+        count > 9 ? '9+' : '$count',
+        textAlign: TextAlign.center,
+        style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+      ),
+    );
+  }
 }
 
 /// Opens the navigation sheet, then routes to whatever was picked.
@@ -140,13 +178,21 @@ Future<void> showPortalMenu(BuildContext context) async {
                       constraints: const BoxConstraints(minHeight: 52),
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                       alignment: Alignment.centerLeft,
-                      child: Text(
-                        label,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: muted ? slate : ink,
-                        ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              label,
+                              style: GoogleFonts.dmSans(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: muted ? slate : ink,
+                              ),
+                            ),
+                          ),
+                          if (destination == PortalDestination.messages)
+                            _UnreadCount(stream: scope.unreadMessages),
+                        ],
                       ),
                     ),
                   );
@@ -163,6 +209,25 @@ Future<void> showPortalMenu(BuildContext context) async {
   await scope.go(context, picked);
 }
 
+/// Renders the badge only when there is something to show.
+class _UnreadCount extends StatelessWidget {
+  const _UnreadCount({required this.stream});
+  final Stream<int>? stream;
+
+  @override
+  Widget build(BuildContext context) {
+    if (stream == null) return const SizedBox.shrink();
+    return StreamBuilder<int>(
+      stream: stream,
+      builder: (context, snap) {
+        final count = snap.data ?? 0;
+        if (count <= 0) return const SizedBox.shrink();
+        return UnreadBadge(count: count);
+      },
+    );
+  }
+}
+
 class PortalHeader extends StatelessWidget {
   const PortalHeader({super.key, this.subtitle});
 
@@ -171,7 +236,8 @@ class PortalHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final session = PortalGuideScope.maybeOf(context)?.session;
+    final scope = PortalGuideScope.maybeOf(context);
+    final session = scope?.session;
     final kicker = subtitle ?? (session == null ? 'CLIENT PORTAL' : '${session.workspaceLabel} PORTAL');
 
     return Container(
@@ -224,6 +290,12 @@ class PortalHeader extends StatelessWidget {
                       'Menu',
                       style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600, color: ink),
                     ),
+                    // A waiting reply should be visible without opening the menu.
+                    if (scope?.unreadMessages != null)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: _UnreadCount(stream: scope!.unreadMessages),
+                      ),
                   ],
                 ),
               ),
