@@ -18,6 +18,7 @@ import { ClientDetailScreen } from './portal/screens/ClientDetailScreen.tsx';
 import { ClientsScreen } from './portal/screens/ClientsScreen.tsx';
 import { UsersScreen } from './portal/screens/UsersScreen.tsx';
 import { PortalRegisterScreen, PortalSignInScreen } from './portal/screens/AuthScreens.tsx';
+import { CompleteProfileScreen } from './portal/screens/CompleteProfileScreen.tsx';
 import { BookConsultationScreen } from './portal/screens/BookConsultationScreen.tsx';
 import { ClientDashboard } from './portal/screens/ClientDashboard.tsx';
 import { DocumentsScreen } from './portal/screens/DocumentsScreen.tsx';
@@ -47,6 +48,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/portal" element={<PortalAuthLayout />}>
           <Route path="sign-in" element={<PortalSignInScreen />} />
           <Route path="register" element={<PortalRegisterScreen />} />
+          <Route path="complete-profile" element={<CompleteProfileScreen />} />
           <Route path="account-deleted" element={<AccountDeletedScreen />} />
           <Route path="view/:token" element={<SharedProjectScreen />} />
           <Route element={<RequireAuth />}>

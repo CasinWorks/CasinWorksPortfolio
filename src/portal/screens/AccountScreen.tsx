@@ -17,7 +17,7 @@ export function AccountScreen() {
     path: "/portal/account",
     noIndex: true,
   });
-  const { profile, logout, deleteAccount } = usePortalAuth();
+  const { profile, logout, deleteAccount, authUsesApple } = usePortalAuth();
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [password, setPassword] = useState("");
@@ -34,7 +34,7 @@ export function AccountScreen() {
     setError("");
     setWorking(true);
     try {
-      await deleteAccount(password);
+      await deleteAccount(authUsesApple ? undefined : password);
       navigate("/portal/account-deleted", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete the account.");
@@ -61,6 +61,12 @@ export function AccountScreen() {
           <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Workspace</dt>
           <dd className="text-sm font-medium text-right">{workspaceLabel(profile?.role)}</dd>
         </div>
+        {authUsesApple && (
+          <div className="py-4 flex justify-between gap-4">
+            <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Sign-in</dt>
+            <dd className="text-sm font-medium text-right">Apple</dd>
+          </div>
+        )}
       </dl>
 
       <p className="mt-8 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">What is stored</p>
@@ -117,18 +123,21 @@ export function AccountScreen() {
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Confirm</p>
             <h2 className="mt-2 font-serif text-3xl font-semibold tracking-tight">Delete your account.</h2>
             <p className="mt-3 text-sm text-slate-600">
-              Enter your password to confirm. Your profile, consultation requests, and applications are removed for
-              good.
+              {authUsesApple
+                ? "Continue with Apple to confirm. Your profile, consultation requests, and applications are removed for good."
+                : "Enter your password to confirm. Your profile, consultation requests, and applications are removed for good."}
             </p>
-            <input
-              required
-              type="password"
-              autoComplete="current-password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-5 w-full px-3.5 py-2.5 bg-white border border-black/15 text-sm focus:outline-none focus:border-black"
-            />
+            {!authUsesApple && (
+              <input
+                required
+                type="password"
+                autoComplete="current-password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-5 w-full px-3.5 py-2.5 bg-white border border-black/15 text-sm focus:outline-none focus:border-black"
+              />
+            )}
             <div className="mt-5 grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -140,10 +149,10 @@ export function AccountScreen() {
               </button>
               <button
                 type="submit"
-                disabled={working || !password}
+                disabled={working || (!authUsesApple && !password)}
                 className="rounded-full bg-red-800 text-white py-3 text-sm font-semibold disabled:opacity-50"
               >
-                {working ? "Deleting…" : "Delete"}
+                {working ? "Deleting…" : authUsesApple ? "Continue with Apple" : "Delete"}
               </button>
             </div>
           </form>

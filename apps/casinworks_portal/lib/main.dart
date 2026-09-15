@@ -10,12 +10,15 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'account.dart';
 import 'admin.dart';
+import 'apple_auth.dart';
+import 'complete_profile.dart';
 import 'credentials.dart';
 import 'theme.dart';
 import 'fairway.dart';
 import 'widgets.dart';
 import 'book.dart';
 import 'tutorial.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 /// Fill via dart-defines on web (same Firebase project as casinworks.com/portal).
 const firebaseOptions = FirebaseOptions(
@@ -243,6 +246,28 @@ class _SignInPageState extends State<SignInPage> {
     }
   }
 
+  Future<void> _continueWithApple() async {
+    setState(() {
+      sending = true;
+      error = null;
+    });
+    try {
+      if (Firebase.apps.isEmpty) {
+        throw Exception('Firebase is not configured on this device.');
+      }
+      await signInWithAppleFirebase();
+      await CredentialStore.clear();
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code != AuthorizationErrorCode.canceled && mounted) {
+        setState(() => error = e.message);
+      }
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
+    } finally {
+      if (mounted) setState(() => sending = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -333,6 +358,37 @@ class _SignInPageState extends State<SignInPage> {
               enabled: !sending && (!register || acceptedPrivacy),
               onPressed: _submit,
             ),
+            if (appleSignInSupported) ...[
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Expanded(child: Divider(color: hairline, height: 1)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text('OR', style: GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w600, color: slate)),
+                  ),
+                  const Expanded(child: Divider(color: hairline, height: 1)),
+                ],
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: sending ? null : _continueWithApple,
+                  icon: const Icon(Icons.apple, size: 20),
+                  label: Text(sending ? 'Please wait…' : 'Continue with Apple'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: ink,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: ink.withValues(alpha: 0.4),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: const StadiumBorder(),
+                    textStyle: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
             if (!register) ...[
               const SizedBox(height: 16),
               Center(
@@ -395,6 +451,10 @@ class HomeShell extends StatelessWidget {
             backgroundColor: cream,
             body: Center(child: CircularProgressIndicator()),
           );
+        }
+        // Auth without a Firestore profile (e.g. first Apple sign-in).
+        if (!snap.data!.exists) {
+          return const CompleteProfilePage();
         }
         final role = (snap.data?.data()?['role'] as String?) ?? 'client';
         final displayName = (snap.data?.data()?['displayName'] as String?) ?? '';

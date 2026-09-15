@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'apple_auth.dart';
 import 'credentials.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -122,6 +123,34 @@ class _AccountPageState extends State<AccountPage> {
   Future<void> _confirmDelete() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
+
+    final apple = userHasAppleProvider(user);
+
+    if (apple) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (_) => const _DeleteAppleAccountDialog(),
+      );
+      if (ok != true || !mounted) return;
+
+      setState(() {
+        working = true;
+        error = null;
+      });
+      try {
+        await reauthenticateWithApple();
+        await deleteAccountData(user);
+        await CredentialStore.clear();
+        if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+      } on FirebaseAuthException catch (e) {
+        if (mounted) setState(() => error = e.message ?? 'Could not delete the account.');
+      } catch (e) {
+        if (mounted) setState(() => error = e.toString());
+      } finally {
+        if (mounted) setState(() => working = false);
+      }
+      return;
+    }
 
     final password = await showDialog<String>(context: context, builder: (_) => const _DeleteAccountDialog());
     if (password == null || !mounted) return;
@@ -283,6 +312,70 @@ class _Row extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DeleteAppleAccountDialog extends StatelessWidget {
+  const _DeleteAppleAccountDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: cream,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('CONFIRM', style: kickerStyle),
+            const SizedBox(height: 8),
+            Text('Delete your account.', style: displayStyle(26)),
+            const SizedBox(height: 12),
+            Text(
+              'Continue with Apple to confirm. Your profile, consultation requests, and '
+              'applications are removed for good.',
+              style: bodyStyle.copyWith(fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ink,
+                      side: const BorderSide(color: fieldBorder),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: const StadiumBorder(),
+                      textStyle: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    child: const Text('Keep it'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: blocked,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: const StadiumBorder(),
+                      textStyle: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600),
+                      elevation: 0,
+                    ),
+                    child: const Text('Continue'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
