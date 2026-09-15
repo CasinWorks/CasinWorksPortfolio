@@ -4,6 +4,11 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Apply only when Firebase Console config is present (see README Sign in with Google).
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.casinworks.casinworks_portal"
     compileSdk = flutter.compileSdkVersion

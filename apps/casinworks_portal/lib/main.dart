@@ -13,12 +13,16 @@ import 'admin.dart';
 import 'apple_auth.dart';
 import 'complete_profile.dart';
 import 'credentials.dart';
+import 'google_auth.dart';
+import 'messages.dart';
+import 'push.dart';
 import 'theme.dart';
 import 'fairway.dart';
 import 'widgets.dart';
 import 'book.dart';
 import 'tutorial.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 /// Fill via dart-defines on web (same Firebase project as casinworks.com/portal).
 const firebaseOptions = FirebaseOptions(
@@ -54,6 +58,55 @@ class CasinWorksPortalApp extends StatefulWidget {
 class _CasinWorksPortalAppState extends State<CasinWorksPortalApp> {
   PortalSession? _session;
 
+  /// Rebuilt whenever the account changes so the badge never shows another
+  /// user's unread count after a switch.
+  Stream<int>? _unread;
+
+  final _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    PushService.instance.pendingThreadId.addListener(_openPendingThread);
+  }
+
+  @override
+  void dispose() {
+    PushService.instance.pendingThreadId.removeListener(_openPendingThread);
+    super.dispose();
+  }
+
+  void _applySession(PortalSession? session) {
+    if (_session == session) return;
+    setState(() {
+      _session = session;
+      _unread = session == null ? null : unreadThreadCountStream(session);
+    });
+
+    if (session == null) {
+      PushService.instance.stop();
+    } else {
+      PushService.instance.start(session.uid);
+      // A notification may have launched the app before we knew who was
+      // signed in; this picks that up once the session lands.
+      _openPendingThread();
+    }
+  }
+
+  /// Opens the thread behind a tapped notification, once there is a session and
+  /// a navigator to push onto.
+  void _openPendingThread() {
+    final threadId = PushService.instance.pendingThreadId.value;
+    if (threadId == null || _session == null) return;
+    final nav = _navigatorKey.currentState;
+    if (nav == null) return;
+
+    PushService.instance.pendingThreadId.value = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      nav.push<void>(MaterialPageRoute(builder: (_) => ThreadPage(threadId: threadId)));
+    });
+  }
+
   /// Every destination in the header menu. Lives here because this is the only
   /// library that can see all the pages.
   Future<void> _go(BuildContext context, PortalDestination destination) async {
@@ -70,6 +123,7 @@ class _CasinWorksPortalAppState extends State<CasinWorksPortalApp> {
       return;
     }
     if (destination == PortalDestination.signOut) {
+      await PushService.instance.stop();
       await FirebaseAuth.instance.signOut();
       nav.popUntil((route) => route.isFirst);
       return;
@@ -92,6 +146,7 @@ class _CasinWorksPortalAppState extends State<CasinWorksPortalApp> {
         isAdmin: session.isAdmin,
       ),
       PortalDestination.gigs => GigBoard(uid: session.uid, email: session.email),
+      PortalDestination.messages => const MessagesPage(),
       PortalDestination.clients => const ClientsPage(),
       PortalDestination.users => const UsersPage(),
       PortalDestination.adminInbox => const AdminInboxPage(),
@@ -106,15 +161,14 @@ class _CasinWorksPortalAppState extends State<CasinWorksPortalApp> {
   Widget build(BuildContext context) {
     return PortalGuideScope(
       session: _session,
-      setSession: (session) {
-        if (_session == session) return;
-        setState(() => _session = session);
-      },
+      setSession: _applySession,
       go: _go,
+      unreadMessages: _unread,
       child: MaterialApp(
         title: 'CasinWorks Portal',
         debugShowCheckedModeBanner: false,
         theme: portalTheme(),
+        navigatorKey: _navigatorKey,
         home: const Gate(),
       ),
     );
@@ -268,8 +322,31 @@ class _SignInPageState extends State<SignInPage> {
     }
   }
 
+  Future<void> _continueWithGoogle() async {
+    setState(() {
+      sending = true;
+      error = null;
+    });
+    try {
+      if (Firebase.apps.isEmpty) {
+        throw Exception('Firebase is not configured on this device.');
+      }
+      await signInWithGoogleFirebase();
+      await CredentialStore.clear();
+    } on GoogleSignInException catch (e) {
+      if (e.code != GoogleSignInExceptionCode.canceled && mounted) {
+        setState(() => error = e.description ?? e.toString());
+      }
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
+    } finally {
+      if (mounted) setState(() => sending = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final showOAuth = appleSignInSupported || googleSignInSupported;
     return Scaffold(
       backgroundColor: cream,
       body: SafeArea(
@@ -358,7 +435,7 @@ class _SignInPageState extends State<SignInPage> {
               enabled: !sending && (!register || acceptedPrivacy),
               onPressed: _submit,
             ),
-            if (appleSignInSupported) ...[
+            if (showOAuth) ...[
               const SizedBox(height: 14),
               Row(
                 children: [
@@ -370,24 +447,45 @@ class _SignInPageState extends State<SignInPage> {
                   const Expanded(child: Divider(color: hairline, height: 1)),
                 ],
               ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: sending ? null : _continueWithApple,
-                  icon: const Icon(Icons.apple, size: 20),
-                  label: Text(sending ? 'Please wait…' : 'Continue with Apple'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: ink,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: ink.withValues(alpha: 0.4),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: const StadiumBorder(),
-                    textStyle: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600),
-                    elevation: 0,
+              if (googleSignInSupported) ...[
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: sending ? null : _continueWithGoogle,
+                    icon: const GoogleMark(size: 18),
+                    label: Text(sending ? 'Please wait…' : 'Continue with Google'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ink,
+                      side: const BorderSide(color: fieldBorder),
+                      disabledForegroundColor: ink.withValues(alpha: 0.4),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: const StadiumBorder(),
+                      textStyle: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
-              ),
+              ],
+              if (appleSignInSupported) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: sending ? null : _continueWithApple,
+                    icon: const AppleMark(size: 20),
+                    label: Text(sending ? 'Please wait…' : 'Continue with Apple'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: ink,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: ink.withValues(alpha: 0.4),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: const StadiumBorder(),
+                      textStyle: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
             ],
             if (!register) ...[
               const SizedBox(height: 16),

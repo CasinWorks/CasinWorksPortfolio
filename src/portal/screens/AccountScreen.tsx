@@ -17,12 +17,14 @@ export function AccountScreen() {
     path: "/portal/account",
     noIndex: true,
   });
-  const { profile, logout, deleteAccount, authUsesApple } = usePortalAuth();
+  const { profile, logout, deleteAccount, authUsesApple, authUsesGoogle, authUsesOAuth } = usePortalAuth();
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [working, setWorking] = useState(false);
+
+  const oauthLabel = authUsesApple ? "Apple" : authUsesGoogle ? "Google" : null;
 
   async function onSignOut() {
     await logout();
@@ -34,7 +36,7 @@ export function AccountScreen() {
     setError("");
     setWorking(true);
     try {
-      await deleteAccount(authUsesApple ? undefined : password);
+      await deleteAccount(authUsesOAuth ? undefined : password);
       navigate("/portal/account-deleted", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete the account.");
@@ -61,10 +63,10 @@ export function AccountScreen() {
           <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Workspace</dt>
           <dd className="text-sm font-medium text-right">{workspaceLabel(profile?.role)}</dd>
         </div>
-        {authUsesApple && (
+        {oauthLabel && (
           <div className="py-4 flex justify-between gap-4">
             <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Sign-in</dt>
-            <dd className="text-sm font-medium text-right">Apple</dd>
+            <dd className="text-sm font-medium text-right">{oauthLabel}</dd>
           </div>
         )}
       </dl>
@@ -123,11 +125,11 @@ export function AccountScreen() {
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Confirm</p>
             <h2 className="mt-2 font-serif text-3xl font-semibold tracking-tight">Delete your account.</h2>
             <p className="mt-3 text-sm text-slate-600">
-              {authUsesApple
-                ? "Continue with Apple to confirm. Your profile, consultation requests, and applications are removed for good."
+              {oauthLabel
+                ? `Continue with ${oauthLabel} to confirm. Your profile, consultation requests, and applications are removed for good.`
                 : "Enter your password to confirm. Your profile, consultation requests, and applications are removed for good."}
             </p>
-            {!authUsesApple && (
+            {!authUsesOAuth && (
               <input
                 required
                 type="password"
@@ -149,10 +151,10 @@ export function AccountScreen() {
               </button>
               <button
                 type="submit"
-                disabled={working || (!authUsesApple && !password)}
+                disabled={working || (!authUsesOAuth && !password)}
                 className="rounded-full bg-red-800 text-white py-3 text-sm font-semibold disabled:opacity-50"
               >
-                {working ? "Deleting…" : authUsesApple ? "Continue with Apple" : "Delete"}
+                {working ? "Deleting…" : oauthLabel ? `Continue with ${oauthLabel}` : "Delete"}
               </button>
             </div>
           </form>

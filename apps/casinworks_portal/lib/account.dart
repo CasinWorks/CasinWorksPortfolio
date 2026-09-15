@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'apple_auth.dart';
 import 'credentials.dart';
+import 'google_auth.dart';
+import 'push.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -116,6 +118,7 @@ class _AccountPageState extends State<AccountPage> {
   bool working = false;
 
   Future<void> _signOut() async {
+    await PushService.instance.stop();
     await FirebaseAuth.instance.signOut();
     if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
   }
@@ -125,11 +128,13 @@ class _AccountPageState extends State<AccountPage> {
     if (user == null) return;
 
     final apple = userHasAppleProvider(user);
+    final google = userHasGoogleProvider(user);
 
-    if (apple) {
+    if (apple || google) {
+      final providerLabel = apple ? 'Apple' : 'Google';
       final ok = await showDialog<bool>(
         context: context,
-        builder: (_) => const _DeleteAppleAccountDialog(),
+        builder: (_) => _DeleteOAuthAccountDialog(providerLabel: providerLabel),
       );
       if (ok != true || !mounted) return;
 
@@ -138,7 +143,12 @@ class _AccountPageState extends State<AccountPage> {
         error = null;
       });
       try {
-        await reauthenticateWithApple();
+        if (apple) {
+          await reauthenticateWithApple();
+        } else {
+          await reauthenticateWithGoogle();
+        }
+        await PushService.instance.stop();
         await deleteAccountData(user);
         await CredentialStore.clear();
         if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
@@ -165,6 +175,9 @@ class _AccountPageState extends State<AccountPage> {
         throw Exception('This account has no email address to confirm against.');
       }
       await user.reauthenticateWithCredential(EmailAuthProvider.credential(email: email, password: password));
+      // Unregister the device before the account goes, while the rules still
+      // allow writing to the user document.
+      await PushService.instance.stop();
       await deleteAccountData(user);
       await CredentialStore.clear();
       if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
@@ -215,6 +228,13 @@ class _AccountPageState extends State<AccountPage> {
                   _Row(label: 'Name', value: (user?.displayName ?? '').isEmpty ? '—' : user!.displayName!),
                   const Divider(height: 1, color: hairline),
                   _Row(label: 'Workspace', value: workspace),
+                  if (user != null && (userHasAppleProvider(user) || userHasGoogleProvider(user))) ...[
+                    const Divider(height: 1, color: hairline),
+                    _Row(
+                      label: 'Sign-in',
+                      value: userHasAppleProvider(user) ? 'Apple' : 'Google',
+                    ),
+                  ],
                   const Divider(height: 1, color: hairline),
                   const SizedBox(height: 28),
                   Text('WHAT IS STORED', style: kickerStyle),
@@ -317,8 +337,9 @@ class _Row extends StatelessWidget {
   }
 }
 
-class _DeleteAppleAccountDialog extends StatelessWidget {
-  const _DeleteAppleAccountDialog();
+class _DeleteOAuthAccountDialog extends StatelessWidget {
+  const _DeleteOAuthAccountDialog({required this.providerLabel});
+  final String providerLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -337,7 +358,7 @@ class _DeleteAppleAccountDialog extends StatelessWidget {
             Text('Delete your account.', style: displayStyle(26)),
             const SizedBox(height: 12),
             Text(
-              'Continue with Apple to confirm. Your profile, consultation requests, and '
+              'Continue with $providerLabel to confirm. Your profile, consultation requests, and '
               'applications are removed for good.',
               style: bodyStyle.copyWith(fontSize: 13),
             ),

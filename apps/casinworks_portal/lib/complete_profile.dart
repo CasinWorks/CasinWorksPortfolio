@@ -7,7 +7,7 @@ import 'account.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
-/// First-time Apple (or any Auth-without-profile) users pick client vs subcontractor here.
+/// First-time Apple/Google (or any Auth-without-profile) users pick client vs subcontractor here.
 class CompleteProfilePage extends StatefulWidget {
   const CompleteProfilePage({super.key});
 
