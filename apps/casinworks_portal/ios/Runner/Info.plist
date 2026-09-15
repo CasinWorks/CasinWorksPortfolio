@@ -24,6 +24,19 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>GIDClientID</key>
+	<string>18718514194-4ig61ua5gok5d0t00cgcbcenafsp9mfc.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.18718514194-4ig61ua5gok5d0t00cgcbcenafsp9mfc</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSCalendarsUsageDescription</key>
 	<string>CasinWorks saves your booked consultation to Calendar.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>

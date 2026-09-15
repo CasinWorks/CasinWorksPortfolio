@@ -1,0 +1,10 @@
+{
+  "_comment": "Replace this file with google-services.json downloaded from Firebase Console for package com.casinworks.casinworks_portal. See apps/casinworks_portal/README.md (Sign in with Google → Android).",
+  "project_info": {
+    "project_number": "REPLACE_ME",
+    "project_id": "casinworks-fb7ad",
+    "storage_bucket": "casinworks-fb7ad.firebasestorage.app"
+  },
+  "client": [],
+  "configuration_version": "1"
+}

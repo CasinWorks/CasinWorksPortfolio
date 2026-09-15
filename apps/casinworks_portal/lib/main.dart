@@ -13,6 +13,7 @@ import 'admin.dart';
 import 'apple_auth.dart';
 import 'complete_profile.dart';
 import 'credentials.dart';
+import 'google_auth.dart';
 import 'messages.dart';
 import 'push.dart';
 import 'theme.dart';
@@ -21,6 +22,7 @@ import 'widgets.dart';
 import 'book.dart';
 import 'tutorial.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 /// Fill via dart-defines on web (same Firebase project as casinworks.com/portal).
 const firebaseOptions = FirebaseOptions(
@@ -320,8 +322,31 @@ class _SignInPageState extends State<SignInPage> {
     }
   }
 
+  Future<void> _continueWithGoogle() async {
+    setState(() {
+      sending = true;
+      error = null;
+    });
+    try {
+      if (Firebase.apps.isEmpty) {
+        throw Exception('Firebase is not configured on this device.');
+      }
+      await signInWithGoogleFirebase();
+      await CredentialStore.clear();
+    } on GoogleSignInException catch (e) {
+      if (e.code != GoogleSignInExceptionCode.canceled && mounted) {
+        setState(() => error = e.description ?? e.toString());
+      }
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
+    } finally {
+      if (mounted) setState(() => sending = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final showOAuth = appleSignInSupported || googleSignInSupported;
     return Scaffold(
       backgroundColor: cream,
       body: SafeArea(
@@ -410,7 +435,7 @@ class _SignInPageState extends State<SignInPage> {
               enabled: !sending && (!register || acceptedPrivacy),
               onPressed: _submit,
             ),
-            if (appleSignInSupported) ...[
+            if (showOAuth) ...[
               const SizedBox(height: 14),
               Row(
                 children: [
@@ -422,24 +447,45 @@ class _SignInPageState extends State<SignInPage> {
                   const Expanded(child: Divider(color: hairline, height: 1)),
                 ],
               ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: sending ? null : _continueWithApple,
-                  icon: const Icon(Icons.apple, size: 20),
-                  label: Text(sending ? 'Please wait…' : 'Continue with Apple'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: ink,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: ink.withValues(alpha: 0.4),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: const StadiumBorder(),
-                    textStyle: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600),
-                    elevation: 0,
+              if (googleSignInSupported) ...[
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: sending ? null : _continueWithGoogle,
+                    icon: const GoogleMark(size: 18),
+                    label: Text(sending ? 'Please wait…' : 'Continue with Google'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ink,
+                      side: const BorderSide(color: fieldBorder),
+                      disabledForegroundColor: ink.withValues(alpha: 0.4),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: const StadiumBorder(),
+                      textStyle: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
-              ),
+              ],
+              if (appleSignInSupported) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: sending ? null : _continueWithApple,
+                    icon: const AppleMark(size: 20),
+                    label: Text(sending ? 'Please wait…' : 'Continue with Apple'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: ink,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: ink.withValues(alpha: 0.4),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: const StadiumBorder(),
+                      textStyle: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
             ],
             if (!register) ...[
               const SizedBox(height: 16),

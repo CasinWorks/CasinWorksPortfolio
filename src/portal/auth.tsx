@@ -4,6 +4,7 @@ import {
   createUserWithEmailAndPassword,
   EmailAuthProvider,
   getRedirectResult,
+  GoogleAuthProvider,
   OAuthProvider,
   onAuthStateChanged,
   reauthenticateWithCredential,
@@ -28,15 +29,18 @@ import {
 } from "./api";
 import type { PortalRole, PortalUser } from "./types";
 
+type OAuthSignInProvider = "apple" | "google";
+
 type AuthContextValue = {
   configured: boolean;
   loading: boolean;
   firebaseUser: User | null;
   profile: PortalUser | null;
-  /** Signed into Firebase Auth but no Firestore `users/{uid}` yet (Apple first run). */
+  /** Signed into Firebase Auth but no Firestore `users/{uid}` yet (OAuth first run). */
   needsProfileCompletion: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithApple: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   register: (input: {
     email: string;
     password: string;
@@ -50,15 +54,27 @@ type AuthContextValue = {
     displayName?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
-  /** Password required for email/password accounts; ignored for Apple. */
+  /** Password required for email/password accounts; ignored for Apple/Google. */
   deleteAccount: (password?: string) => Promise<void>;
   authUsesApple: boolean;
+  authUsesGoogle: boolean;
+  authUsesOAuth: boolean;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 function userUsesApple(user: User | null) {
   return Boolean(user?.providerData.some((p) => p.providerId === "apple.com"));
+}
+
+function userUsesGoogle(user: User | null) {
+  return Boolean(user?.providerData.some((p) => p.providerId === "google.com"));
+}
+
+function primaryOAuthProvider(user: User | null): OAuthSignInProvider | null {
+  if (userUsesApple(user)) return "apple";
+  if (userUsesGoogle(user)) return "google";
+  return null;
 }
 
 async function afterProfileReady(profile: PortalUser) {
@@ -77,6 +93,26 @@ async function sendWelcome(profile: PortalUser, idToken?: string) {
     },
     body: JSON.stringify({ displayName: profile.displayName, role: profile.role }),
   }).catch(() => undefined);
+}
+
+async function signInWithOAuthProvider(provider: GoogleAuthProvider | OAuthProvider) {
+  const auth = getFirebaseAuth();
+  await setPersistence(auth, browserLocalPersistence);
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (err) {
+    if (
+      err instanceof FirebaseError &&
+      (err.code === "auth/popup-blocked" || err.code === "auth/popup-closed-by-user")
+    ) {
+      if (err.code === "auth/popup-blocked") {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+      throw err;
+    }
+    throw err;
+  }
 }
 
 export function PortalAuthProvider({ children }: { children: ReactNode }) {
@@ -106,7 +142,7 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
           try {
             const existing = await fetchUserProfile(user.uid);
             if (!existing) {
-              // Do not auto-create — first-time Apple (or orphan) accounts complete a role picker.
+              // Do not auto-create — first-time OAuth (or orphan) accounts complete a role picker.
               setProfile(null);
               return;
             }
@@ -127,6 +163,8 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const needsProfileCompletion = Boolean(firebaseUser?.email && !profile && !loading);
+  const usesApple = userUsesApple(firebaseUser);
+  const usesGoogle = userUsesGoogle(firebaseUser);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -135,7 +173,9 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
       firebaseUser,
       profile,
       needsProfileCompletion,
-      authUsesApple: userUsesApple(firebaseUser),
+      authUsesApple: usesApple,
+      authUsesGoogle: usesGoogle,
+      authUsesOAuth: usesApple || usesGoogle,
       async signIn(email, password) {
         if (!isFirebaseConfigured()) throw new Error("Firebase is not configured on the server.");
         const auth = getFirebaseAuth();
@@ -144,26 +184,17 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
       },
       async signInWithApple() {
         if (!isFirebaseConfigured()) throw new Error("Firebase is not configured on the server.");
-        const auth = getFirebaseAuth();
-        await setPersistence(auth, browserLocalPersistence);
         const provider = new OAuthProvider("apple.com");
         provider.addScope("email");
         provider.addScope("name");
-        try {
-          await signInWithPopup(auth, provider);
-        } catch (err) {
-          if (
-            err instanceof FirebaseError &&
-            (err.code === "auth/popup-blocked" || err.code === "auth/popup-closed-by-user")
-          ) {
-            if (err.code === "auth/popup-blocked") {
-              await signInWithRedirect(auth, provider);
-              return;
-            }
-            throw err;
-          }
-          throw err;
-        }
+        await signInWithOAuthProvider(provider);
+      },
+      async signInWithGoogle() {
+        if (!isFirebaseConfigured()) throw new Error("Firebase is not configured on the server.");
+        const provider = new GoogleAuthProvider();
+        provider.addScope("email");
+        provider.addScope("profile");
+        await signInWithOAuthProvider(provider);
       },
       async register({ email, password, displayName, role, company }) {
         if (!isFirebaseConfigured()) throw new Error("Firebase is not configured on the server.");
@@ -220,9 +251,13 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
         if (!isFirebaseConfigured()) throw new Error("Firebase is not configured on the server.");
         const user = getFirebaseAuth().currentUser;
         if (!user?.email) throw new Error("This account has no email address to confirm against.");
+        const oauth = primaryOAuthProvider(user);
         try {
-          if (userUsesApple(user)) {
+          if (oauth === "apple") {
             const provider = new OAuthProvider("apple.com");
+            await reauthenticateWithPopup(user, provider);
+          } else if (oauth === "google") {
+            const provider = new GoogleAuthProvider();
             await reauthenticateWithPopup(user, provider);
           } else {
             if (!password) throw new Error("Enter your password to confirm.");
@@ -238,14 +273,15 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
             throw new Error("That password did not match. Your account was not deleted.");
           }
           if (err instanceof FirebaseError && err.code === "auth/popup-closed-by-user") {
-            throw new Error("Apple confirmation was cancelled. Your account was not deleted.");
+            const label = oauth === "google" ? "Google" : "Apple";
+            throw new Error(`${label} confirmation was cancelled. Your account was not deleted.`);
           }
           throw err;
         }
         await deleteAccountData(user);
       },
     }),
-    [configured, loading, firebaseUser, profile, needsProfileCompletion],
+    [configured, loading, firebaseUser, profile, needsProfileCompletion, usesApple, usesGoogle],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

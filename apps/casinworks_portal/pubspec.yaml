@@ -1,7 +1,7 @@
 name: casinworks_portal
 description: CasinWorks client portal and gig board (iOS / Android).
 publish_to: "none"
-version: 1.0.0+13
+version: 1.0.0+14
 
 environment:
   sdk: ^3.12.1
@@ -23,6 +23,7 @@ dependencies:
   flutter_secure_storage: ^10.3.1
   sign_in_with_apple: ^7.0.1
   crypto: ^3.0.6
+  google_sign_in: ^7.2.0
 
 dev_dependencies:
   flutter_test:

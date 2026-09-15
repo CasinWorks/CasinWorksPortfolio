@@ -4,6 +4,7 @@ import { ArrowRight, Lock, Mail, Shield } from "lucide-react";
 import { SITE } from "../../site";
 import { usePageMeta } from "../../hooks/usePageMeta";
 import { usePortalAuth } from "../auth";
+import { AppleMark, GoogleMark } from "../oauthIcons";
 import type { PortalRole } from "../types";
 import { PageFade } from "../motion";
 
@@ -20,7 +21,8 @@ export function PortalSignInScreen() {
     noIndex: true,
   });
 
-  const { configured, loading, profile, needsProfileCompletion, signIn, signInWithApple } = usePortalAuth();
+  const { configured, loading, profile, needsProfileCompletion, signIn, signInWithApple, signInWithGoogle } =
+    usePortalAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const nextPath = safeNext(params.get("next"));
@@ -55,6 +57,18 @@ export function PortalSignInScreen() {
       // Auth state listener routes to complete-profile or home.
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not continue with Apple.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function onGoogle() {
+    setError("");
+    setSending(true);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not continue with Google.");
     } finally {
       setSending(false);
     }
@@ -170,9 +184,19 @@ export function PortalSignInScreen() {
         <button
           type="button"
           disabled={sending || !configured}
-          onClick={() => void onApple()}
-          className="mt-5 w-full py-3.5 px-6 bg-black text-white rounded-full text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-slate-800 disabled:opacity-50"
+          onClick={() => void onGoogle()}
+          className="mt-5 w-full py-3.5 px-6 bg-white text-black border border-black/15 rounded-full text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-black/5 disabled:opacity-50"
         >
+          <GoogleMark className="size-[18px]" />
+          Continue with Google
+        </button>
+        <button
+          type="button"
+          disabled={sending || !configured}
+          onClick={() => void onApple()}
+          className="mt-3 w-full py-3.5 px-6 bg-black text-white rounded-full text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-slate-800 disabled:opacity-50"
+        >
+          <AppleMark className="size-[18px]" />
           Continue with Apple
         </button>
 
@@ -197,7 +221,7 @@ export function PortalRegisterScreen() {
     path: "/portal/register",
     noIndex: true,
   });
-  const { configured, profile, needsProfileCompletion, register, signInWithApple } = usePortalAuth();
+  const { configured, profile, needsProfileCompletion, register, signInWithApple, signInWithGoogle } = usePortalAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const invitedEmail = (params.get("email") ?? "").trim().toLowerCase();
@@ -245,6 +269,18 @@ export function PortalRegisterScreen() {
       await signInWithApple();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not continue with Apple.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function onGoogle() {
+    setError("");
+    setSending(true);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not continue with Google.");
     } finally {
       setSending(false);
     }
@@ -339,9 +375,19 @@ export function PortalRegisterScreen() {
             <button
               type="button"
               disabled={sending || !configured}
-              onClick={() => void onApple()}
-              className="mt-5 w-full py-3.5 bg-black text-white rounded-full text-sm font-semibold disabled:opacity-50"
+              onClick={() => void onGoogle()}
+              className="mt-5 w-full py-3.5 bg-white text-black border border-black/15 rounded-full text-sm font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-50"
             >
+              <GoogleMark className="size-[18px]" />
+              Continue with Google
+            </button>
+            <button
+              type="button"
+              disabled={sending || !configured}
+              onClick={() => void onApple()}
+              className="mt-3 w-full py-3.5 bg-black text-white rounded-full text-sm font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <AppleMark className="size-[18px]" />
               Continue with Apple
             </button>
           </>
