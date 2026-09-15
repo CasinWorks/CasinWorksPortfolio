@@ -61,7 +61,7 @@ function portalUserFromSnap(uid: string, data: Record<string, unknown>): PortalU
   };
 }
 
-export async function createUserProfileIfMissing(user: PortalUser): Promise<PortalUser> {
+export async function createUserProfileIfMissing(user: PortalUser & { privacyAcceptedAt?: string }): Promise<PortalUser> {
   const existing = await fetchUserProfile(user.uid);
   if (existing) return existing;
   const role = user.role === "subcontractor" ? "subcontractor" : "client";
@@ -73,6 +73,7 @@ export async function createUserProfileIfMissing(user: PortalUser): Promise<Port
       displayName: user.displayName,
       role,
       company: company || undefined,
+      privacyAcceptedAt: user.privacyAcceptedAt || undefined,
       updatedAt: serverTimestamp(),
     } as Record<string, unknown>),
   );

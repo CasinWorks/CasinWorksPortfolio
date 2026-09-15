@@ -151,7 +151,7 @@ function UnreadBadge({ count }: { count: number }) {
 }
 
 export function RequireAuth() {
-  const { configured, loading, profile } = usePortalAuth();
+  const { configured, loading, profile, needsProfileCompletion, firebaseUser } = usePortalAuth();
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--page-cream)] text-slate-500 px-[var(--page-gutter)] py-16 sm:py-24">
@@ -169,6 +169,9 @@ export function RequireAuth() {
         </p>
       </div>
     );
+  }
+  if (needsProfileCompletion || (firebaseUser && !profile)) {
+    return <Navigate to="/portal/complete-profile" replace />;
   }
   if (!profile) return <Navigate to="/portal/sign-in" replace />;
   return <Outlet />;

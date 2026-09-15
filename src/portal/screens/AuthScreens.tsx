@@ -20,7 +20,7 @@ export function PortalSignInScreen() {
     noIndex: true,
   });
 
-  const { configured, loading, profile, signIn } = usePortalAuth();
+  const { configured, loading, profile, needsProfileCompletion, signIn, signInWithApple } = usePortalAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const nextPath = safeNext(params.get("next"));
@@ -30,6 +30,7 @@ export function PortalSignInScreen() {
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
 
+  if (needsProfileCompletion) return <Navigate to="/portal/complete-profile" replace />;
   if (profile) return <Navigate to={nextPath} replace />;
 
   async function onSubmit(e: FormEvent) {
@@ -41,6 +42,19 @@ export function PortalSignInScreen() {
       navigate(nextPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign in.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function onApple() {
+    setError("");
+    setSending(true);
+    try {
+      await signInWithApple();
+      // Auth state listener routes to complete-profile or home.
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not continue with Apple.");
     } finally {
       setSending(false);
     }
@@ -148,6 +162,20 @@ export function PortalSignInScreen() {
           </button>
         </form>
 
+        <div className="mt-5 flex items-center gap-3">
+          <div className="h-px flex-1 bg-black/10" />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Or</span>
+          <div className="h-px flex-1 bg-black/10" />
+        </div>
+        <button
+          type="button"
+          disabled={sending || !configured}
+          onClick={() => void onApple()}
+          className="mt-5 w-full py-3.5 px-6 bg-black text-white rounded-full text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-slate-800 disabled:opacity-50"
+        >
+          Continue with Apple
+        </button>
+
         <p className="mt-8 pt-6 border-t border-black/10 text-sm text-slate-600">
           Need access?{" "}
           <Link to={`/portal/register${params.get("next") ? `?next=${encodeURIComponent(nextPath)}` : ""}`} className="text-black font-medium underline underline-offset-4">
@@ -169,7 +197,7 @@ export function PortalRegisterScreen() {
     path: "/portal/register",
     noIndex: true,
   });
-  const { configured, profile, register } = usePortalAuth();
+  const { configured, profile, needsProfileCompletion, register, signInWithApple } = usePortalAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const invitedEmail = (params.get("email") ?? "").trim().toLowerCase();
@@ -183,6 +211,7 @@ export function PortalRegisterScreen() {
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
 
+  if (needsProfileCompletion) return <Navigate to="/portal/complete-profile" replace />;
   if (profile) return <Navigate to={nextPath} replace />;
 
   async function onSubmit(e: FormEvent) {
@@ -204,6 +233,18 @@ export function PortalRegisterScreen() {
       navigate(nextPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not register.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function onApple() {
+    setError("");
+    setSending(true);
+    try {
+      await signInWithApple();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not continue with Apple.");
     } finally {
       setSending(false);
     }
@@ -287,6 +328,24 @@ export function PortalRegisterScreen() {
             Create account
           </button>
         </form>
+
+        {!invitedEmail && !fromBook && (
+          <>
+            <div className="mt-5 flex items-center gap-3">
+              <div className="h-px flex-1 bg-black/10" />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Or</span>
+              <div className="h-px flex-1 bg-black/10" />
+            </div>
+            <button
+              type="button"
+              disabled={sending || !configured}
+              onClick={() => void onApple()}
+              className="mt-5 w-full py-3.5 bg-black text-white rounded-full text-sm font-semibold disabled:opacity-50"
+            >
+              Continue with Apple
+            </button>
+          </>
+        )}
       </div>
     </PageFade>
   );
