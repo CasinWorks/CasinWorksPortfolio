@@ -180,7 +180,22 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
         if (!isFirebaseConfigured()) throw new Error("Firebase is not configured on the server.");
         const auth = getFirebaseAuth();
         await setPersistence(auth, browserLocalPersistence);
-        await signInWithEmailAndPassword(auth, email.trim(), password);
+        try {
+          await signInWithEmailAndPassword(auth, email.trim(), password);
+        } catch (err) {
+          if (
+            err instanceof FirebaseError &&
+            (err.code === "auth/invalid-credential" ||
+              err.code === "auth/wrong-password" ||
+              err.code === "auth/user-not-found" ||
+              err.code === "auth/invalid-login-credentials")
+          ) {
+            throw new Error(
+              "Email or password is incorrect. If you signed up with Google or Apple, use that button instead.",
+            );
+          }
+          throw err;
+        }
       },
       async signInWithApple() {
         if (!isFirebaseConfigured()) throw new Error("Firebase is not configured on the server.");

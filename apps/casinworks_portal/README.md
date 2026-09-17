@@ -23,8 +23,11 @@ Required before TestFlight / App Store builds that use the Apple button.
 1. Certificates, Identifiers & Profiles → **Identifiers** → App ID `com.casinworks.casinworksPortal` → enable **Sign In with Apple**.
 2. For the **web** portal, create a **Services ID** (e.g. `com.casinworks.casinworksPortal.web`):
    - Enable Sign In with Apple → Configure.
-   - Domains: `casinworks-fb7ad.firebaseapp.com` (and `www.casinworks.com` if you add custom handlers later).
-   - Return URL: `https://casinworks-fb7ad.firebaseapp.com/__/auth/handler`
+   - Domains: `auth.casinworks.com` and `casinworks-fb7ad.firebaseapp.com`.
+   - Return URLs:
+     - `https://auth.casinworks.com/__/auth/handler`
+     - `https://casinworks-fb7ad.firebaseapp.com/__/auth/handler`
+   - After changing Firebase `authDomain` to the custom domain, both must stay listed or web Apple sign-in fails.
 3. Keys → create a key with **Sign In with Apple**, download the `.p8`, note Key ID and Team ID.
 
 ### Firebase Console
