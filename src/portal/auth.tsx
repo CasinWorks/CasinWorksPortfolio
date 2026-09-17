@@ -41,6 +41,7 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<void>;
   signInWithApple: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
   register: (input: {
     email: string;
     password: string;
@@ -101,6 +102,11 @@ async function signInWithOAuthProvider(provider: GoogleAuthProvider | OAuthProvi
   try {
     await signInWithPopup(auth, provider);
   } catch (err) {
+    if (err instanceof FirebaseError && err.code === "auth/account-exists-with-different-credential") {
+      throw new Error(
+        "This email already has a CasinWorks account with a different sign-in method. Use the provider you signed up with (Apple, Google, or email/password).",
+      );
+    }
     if (
       err instanceof FirebaseError &&
       (err.code === "auth/popup-blocked" || err.code === "auth/popup-closed-by-user")
@@ -210,6 +216,20 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
         provider.addScope("email");
         provider.addScope("profile");
         await signInWithOAuthProvider(provider);
+      },
+      async sendPasswordReset(email) {
+        if (!isFirebaseConfigured()) throw new Error("Firebase is not configured on the server.");
+        const trimmed = email.trim();
+        if (!trimmed) throw new Error("Enter your email address.");
+        const res = await fetch("/api/password-reset", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: trimmed }),
+        });
+        const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+        if (!res.ok || !json?.ok) {
+          throw new Error(json?.error || "Could not send the reset email.");
+        }
       },
       async register({ email, password, displayName, role, company }) {
         if (!isFirebaseConfigured()) throw new Error("Firebase is not configured on the server.");

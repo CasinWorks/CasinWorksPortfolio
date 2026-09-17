@@ -17,7 +17,7 @@ import { AdminScreen } from './portal/screens/AdminScreen.tsx';
 import { ClientDetailScreen } from './portal/screens/ClientDetailScreen.tsx';
 import { ClientsScreen } from './portal/screens/ClientsScreen.tsx';
 import { UsersScreen } from './portal/screens/UsersScreen.tsx';
-import { PortalRegisterScreen, PortalSignInScreen } from './portal/screens/AuthScreens.tsx';
+import { PortalRegisterScreen, PortalResetPasswordScreen, PortalSignInScreen } from './portal/screens/AuthScreens.tsx';
 import { CompleteProfileScreen } from './portal/screens/CompleteProfileScreen.tsx';
 import { BookConsultationScreen } from './portal/screens/BookConsultationScreen.tsx';
 import { ClientDashboard } from './portal/screens/ClientDashboard.tsx';
@@ -47,6 +47,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/thank-you" element={<ThankYouPage />} />
         <Route path="/portal" element={<PortalAuthLayout />}>
           <Route path="sign-in" element={<PortalSignInScreen />} />
+          <Route path="reset-password" element={<PortalResetPasswordScreen />} />
           <Route path="register" element={<PortalRegisterScreen />} />
           <Route path="complete-profile" element={<CompleteProfileScreen />} />
           <Route path="account-deleted" element={<AccountDeletedScreen />} />

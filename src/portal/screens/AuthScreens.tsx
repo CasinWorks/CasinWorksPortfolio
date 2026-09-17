@@ -149,9 +149,17 @@ export function PortalSignInScreen() {
             </div>
           </div>
           <div>
-            <label htmlFor="portal-password" className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 mb-1.5">
-              Password
-            </label>
+            <div className="flex items-center justify-between gap-3 mb-1.5">
+              <label htmlFor="portal-password" className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Password
+              </label>
+              <Link
+                to={`/portal/reset-password${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`}
+                className="text-xs font-medium text-slate-500 underline underline-offset-4 hover:text-black"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <div className="relative">
               <input
                 id="portal-password"
@@ -391,6 +399,107 @@ export function PortalRegisterScreen() {
               Continue with Apple
             </button>
           </>
+        )}
+      </div>
+    </PageFade>
+  );
+}
+
+export function PortalResetPasswordScreen() {
+  usePageMeta({
+    title: `Reset password — ${SITE.name}`,
+    path: "/portal/reset-password",
+    noIndex: true,
+  });
+
+  const { configured, profile, needsProfileCompletion, sendPasswordReset } = usePortalAuth();
+  const [params] = useSearchParams();
+  const [email, setEmail] = useState((params.get("email") ?? "").trim());
+  const [error, setError] = useState("");
+  const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  if (needsProfileCompletion) return <Navigate to="/portal/complete-profile" replace />;
+  if (profile) return <Navigate to="/portal" replace />;
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSending(true);
+    try {
+      await sendPasswordReset(email);
+      setSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send the reset email.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <PageFade className="min-h-screen bg-[var(--page-cream)] text-[#1a1a1a] px-[var(--page-gutter)] py-12 sm:py-24">
+      <div className="max-w-md mx-auto">
+        <Link to="/portal/sign-in" className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+          ← Sign in
+        </Link>
+        <h1 className="mt-6 font-serif text-4xl font-semibold tracking-tight">
+          Reset your <span className="italic text-slate-500">password.</span>
+        </h1>
+        <p className="mt-3 text-sm text-slate-600 leading-relaxed">
+          We’ll email a CasinWorks reset link if this address has an email/password account. Google and Apple sign-in
+          don’t use a password — use those buttons on the sign-in page instead.
+        </p>
+
+        {!configured && (
+          <p className="mt-6 text-sm text-red-700">
+            Firebase is not configured on the server. Password reset is unavailable until FIREBASE_* keys are set.
+          </p>
+        )}
+
+        {sent ? (
+          <div className="mt-8 space-y-4">
+            <p className="text-sm text-slate-700 leading-relaxed">
+              If an email/password account exists for <span className="font-medium text-black">{email.trim()}</span>, a
+              reset link is on the way. Check spam if you don’t see it in a few minutes.
+            </p>
+            <Link
+              to="/portal/sign-in"
+              className="inline-flex w-full items-center justify-center rounded-full bg-black py-3.5 text-sm font-semibold text-white"
+            >
+              Back to sign in
+            </Link>
+          </div>
+        ) : (
+          <form onSubmit={onSubmit} className="mt-8 space-y-4">
+            <div>
+              <label
+                htmlFor="reset-email"
+                className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 mb-1.5"
+              >
+                Email
+              </label>
+              <div className="relative">
+                <input
+                  id="reset-email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white border border-black/15 text-sm focus:outline-none focus:border-black"
+                />
+                <Mail className="size-4 text-slate-400 absolute right-3 top-3" aria-hidden />
+              </div>
+            </div>
+            {error && <p className="text-sm text-red-700">{error}</p>}
+            <button
+              type="submit"
+              disabled={sending || !configured}
+              className="w-full py-3.5 bg-black text-white rounded-full text-sm font-semibold disabled:opacity-50"
+            >
+              {sending ? "Sending…" : "Send reset link"}
+            </button>
+          </form>
         )}
       </div>
     </PageFade>
