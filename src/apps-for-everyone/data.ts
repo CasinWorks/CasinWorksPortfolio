@@ -127,15 +127,16 @@ export const APPS_DATA: AppItem[] = [
   },
   {
     id: "casinpos",
-    name: "Casin POS",
+    name: "CasinPOS",
     category: "RETAIL / POINT OF SALE",
     status: "LIVE",
     demoLabel: "LIVE DEMO",
     description:
-      "A point-of-sale workspace for retail checkout, inventory, and sales records. Live on pos.casinworks.com; iOS and Android forthcoming.",
+      "A point-of-sale workspace for retail checkout, inventory, and sales records. Live on the web and now on the App Store for iPhone; Android forthcoming.",
     url: "https://pos.casinworks.com",
+    appStoreUrl: "https://apps.apple.com/ph/app/casinpos/id6799613441",
     image: "/apps/casinpos.png",
-    platforms: "iOS and Android soon",
+    platforms: "Web · iOS",
     technologies: ["Checkout", "Inventory", "Sales records"],
   },
 ];

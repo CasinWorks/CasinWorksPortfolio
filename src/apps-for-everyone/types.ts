@@ -21,6 +21,7 @@ export interface AppItem {
   caseStudy?: boolean;
   description: string;
   url?: string;
+  appStoreUrl?: string;
   image?: string;
   platforms?: string;
   role?: string;
