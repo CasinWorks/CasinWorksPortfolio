@@ -84,7 +84,7 @@ export function AppsForEveryoneSection() {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-white hover:text-slate-300 transition-colors"
                     >
-                      Live demo
+                      {app.demoLabel ?? "Live demo"}
                       <ArrowUpRight className="size-4" aria-hidden />
                     </a>
                   )}

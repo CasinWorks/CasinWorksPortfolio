@@ -117,9 +117,9 @@ export const APPS_DATA: AppItem[] = [
     name: "CasinFreight",
     category: "LOGISTICS / FLEET",
     status: "LIVE",
-    demoLabel: "LIVE DEMO",
+    demoLabel: "Open product",
     description:
-      "Philippine trucking and fleet management — dispatch, trips, and operations in one web workspace.",
+      "Philippine trucking and fleet management — dispatch, trips, and operations in one live web product.",
     url: "https://www.casinfreight.com",
     image: "/apps/casinfreight.png",
     platforms: "Web",
@@ -130,11 +130,13 @@ export const APPS_DATA: AppItem[] = [
     name: "CasinPOS",
     category: "RETAIL / POINT OF SALE",
     status: "LIVE",
+    demoLabel: "Open product",
     description:
-      "A point-of-sale workspace for retail checkout, inventory, and sales records — available on the App Store for iPhone.",
+      "A point-of-sale workspace for retail checkout, inventory, and sales records. Live on the web at pos.casinworks.com and on the App Store for iPhone.",
+    url: "https://pos.casinworks.com",
     appStoreUrl: "https://apps.apple.com/ph/app/casinpos/id6799613441",
     image: "/apps/casinpos.png",
-    platforms: "iOS",
+    platforms: "Web · iOS",
     technologies: ["Checkout", "Inventory", "Sales records"],
   },
 ];
