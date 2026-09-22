@@ -15,6 +15,7 @@ import {
   threadIdForClient,
 } from "../api";
 import type { Message, MessageAuthor, MessageThread, PortalRole } from "../types";
+import { HelpMeWrite } from "../components/HelpMeWrite";
 import { StaggerItem, StaggerList } from "../motion";
 
 export function viewerAuthor(role: PortalRole | undefined): MessageAuthor {
@@ -281,6 +282,14 @@ export function ThreadScreen() {
 
       {thread && profile && (
         <Composer
+          role={viewer}
+          projectName={thread.projectName || thread.subject}
+          clientName={thread.clientName || thread.clientEmail}
+          recentMessages={messages.slice(-8).map((m) => ({
+            role: m.senderRole === "admin" ? ("admin" as const) : ("client" as const),
+            body: m.body,
+          }))}
+          getIdToken={async () => firebaseUser?.getIdToken().catch(() => undefined)}
           onSend={async (body) => {
             const idToken = await firebaseUser?.getIdToken().catch(() => undefined);
             await sendMessage({
@@ -298,7 +307,21 @@ export function ThreadScreen() {
   );
 }
 
-function Composer({ onSend }: { onSend: (body: string) => Promise<void> }) {
+function Composer({
+  onSend,
+  role,
+  projectName,
+  clientName,
+  recentMessages,
+  getIdToken,
+}: {
+  onSend: (body: string) => Promise<void>;
+  role: MessageAuthor;
+  projectName?: string;
+  clientName?: string;
+  recentMessages: Array<{ role: "admin" | "client"; body: string }>;
+  getIdToken: () => Promise<string | undefined>;
+}) {
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -340,6 +363,17 @@ function Composer({ onSend }: { onSend: (body: string) => Promise<void> }) {
         maxLength={MESSAGE_MAX_LENGTH}
         placeholder="Write a message…"
         className="w-full px-3.5 py-2.5 bg-white border border-black/15 text-sm resize-y min-h-[5rem]"
+      />
+      <HelpMeWrite
+        value={body}
+        onChange={setBody}
+        context={{
+          role: role === "admin" ? "admin" : "client",
+          projectName,
+          clientName,
+          recentMessages,
+          getIdToken,
+        }}
       />
       {error && <p className="text-sm text-red-700">{error}</p>}
       <div className="flex items-center justify-between gap-3">

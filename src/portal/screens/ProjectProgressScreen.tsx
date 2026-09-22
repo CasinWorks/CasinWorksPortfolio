@@ -13,6 +13,7 @@ import { FairwayVisual } from "./FairwayVisual";
 import { MilestoneManage } from "./MilestoneManage";
 import { ProjectRecordsList } from "./ProjectRecordsList";
 import { ShareLinkCard } from "./ShareLinkCard";
+import { HelpMeWrite } from "../components/HelpMeWrite";
 import { ProgressBar, TimelineDot } from "../motion";
 import { StatusPill, projectLabel } from "./ui";
 
@@ -481,6 +482,20 @@ function ProjectCommentsPanel({
           maxLength={MESSAGE_MAX_LENGTH}
           placeholder={viewerIsAdmin ? "Update for the client…" : "Ask about this project…"}
           className="w-full px-3.5 py-2.5 bg-white border border-black/15 text-sm resize-y min-h-[5rem]"
+        />
+        <HelpMeWrite
+          value={body}
+          onChange={setBody}
+          context={{
+            role: viewerIsAdmin ? "admin" : "client",
+            projectName: project.name,
+            clientName: project.clientName || project.clientEmail,
+            recentMessages: messages.slice(-8).map((m) => ({
+              role: m.senderRole === "admin" ? "admin" : "client",
+              body: m.body,
+            })),
+            getIdToken: async () => firebaseUser?.getIdToken().catch(() => undefined),
+          }}
         />
         {(localError || !viewerUid) && (
           <p className="text-sm text-red-700">{localError || "Sign in again to comment."}</p>
