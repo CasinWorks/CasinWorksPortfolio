@@ -41,7 +41,7 @@ export function ShareLinkCard({ project }: { project: Project }) {
   }
 
   const mailHref = url
-    ? `mailto:${encodeURIComponent(project.clientEmail)}?subject=${encodeURIComponent(
+    ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(project.clientEmail)}&su=${encodeURIComponent(
         `Progress on ${project.name}`,
       )}&body=${encodeURIComponent(
         `Hello,\n\nHere is your CasinWorks project invite. Sign in (or create an account) with ${project.clientEmail} to open it. Nothing is shown until you log in.\n\n${url}\n\nThank you,\nCasinWorks`,
@@ -63,8 +63,13 @@ export function ShareLinkCard({ project }: { project: Project }) {
         </button>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        {project.clientEmail && (
-          <a href={mailHref} className="rounded-full border border-black/15 px-4 py-2 text-xs font-semibold inline-flex items-center gap-1.5">
+        {project.clientEmail && url && (
+          <a
+            href={mailHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-full border border-black/15 px-4 py-2 text-xs font-semibold inline-flex items-center gap-1.5"
+          >
             <Mail className="size-3.5" aria-hidden />
             Email client
           </a>

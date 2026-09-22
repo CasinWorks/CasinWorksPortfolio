@@ -1,0 +1,15 @@
+apps/
+casinworks/
+casin-works-—-apps-for-everyone-2/
+node_modules/
+.git/
+.vercel/
+dist/
+build/
+coverage/
+*.log
+.DS_Store
+.env*
+!.env.example
+casinworks-app-icon.png
+CWLogo.png

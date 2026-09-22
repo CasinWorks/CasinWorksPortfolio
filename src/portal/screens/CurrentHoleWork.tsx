@@ -88,7 +88,7 @@ export function CurrentHoleWork({
   }
 
   const mailHref = issued
-    ? `mailto:${encodeURIComponent(project.clientEmail)}?subject=${encodeURIComponent(
+    ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(project.clientEmail)}&su=${encodeURIComponent(
         `Quotation ${issued.quoteNumber} — ${project.name}`,
       )}&body=${encodeURIComponent(
         `Hello,\n\nPlease find quotation ${issued.quoteNumber} for ${project.name}. I have attached the PDF.\n\nThank you,\nCasinWorks`,
@@ -225,6 +225,8 @@ export function CurrentHoleWork({
                 {project.clientEmail && (
                   <a
                     href={mailHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-full border border-black/15 px-5 py-2.5 text-sm font-semibold"
                   >
                     <Mail className="size-4" aria-hidden />
