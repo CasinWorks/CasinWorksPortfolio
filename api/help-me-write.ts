@@ -198,7 +198,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const ai = new GoogleGenAI({ apiKey: geminiKey });
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.6-flash",
       contents: contextBits.join("\n\n"),
       config: {
         systemInstruction: system,
@@ -213,7 +213,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     return res.status(200).json({ ok: true, text });
   } catch (err) {
-    console.error("[help-me-write] gemini", err instanceof Error ? err.message : String(err));
-    return res.status(502).json({ ok: false, error: "Could not generate a draft. Try again." });
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error("[help-me-write] gemini", detail);
+    return res.status(502).json({
+      ok: false,
+      error: "Could not generate a draft. Try again.",
+    });
   }
 }
