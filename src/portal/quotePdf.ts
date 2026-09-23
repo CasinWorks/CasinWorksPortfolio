@@ -147,24 +147,31 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
   y += billH + 10;
 
   label("Scope of work");
+  const scopeCols = {
+    desc: contentW * 0.3,
+    details: contentW * 0.46,
+    amount: contentW * 0.24,
+  };
+  const scopePad = 2.5;
   drawTableHeader(doc, margin, y, contentW, [
-    { label: "DESCRIPTION", w: contentW * 0.28 },
-    { label: "DETAILS", w: contentW * 0.48 },
-    { label: "AMOUNT", w: contentW * 0.24, align: "right" },
+    { label: "DESCRIPTION", w: scopeCols.desc },
+    { label: "DETAILS", w: scopeCols.details },
+    { label: "AMOUNT", w: scopeCols.amount, align: "right" },
   ]);
   y += 9;
   for (const row of quote.scope) {
-    const desc = wrap(row.description || "-", contentW * 0.26);
-    const details = wrap(row.details || "-", contentW * 0.46);
-    const h = Math.max(8, Math.max(desc.length, details.length) * 5 + 4);
-    ensure(h + 6);
+    // Measure wrap at the same font used for drawing (label() leaves size 8).
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9.5);
+    const desc = wrap(row.description || "-", scopeCols.desc - scopePad * 2);
+    const details = wrap(row.details || "-", scopeCols.details - scopePad * 2);
+    const h = Math.max(8, Math.max(desc.length, details.length) * 5 + 4);
+    ensure(h + 6);
     doc.setTextColor(...INK);
-    write(desc, margin + 2, y + 5);
-    write(details, margin + contentW * 0.28 + 2, y + 5);
+    write(desc, margin + scopePad, y + 5);
+    write(details, margin + scopeCols.desc + scopePad, y + 5);
     doc.setFont("helvetica", "bold");
-    write(formatPesoPdf(row.amount), margin + contentW - 2, y + 5, { align: "right" });
+    write(formatPesoPdf(row.amount), margin + contentW - scopePad, y + 5, { align: "right" });
     y += h;
     doc.setDrawColor(...RULE);
     doc.line(margin, y, pageW - margin, y);
@@ -201,11 +208,11 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9.5);
     doc.setTextColor(...INK);
-    const title = wrap(row.title, contentW * 0.56);
-    write(title, margin + 2, y + 4);
+    const title = wrap(row.title, contentW * 0.56 - 5);
+    write(title, margin + 2.5, y + 4);
     write(`${row.percent.toFixed(2)}%`, margin + contentW * 0.72 - 2, y + 4, { align: "right" });
     doc.setFont("helvetica", "bold");
-    write(formatPesoPdf(row.amount), margin + contentW - 2, y + 4, { align: "right" });
+    write(formatPesoPdf(row.amount), margin + contentW - 2.5, y + 4, { align: "right" });
     y += Math.max(9, title.length * 5 + 3);
     doc.setDrawColor(...RULE);
     doc.line(margin, y, pageW - margin, y);
