@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import { formatPesoPdf, formatQuoteDate, scopeTotal } from "./quote";
+import { DEFAULT_QUOTE_TERMS, formatPesoPdf, formatQuoteDate, scopeTotal } from "./quote";
 import type { Quotation } from "./types";
 
 const BLUE: [number, number, number] = [37, 99, 235];
@@ -260,7 +260,12 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
 
   ensure(28);
   label("Terms & conditions");
-  quote.terms.forEach((term, i) => {
+  // Always render from defaults — stored quote.terms may still contain ₱ / null-padded junk
+  // from older builds, which Helvetica cannot draw (spaced letters, clipped line).
+  const terms = DEFAULT_QUOTE_TERMS.map((t) =>
+    t.replace("{validity}", String(quote.validityDays || 30)),
+  );
+  terms.forEach((term, i) => {
     const lines = wrap(`${i + 1}.  ${term}`, contentW);
     ensure(lines.length * 4.6 + 2);
     doc.setFont("helvetica", "normal");
