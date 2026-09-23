@@ -190,7 +190,7 @@ export function CurrentHoleWork({
               <div className="flex items-center justify-between mb-4 gap-3">
                 <p className="text-sm text-slate-600">
                   {priorQuotes > 0
-                    ? "Adjust amounts for a discount or scope change, then generate a new PDF. It gets a new quote number and stays on the project with earlier drafts."
+                    ? "Adjust amounts for a discount or scope change, then generate a new PDF. Same quote number; earlier drafts stay on the project."
                     : "Fill the quote. Generate PDF creates the Q-format file and files it on this project."}
                 </p>
                 <button type="button" onClick={() => setPanel("idle")} className="text-xs font-semibold underline underline-offset-4 shrink-0">
@@ -218,7 +218,7 @@ export function CurrentHoleWork({
               <p className="text-sm font-semibold">Quotation {issued.quoteNumber} is ready.</p>
               <p className="mt-1 text-sm text-slate-600">
                 Download the PDF, send it to {project.clientEmail || "the client"}, then mark this hole done when they accept.
-                If they ask for a discount, revise and generate a new quote — earlier drafts stay on file.
+                If they ask for a discount, revise under the same quote number — earlier drafts stay on file.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <a

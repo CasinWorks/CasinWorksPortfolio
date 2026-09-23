@@ -52,10 +52,14 @@ export function IssueQuotationForm({
   }, [lockedProjectId]);
 
   useEffect(() => {
+    if (reviseFrom?.quoteNumber) {
+      setQuoteNumber(reviseFrom.quoteNumber);
+      return;
+    }
     nextQuoteNumber()
       .then(setQuoteNumber)
       .catch(() => setQuoteNumber(nextQuoteNumberFromExisting([])));
-  }, []);
+  }, [reviseFrom?.quoteNumber]);
 
   useEffect(() => {
     if (!project) return;
@@ -64,6 +68,7 @@ export function IssueQuotationForm({
       setScope(reviseFrom.scope.map((row) => ({ ...row })));
       setMilestones(reviseFrom.milestones.map((row) => ({ ...row })));
       setValidityDays(String(reviseFrom.validityDays || 30));
+      setQuoteNumber(reviseFrom.quoteNumber);
       return;
     }
     const nextScope = defaultScope(project);
@@ -114,8 +119,11 @@ export function IssueQuotationForm({
     setError("");
     setSaving(true);
     try {
-      // Allocate at save time so concurrent issues and the external floor stay correct.
-      const assignedNumber = await nextQuoteNumber();
+      // Revisions keep the same Q-number; new quotes allocate at save time.
+      const assignedNumber =
+        isRevision && reviseFrom?.quoteNumber
+          ? reviseFrom.quoteNumber
+          : await nextQuoteNumber();
       setQuoteNumber(assignedNumber);
       const quote = buildQuotation({
         quoteNumber: assignedNumber,
@@ -131,8 +139,10 @@ export function IssueQuotationForm({
         setScope([]);
         setMilestones([]);
       }
-      const n = await nextQuoteNumber();
-      setQuoteNumber(n);
+      if (!isRevision) {
+        const n = await nextQuoteNumber();
+        setQuoteNumber(n);
+      }
       await onCreated(issued);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not issue quotation.");
@@ -164,14 +174,16 @@ export function IssueQuotationForm({
           <input
             readOnly
             value={quoteNumber || "…"}
-            title="Assigned automatically from issued quotations"
-            aria-label="Quote number (auto-generated)"
+            title={isRevision ? "Kept from the quotation being revised" : "Assigned automatically from issued quotations"}
+            aria-label={isRevision ? "Quote number (retained on revise)" : "Quote number (auto-generated)"}
             className="px-3.5 py-2.5 bg-[var(--page-panel)] border border-black/10 text-sm font-semibold tracking-wide"
           />
           <input required value={validityDays} onChange={(e) => setValidityDays(e.target.value)} placeholder="Validity (days)" className="px-3.5 py-2.5 bg-white border border-black/15 text-sm" />
         </div>
         <p className="text-xs text-slate-500 -mt-2">
-          Quote number is assigned automatically from issued quotations (including Q-0001 already issued outside the portal).
+          {isRevision
+            ? `Keeps quote number ${reviseFrom?.quoteNumber ?? quoteNumber}. Earlier drafts stay on the project.`
+            : "Quote number is assigned automatically from issued quotations (including Q-0001 already issued outside the portal)."}
         </p>
 
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Bill to</p>
