@@ -29,7 +29,9 @@ export function CurrentHoleWork({
   const holeNumber = milestones.findIndex((m) => m.id === milestone.id) + 1;
   const attachmentNeed = resolveAttachmentNeed(kind, milestone.attachmentNeed);
   const expectedType = expectedDocType(kind);
-  const latestQuote = documents.filter((d) => d.type === "quotation").at(-1);
+  const quoteDocs = documents.filter((d) => d.type === "quotation");
+  const latestQuote = quoteDocs[0] ?? null;
+  const priorQuotes = quoteDocs.length;
   const hasConsult = documents.some((d) => d.type === "consultation");
   const hasDemo = documents.some((d) => d.type === "demo");
   const hasPo = documents.some((d) => d.type === "PO");
@@ -185,9 +187,13 @@ export function CurrentHoleWork({
         <div className="mt-6">
           {panel === "form" ? (
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-slate-600">Fill the quote. Generate PDF creates the Q-format file and files it on this project.</p>
-                <button type="button" onClick={() => setPanel("idle")} className="text-xs font-semibold underline underline-offset-4">
+              <div className="flex items-center justify-between mb-4 gap-3">
+                <p className="text-sm text-slate-600">
+                  {priorQuotes > 0
+                    ? "Adjust amounts for a discount or scope change, then generate a new PDF. It gets a new quote number and stays on the project with earlier drafts."
+                    : "Fill the quote. Generate PDF creates the Q-format file and files it on this project."}
+                </p>
+                <button type="button" onClick={() => setPanel("idle")} className="text-xs font-semibold underline underline-offset-4 shrink-0">
                   Cancel
                 </button>
               </div>
@@ -196,6 +202,7 @@ export function CurrentHoleWork({
                 lockedProjectId={project.id}
                 compact
                 issuer={issuer}
+                reviseFrom={latestQuote?.quotation}
                 onCreated={async (result) => {
                   if (result) {
                     setIssued(result);
@@ -210,7 +217,8 @@ export function CurrentHoleWork({
             <div className="border border-black/10 bg-[var(--page-panel)] p-5">
               <p className="text-sm font-semibold">Quotation {issued.quoteNumber} is ready.</p>
               <p className="mt-1 text-sm text-slate-600">
-                Download the PDF, attach it to an email to {project.clientEmail || "the client"}, then mark this hole done. They will also see it under project records when they sign in.
+                Download the PDF, send it to {project.clientEmail || "the client"}, then mark this hole done when they accept.
+                If they ask for a discount, revise and generate a new quote — earlier drafts stay on file.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <a
@@ -233,15 +241,25 @@ export function CurrentHoleWork({
                     Email client
                   </a>
                 )}
-                <button type="button" onClick={() => setPanel("form")} className="text-sm font-semibold underline underline-offset-4 px-2">
-                  Issue another
+                <button
+                  type="button"
+                  onClick={() => setPanel("form")}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-black/15 px-5 py-2.5 text-sm font-semibold"
+                >
+                  Revise for discount
                 </button>
               </div>
+              {priorQuotes > 1 && (
+                <p className="mt-3 text-xs text-slate-500">
+                  {priorQuotes} quotations on this project — open project records to see every draft.
+                </p>
+              )}
             </div>
           ) : (
             <div>
               <p className="text-sm text-slate-600 max-w-xl">
                 Open the quote form, generate the PDF, send that file to the client. It is also filed on their portal.
+                You can revise and regenerate later if they negotiate price.
               </p>
               <button
                 type="button"

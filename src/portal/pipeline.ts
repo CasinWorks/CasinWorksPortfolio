@@ -19,7 +19,7 @@ export const ENGAGEMENT_PIPELINE: { title: string; kind: MilestoneKind; descript
   {
     title: "Send quotation",
     kind: "quotation",
-    description: "Issue the quotation PDF, send it to the client, then mark this hole done. They also see it on their portal.",
+    description: "Issue the quotation PDF, send it to the client, then mark this hole done. They also see it on their portal. Revise and regenerate if they negotiate price.",
   },
   {
     title: "Purchase order",

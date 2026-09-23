@@ -12,7 +12,7 @@ import {
   nextQuoteNumberFromExisting,
   scopeTotal,
 } from "../quote";
-import type { Project, QuoteBillTo, QuoteMilestone, QuoteScopeItem } from "../types";
+import type { Project, Quotation, QuoteBillTo, QuoteMilestone, QuoteScopeItem } from "../types";
 
 const emptyBill: QuoteBillTo = { company: "", contact: "", address: "", email: "", phone: "" };
 
@@ -22,24 +22,30 @@ export function IssueQuotationForm({
   onCreated,
   lockedProjectId,
   compact,
+  reviseFrom,
 }: {
   projects: Project[];
   issuer: string;
   onCreated: (issued?: { fileUrl: string; fileName: string; quoteNumber: string }) => Promise<void>;
   lockedProjectId?: string;
   compact?: boolean;
+  /** Prefill from a prior quotation when revising for discount / scope change. */
+  reviseFrom?: Quotation;
 }) {
   const [projectId, setProjectId] = useState(lockedProjectId ?? "");
   const [quoteNumber, setQuoteNumber] = useState("");
-  const [validityDays, setValidityDays] = useState("30");
-  const [billTo, setBillTo] = useState<QuoteBillTo>(emptyBill);
-  const [scope, setScope] = useState<QuoteScopeItem[]>([]);
-  const [milestones, setMilestones] = useState<QuoteMilestone[]>([]);
+  const [validityDays, setValidityDays] = useState(
+    reviseFrom ? String(reviseFrom.validityDays || 30) : "30",
+  );
+  const [billTo, setBillTo] = useState<QuoteBillTo>(reviseFrom?.billTo ?? emptyBill);
+  const [scope, setScope] = useState<QuoteScopeItem[]>(reviseFrom?.scope ?? []);
+  const [milestones, setMilestones] = useState<QuoteMilestone[]>(reviseFrom?.milestones ?? []);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
   const project = projects.find((p) => p.id === projectId);
   const total = scopeTotal(scope);
+  const isRevision = Boolean(reviseFrom);
 
   useEffect(() => {
     if (lockedProjectId) setProjectId(lockedProjectId);
@@ -53,6 +59,13 @@ export function IssueQuotationForm({
 
   useEffect(() => {
     if (!project) return;
+    if (reviseFrom) {
+      setBillTo({ ...emptyBill, ...reviseFrom.billTo });
+      setScope(reviseFrom.scope.map((row) => ({ ...row })));
+      setMilestones(reviseFrom.milestones.map((row) => ({ ...row })));
+      setValidityDays(String(reviseFrom.validityDays || 30));
+      return;
+    }
     const nextScope = defaultScope(project);
     setBillTo({
       company: project.clientName || "",
@@ -75,7 +88,7 @@ export function IssueQuotationForm({
         });
       }).catch(() => undefined);
     }
-  }, [projectId]);
+  }, [projectId, reviseFrom]);
 
   function patchScope(id: string, patch: Partial<QuoteScopeItem>) {
     setScope((rows) => {
@@ -253,7 +266,7 @@ export function IssueQuotationForm({
 
         {error && <p className="text-sm text-red-700">{error}</p>}
         <button type="submit" disabled={saving || !projectId} className="rounded-full bg-black text-white px-6 py-2.5 text-sm font-semibold disabled:opacity-50">
-          {saving ? "Generating PDF…" : "Generate PDF"}
+          {saving ? "Generating PDF…" : isRevision ? "Generate revised PDF" : "Generate PDF"}
         </button>
       </form>
     </section>
