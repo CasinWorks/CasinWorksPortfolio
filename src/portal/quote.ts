@@ -3,6 +3,12 @@ import type { Project, Quotation, QuoteMilestone, QuoteScopeItem } from "./types
 
 export const QUOTE_ISSUER_PHONE = "09190036230";
 
+/**
+ * Highest Q-#### already issued outside the portal (paper / other tools).
+ * Next portal quote is at least this + 1 (e.g. floor 1 → Q-0002).
+ */
+export const QUOTE_NUMBER_FLOOR = 1;
+
 export const DEFAULT_QUOTE_BANK = {
   bankName: "Bank of the Philippine Islands (BPI)",
   accountName: "CHRISTIAN JOSHUA CASIN",
@@ -151,8 +157,11 @@ export function buildQuotation(input: {
   };
 }
 
-export function nextQuoteNumberFromExisting(existing: string[]) {
-  let max = 0;
+export function nextQuoteNumberFromExisting(
+  existing: string[],
+  floor: number = QUOTE_NUMBER_FLOOR,
+) {
+  let max = Math.max(0, Math.floor(floor));
   for (const value of existing) {
     const match = value.match(/Q-(\d+)/i);
     if (match) max = Math.max(max, Number(match[1]));

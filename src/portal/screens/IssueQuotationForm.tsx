@@ -9,6 +9,7 @@ import {
   defaultMilestones,
   defaultScope,
   formatPeso,
+  nextQuoteNumberFromExisting,
   scopeTotal,
 } from "../quote";
 import type { Project, QuoteBillTo, QuoteMilestone, QuoteScopeItem } from "../types";
@@ -45,7 +46,9 @@ export function IssueQuotationForm({
   }, [lockedProjectId]);
 
   useEffect(() => {
-    nextQuoteNumber().then(setQuoteNumber).catch(() => setQuoteNumber("Q-0001"));
+    nextQuoteNumber()
+      .then(setQuoteNumber)
+      .catch(() => setQuoteNumber(nextQuoteNumberFromExisting([])));
   }, []);
 
   useEffect(() => {
@@ -98,8 +101,11 @@ export function IssueQuotationForm({
     setError("");
     setSaving(true);
     try {
+      // Allocate at save time so concurrent issues and the external floor stay correct.
+      const assignedNumber = await nextQuoteNumber();
+      setQuoteNumber(assignedNumber);
       const quote = buildQuotation({
-        quoteNumber,
+        quoteNumber: assignedNumber,
         validityDays: Number(validityDays) || 30,
         billTo,
         scope,
@@ -142,9 +148,18 @@ export function IssueQuotationForm({
             ))}
           </select>
           )}
-          <input required value={quoteNumber} onChange={(e) => setQuoteNumber(e.target.value)} placeholder="Q-0001" className="px-3.5 py-2.5 bg-white border border-black/15 text-sm" />
+          <input
+            readOnly
+            value={quoteNumber || "…"}
+            title="Assigned automatically from issued quotations"
+            aria-label="Quote number (auto-generated)"
+            className="px-3.5 py-2.5 bg-[var(--page-panel)] border border-black/10 text-sm font-semibold tracking-wide"
+          />
           <input required value={validityDays} onChange={(e) => setValidityDays(e.target.value)} placeholder="Validity (days)" className="px-3.5 py-2.5 bg-white border border-black/15 text-sm" />
         </div>
+        <p className="text-xs text-slate-500 -mt-2">
+          Quote number is assigned automatically from issued quotations (including Q-0001 already issued outside the portal).
+        </p>
 
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Bill to</p>
         <div className="grid sm:grid-cols-2 gap-3">
