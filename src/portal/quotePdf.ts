@@ -9,15 +9,49 @@ const RULE: [number, number, number] = [220, 218, 212];
 const WASH: [number, number, number] = [245, 244, 241];
 const HEADER: [number, number, number] = [23, 23, 23];
 
-/** Helvetica in jsPDF lacks ₱ — it renders as spaced junk / ±. Keep Latin-safe. */
-function pdfText(value: string) {
-  return String(value ?? "")
-    .replace(/\u20b1/g, "PHP ") // ₱
-    .replace(/\u00d7/g, "x") // ×
-    .replace(/[\u2013\u2014\u2212]/g, "-") // – — −
-    .replace(/\u2022/g, "-")
-    .replace(/\u00a0/g, " ")
-    .replace(/\u2026/g, "...");
+/** Helvetica/WinAnsi cannot draw ₱ — it blows up the whole line (spaced letters, ±, clipped). */
+export function pdfSafeText(value: string) {
+  let out = "";
+  for (const ch of String(value ?? "")) {
+    const c = ch.codePointAt(0) ?? 0;
+    if (c === 0x20b1 || ch === "₱") {
+      out += "PHP ";
+      continue;
+    }
+    if (c === 0x00d7) {
+      out += "x";
+      continue;
+    }
+    if (c === 0x2013 || c === 0x2014 || c === 0x2212) {
+      out += "-";
+      continue;
+    }
+    if (c === 0x2022) {
+      out += "-";
+      continue;
+    }
+    if (c === 0x00a0) {
+      out += " ";
+      continue;
+    }
+    if (c === 0x2026) {
+      out += "...";
+      continue;
+    }
+    // Strip UTF-16 null padding / other control chars that show as gaps between letters.
+    if (c === 0 || (c < 32 && c !== 9 && c !== 10 && c !== 13)) continue;
+    // Keep printable ASCII + common Latin-1; drop everything else.
+    if (c >= 0x20 && c <= 0x7e) {
+      out += ch;
+      continue;
+    }
+    if (c >= 0xa0 && c <= 0xff && c !== 0xb1) {
+      // Skip ± (often a mangled ₱); keep other Latin-1.
+      out += ch;
+      continue;
+    }
+  }
+  return out.replace(/[ \t]{2,}/g, " ").trim();
 }
 
 export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
@@ -37,19 +71,19 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.setTextColor(...MUTED);
-    doc.text(pdfText(text).toUpperCase(), margin, y);
+    doc.text(pdfSafeText(text).toUpperCase(), margin, y);
     y += 6;
   };
 
   const write = (text: string | string[], x: number, yy: number, options?: Parameters<jsPDF["text"]>[3]) => {
     if (Array.isArray(text)) {
-      doc.text(text.map(pdfText), x, yy, options);
+      doc.text(text.map(pdfSafeText), x, yy, options);
     } else {
-      doc.text(pdfText(text), x, yy, options);
+      doc.text(pdfSafeText(text), x, yy, options);
     }
   };
 
-  const wrap = (text: string, width: number) => doc.splitTextToSize(pdfText(text), width) as string[];
+  const wrap = (text: string, width: number) => doc.splitTextToSize(pdfSafeText(text), width) as string[];
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);

@@ -66,7 +66,7 @@ export function consultingFee(hours: number) {
 export function consultingDetails(hours: number) {
   const h = Number(hours) || 0;
   const label = h === 1 ? "1 hour" : `${h} hours`;
-  return `${label} × ${formatPeso(CONSULTING_HOURLY_RATE)}/hr`;
+  return `${label} x ${formatPesoPdf(CONSULTING_HOURLY_RATE)}/hr`;
 }
 
 export function consultingLine(hours = 1, projectName?: string): QuoteScopeItem {
@@ -125,7 +125,9 @@ export function buildQuotation(input: {
 }): Quotation {
   const issueDate = todayIso();
   const validityDays = input.validityDays || 30;
-  const terms = DEFAULT_QUOTE_TERMS.map((t) => t.replace("{validity}", String(validityDays)));
+  const terms = DEFAULT_QUOTE_TERMS.map((t) =>
+    t.replace("{validity}", String(validityDays)).replace(/\u20b1/g, "PHP ").replace(/₱/g, "PHP "),
+  );
   return {
     quoteNumber: input.quoteNumber.trim() || "Q-0001",
     issueDate,
