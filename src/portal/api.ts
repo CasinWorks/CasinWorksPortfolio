@@ -264,14 +264,32 @@ export async function uploadProjectFile(projectId: string, file: File) {
 }
 
 export async function createDocument(payload: Omit<ProjectDocument, "id">) {
-  const body = Object.fromEntries(
-    Object.entries({ ...payload, createdAt: serverTimestamp() }).filter(([, value]) => value !== undefined),
-  );
+  const cleaned = omitUndefinedDeep({ ...payload }) as Omit<ProjectDocument, "id">;
+  const body = { ...cleaned, createdAt: serverTimestamp() };
   const refDoc = await addDoc(collection(db(), "documents"), body);
   if (payload.type === "invoice" || payload.type === "remittance") {
     await markPaymentStarted(payload.projectId);
   }
   return refDoc.id;
+}
+
+/** Firestore rejects `undefined` anywhere in the document (including nested). */
+function omitUndefinedDeep(value: unknown): unknown {
+  if (value === undefined) return undefined;
+  if (value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) {
+    return value.map(omitUndefinedDeep).filter((v) => v !== undefined);
+  }
+  // Keep FieldValue, Timestamp, Date, and other non-plain objects intact.
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null) return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (child === undefined) continue;
+    const next = omitUndefinedDeep(child);
+    if (next !== undefined) out[key] = next;
+  }
+  return out;
 }
 
 async function markPaymentStarted(projectId: string) {

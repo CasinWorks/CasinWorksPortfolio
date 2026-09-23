@@ -129,7 +129,20 @@ export function buildQuotation(input: {
     issuerEmail: SITE.email,
     issuerPhone: QUOTE_ISSUER_PHONE,
     billTo: input.billTo,
-    scope: input.scope.filter((row) => row.description.trim() || row.details.trim() || row.amount),
+    scope: input.scope
+      .filter((row) => row.description.trim() || row.details.trim() || row.amount)
+      .map((row) => {
+        const hours = row.hours;
+        const base = {
+          id: row.id,
+          description: row.description,
+          details: row.details,
+          amount: Number(row.amount) || 0,
+        };
+        return hours != null && Number.isFinite(hours) && hours > 0
+          ? { ...base, hours }
+          : base;
+      }),
     milestones: applyMilestonePercents(input.milestones, scopeTotal(input.scope)),
     paymentNote: "Please remit payments to the following (Philippine bank transfer / deposit as applicable):",
     ...DEFAULT_QUOTE_BANK,

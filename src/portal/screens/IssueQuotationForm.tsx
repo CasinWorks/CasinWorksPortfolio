@@ -76,7 +76,17 @@ export function IssueQuotationForm({
 
   function patchScope(id: string, patch: Partial<QuoteScopeItem>) {
     setScope((rows) => {
-      const next = rows.map((row) => (row.id === id ? { ...row, ...patch } : row));
+      const next = rows.map((row) => {
+        if (row.id !== id) return row;
+        const merged: QuoteScopeItem = { ...row, ...patch };
+        if (!("hours" in patch) || patch.hours == null || !Number.isFinite(patch.hours) || patch.hours <= 0) {
+          if ("hours" in patch) {
+            const { hours: _drop, ...rest } = merged;
+            return rest;
+          }
+        }
+        return merged;
+      });
       setMilestones((ms) => applyMilestonePercents(ms, scopeTotal(next)));
       return next;
     });
