@@ -19,7 +19,7 @@ export const CONSULTING_HOURLY_RATE = SITE.consultingHourlyRatePhp;
 
 export const DEFAULT_QUOTE_TERMS = [
   "This quotation is valid for {validity} days from date of issuance.",
-  "Exploratory consultation is billed at ₱1,000 per hour. This quotation covers the agreed build scope only.",
+  "Exploratory consultation is billed at PHP 1,000 per hour. This quotation covers the agreed build scope only.",
   "Scope covers system development, deployment, and documentation only. Ongoing support and maintenance are not included.",
   "Payment schedule is milestone-based as indicated above.",
 ];

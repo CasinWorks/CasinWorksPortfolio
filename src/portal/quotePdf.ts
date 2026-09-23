@@ -9,6 +9,17 @@ const RULE: [number, number, number] = [220, 218, 212];
 const WASH: [number, number, number] = [245, 244, 241];
 const HEADER: [number, number, number] = [23, 23, 23];
 
+/** Helvetica in jsPDF lacks ₱ — it renders as spaced junk / ±. Keep Latin-safe. */
+function pdfText(value: string) {
+  return String(value ?? "")
+    .replace(/\u20b1/g, "PHP ") // ₱
+    .replace(/\u00d7/g, "x") // ×
+    .replace(/[\u2013\u2014\u2212]/g, "-") // – — −
+    .replace(/\u2022/g, "-")
+    .replace(/\u00a0/g, " ")
+    .replace(/\u2026/g, "...");
+}
+
 export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -26,25 +37,35 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.setTextColor(...MUTED);
-    doc.text(text.toUpperCase(), margin, y);
+    doc.text(pdfText(text).toUpperCase(), margin, y);
     y += 6;
   };
+
+  const write = (text: string | string[], x: number, yy: number, options?: Parameters<jsPDF["text"]>[3]) => {
+    if (Array.isArray(text)) {
+      doc.text(text.map(pdfText), x, yy, options);
+    } else {
+      doc.text(pdfText(text), x, yy, options);
+    }
+  };
+
+  const wrap = (text: string, width: number) => doc.splitTextToSize(pdfText(text), width) as string[];
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(...BLUE);
-  doc.text("QUOTATION", margin, y);
+  write("QUOTATION", margin, y);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(...INK);
   const metaX = pageW - margin;
-  doc.text(`Quote no.  ${quote.quoteNumber}`, metaX, y, { align: "right" });
+  write(`Quote no.  ${quote.quoteNumber}`, metaX, y, { align: "right" });
   y += 5;
   doc.setTextColor(...MUTED);
-  doc.text(`Issue date  ${formatQuoteDate(quote.issueDate)}`, metaX, y, { align: "right" });
+  write(`Issue date  ${formatQuoteDate(quote.issueDate)}`, metaX, y, { align: "right" });
   y += 5;
-  doc.text(
+  write(
     `Valid until  ${formatQuoteDate(quote.validUntil)}  ·  Validity: ${quote.validityDays} days`,
     metaX,
     y,
@@ -55,12 +76,12 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
   doc.setTextColor(...INK);
-  doc.text(quote.issuerName, margin, y);
+  write(quote.issuerName, margin, y);
   y += 7;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9.5);
   doc.setTextColor(...MUTED);
-  doc.text(`${quote.issuerEmail}  ·  ${quote.issuerPhone}`, margin, y);
+  write(`${quote.issuerEmail}  ·  ${quote.issuerPhone}`, margin, y);
   y += 8;
   doc.setDrawColor(...RULE);
   doc.setLineWidth(0.3);
@@ -74,7 +95,7 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
     quote.billTo.address,
     [quote.billTo.email, quote.billTo.phone].filter(Boolean).join("  ·  "),
   ].filter(Boolean);
-  const billLines = bill.flatMap((line) => doc.splitTextToSize(line, contentW - 10)) as string[];
+  const billLines = bill.flatMap((line) => wrap(line, contentW - 10));
   const billH = 8 + billLines.length * 5.2;
   doc.setFillColor(...WASH);
   doc.roundedRect(margin, y, contentW, billH, 2, 2, "F");
@@ -86,7 +107,7 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
     doc.setFont("helvetica", i === 0 ? "bold" : "normal");
     doc.setFontSize(i === 0 ? 11 : 9);
     doc.setTextColor(...(i === 0 ? INK : MUTED));
-    doc.text(line, margin + 5, by);
+    write(line, margin + 5, by);
     by += 5.2;
   });
   y += billH + 10;
@@ -99,17 +120,17 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
   ]);
   y += 9;
   for (const row of quote.scope) {
-    const desc = doc.splitTextToSize(row.description || "—", contentW * 0.26) as string[];
-    const details = doc.splitTextToSize(row.details || "—", contentW * 0.46) as string[];
+    const desc = wrap(row.description || "-", contentW * 0.26);
+    const details = wrap(row.details || "-", contentW * 0.46);
     const h = Math.max(8, Math.max(desc.length, details.length) * 5 + 4);
     ensure(h + 6);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9.5);
     doc.setTextColor(...INK);
-    doc.text(desc, margin + 2, y + 5);
-    doc.text(details, margin + contentW * 0.28 + 2, y + 5);
+    write(desc, margin + 2, y + 5);
+    write(details, margin + contentW * 0.28 + 2, y + 5);
     doc.setFont("helvetica", "bold");
-    doc.text(formatPesoPdf(row.amount), margin + contentW - 2, y + 5, { align: "right" });
+    write(formatPesoPdf(row.amount), margin + contentW - 2, y + 5, { align: "right" });
     y += h;
     doc.setDrawColor(...RULE);
     doc.line(margin, y, pageW - margin, y);
@@ -118,11 +139,11 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...MUTED);
-  doc.text("TOTAL CONTRACT VALUE", margin, y);
+  write("TOTAL CONTRACT VALUE", margin, y);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(...INK);
-  doc.text(formatPesoPdf(scopeTotal(quote.scope)), pageW - margin, y, { align: "right" });
+  write(formatPesoPdf(scopeTotal(quote.scope)), pageW - margin, y, { align: "right" });
   y += 12;
 
   ensure(40);
@@ -146,11 +167,11 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9.5);
     doc.setTextColor(...INK);
-    const title = doc.splitTextToSize(row.title, contentW * 0.56) as string[];
-    doc.text(title, margin + 2, y + 4);
-    doc.text(`${row.percent.toFixed(2)}%`, margin + contentW * 0.72 - 2, y + 4, { align: "right" });
+    const title = wrap(row.title, contentW * 0.56);
+    write(title, margin + 2, y + 4);
+    write(`${row.percent.toFixed(2)}%`, margin + contentW * 0.72 - 2, y + 4, { align: "right" });
     doc.setFont("helvetica", "bold");
-    doc.text(formatPesoPdf(row.amount), margin + contentW - 2, y + 4, { align: "right" });
+    write(formatPesoPdf(row.amount), margin + contentW - 2, y + 4, { align: "right" });
     y += Math.max(9, title.length * 5 + 3);
     doc.setDrawColor(...RULE);
     doc.line(margin, y, pageW - margin, y);
@@ -162,8 +183,8 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(...MUTED);
-  const note = doc.splitTextToSize(quote.paymentNote, contentW) as string[];
-  doc.text(note, margin, y);
+  const note = wrap(quote.paymentNote, contentW);
+  write(note, margin, y);
   y += note.length * 4.5 + 3;
   const payLines = [
     `Bank: ${quote.bankName}`,
@@ -178,7 +199,7 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
   doc.setFontSize(9.5);
   doc.setTextColor(...INK);
   for (const line of payLines) {
-    doc.text(line, margin + 5, py);
+    write(line, margin + 5, py);
     py += 5.4;
   }
   y += payH + 12;
@@ -194,11 +215,11 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
     doc.setFont("helvetica", italic ? "italic" : "normal");
     doc.setFontSize(9.5);
     doc.setTextColor(...MUTED);
-    doc.text(k, pageW - margin - 70, y);
+    write(k, pageW - margin - 70, y);
     doc.setFont("helvetica", k === "Net amount" ? "bold" : italic ? "italic" : "normal");
     doc.setTextColor(...INK);
     doc.setFontSize(k === "Net amount" ? 12 : 9.5);
-    doc.text(v, pageW - margin, y, { align: "right" });
+    write(v, pageW - margin, y, { align: "right" });
     y += k === "Net amount" ? 8 : 6;
   }
   y += 8;
@@ -206,12 +227,12 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
   ensure(28);
   label("Terms & conditions");
   quote.terms.forEach((term, i) => {
-    const lines = doc.splitTextToSize(`${i + 1}.  ${term}`, contentW) as string[];
+    const lines = wrap(`${i + 1}.  ${term}`, contentW);
     ensure(lines.length * 4.6 + 2);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.setTextColor(...INK);
-    doc.text(lines, margin, y);
+    write(lines, margin, y);
     y += lines.length * 4.6 + 2;
   });
 
@@ -220,7 +241,7 @@ export async function quotationPdfBlob(quote: Quotation): Promise<Blob> {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(...MUTED);
-  doc.text(`Prepared by ${quote.issuerName}`, margin, y);
+  write(`Prepared by ${quote.issuerName}`, margin, y);
 
   return doc.output("blob");
 }
