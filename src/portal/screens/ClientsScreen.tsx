@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { usePageMeta } from "../../hooks/usePageMeta";
 import { SITE } from "../../site";
 import { createClient, fetchAllClients } from "../api";
+import { downloadClientsBrevoCsv } from "../clientsExport";
 import type { Client } from "../types";
 import { StaggerItem, StaggerList } from "../motion";
 
@@ -23,6 +24,16 @@ export function ClientsScreen() {
   useEffect(() => {
     reload().catch((e) => setError(e instanceof Error ? e.message : "Could not load clients."));
   }, []);
+
+  function exportForBrevo() {
+    setError("");
+    try {
+      const n = downloadClientsBrevoCsv(clients);
+      setMsg(`Exported ${n} client${n === 1 ? "" : "s"} for Brevo.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not export clients.");
+    }
+  }
 
   return (
     <div className="space-y-12">
@@ -50,7 +61,18 @@ export function ClientsScreen() {
       />
 
       <section>
-        <h2 className="font-serif text-2xl font-semibold">Directory</h2>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 max-w-3xl">
+          <h2 className="font-serif text-2xl font-semibold">Directory</h2>
+          {clients.length > 0 && (
+            <button
+              type="button"
+              onClick={exportForBrevo}
+              className="self-start sm:self-auto text-xs font-semibold underline underline-offset-4"
+            >
+              Export for Brevo
+            </button>
+          )}
+        </div>
         {clients.length === 0 && <p className="mt-4 py-6 text-slate-500 border-y border-black/10 max-w-3xl">No clients yet. Add one above.</p>}
         {clients.length > 0 && (
         <StaggerList className="mt-4 divide-y divide-black/10 border-y border-black/10 max-w-3xl">
