@@ -16,15 +16,36 @@
 /* Prevent horizontal scroll from vw-sized type and off-canvas decor */
 html {
   overflow-x: hidden;
+  scroll-behavior: smooth;
   scroll-padding-top: var(--header-h, 6rem);
   /*
     Default zoom: everything is rem-based, so growing the root size on wide
     displays scales type and spacing together instead of leaving dead space.
   */
   font-size: clamp(16px, 1.45vw, 21px);
+  /* Keep scrolling; hide the chrome scrollbar for a cleaner page edge. */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge */
 }
+
+html::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 body {
   overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+body::-webkit-scrollbar {
+  display: none;
 }
 
 /*

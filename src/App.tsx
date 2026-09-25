@@ -10,6 +10,7 @@ import {
   ArrowRight, 
   Plus,
   ArrowUpRight,
+  ChevronDown,
   Menu,
   X
 } from "lucide-react";
@@ -19,7 +20,12 @@ import { StudioConceptsSection } from "./components/StudioConceptsSection";
 import { FaqSection } from "./components/FaqSection";
 import { StickyMobileCta } from "./components/StickyMobileCta";
 import { usePageMeta } from "./hooks/usePageMeta";
-import { PARTNERS, SITE } from "./site";
+import { PARTNERS, ENGAGEMENT_STEPS, SERVICE_OFFERS, SITE } from "./site";
+
+type NavChild = { href: string; label: string; hint?: string };
+type NavItem =
+  | { href: string; label: string; children?: undefined }
+  | { href: string; label: string; children: NavChild[] };
 
 export default function App() {
   usePageMeta({
@@ -28,10 +34,17 @@ export default function App() {
     path: "/",
   });
 
-  const navLinks = useMemo(
+  const navLinks = useMemo<NavItem[]>(
     () => [
-      { href: "#expertise", label: "Expertise" },
-      { href: "#approach", label: "Approach" },
+      {
+        href: "#expertise",
+        label: "Expertise",
+        children: [
+          { href: "#expertise", label: "Core expertise", hint: "SCADA, ops, architecture" },
+          { href: "#services", label: "What we build", hint: "Outcomes for your operations" },
+          { href: "#engagement", label: "How we work", hint: "Consultation to handover" },
+        ],
+      },
       { href: "#partners", label: "Partners" },
       { href: "#work", label: "Case Studies" },
       { href: "#studio-concepts", label: "Studio" },
@@ -42,18 +55,48 @@ export default function App() {
   );
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [expertiseMenuOpen, setExpertiseMenuOpen] = useState(false);
+  const [mobileExpertiseOpen, setMobileExpertiseOpen] = useState(false);
+  const expertiseMenuRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     // If we cross into desktop width, force-close the mobile panel.
     const mq = window.matchMedia("(min-width: 768px)");
     const onChange = () => {
-      if (mq.matches) setMobileNavOpen(false);
+      if (mq.matches) {
+        setMobileNavOpen(false);
+        setMobileExpertiseOpen(false);
+      } else {
+        setExpertiseMenuOpen(false);
+      }
     };
     onChange();
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, []);
+
+  useEffect(() => {
+    if (!expertiseMenuOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (expertiseMenuRef.current && !expertiseMenuRef.current.contains(e.target as Node)) {
+        setExpertiseMenuOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExpertiseMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [expertiseMenuOpen]);
+
+  useEffect(() => {
+    if (!mobileNavOpen) setMobileExpertiseOpen(false);
+  }, [mobileNavOpen]);
 
   useEffect(() => {
     const el = navRef.current;
@@ -118,7 +161,44 @@ export default function App() {
           {/* Desktop nav */}
           <div className="hidden md:flex flex-wrap items-center gap-x-5 lg:gap-x-7 text-[15px] font-medium">
             {navLinks.map((l) =>
-              l.href.startsWith("/") ? (
+              l.children ? (
+                <div key={l.href} className="relative" ref={expertiseMenuRef}>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 hover:opacity-55 transition-opacity"
+                    aria-expanded={expertiseMenuOpen}
+                    aria-haspopup="menu"
+                    onClick={() => setExpertiseMenuOpen((v) => !v)}
+                  >
+                    {l.label}
+                    <ChevronDown
+                      className={`size-3.5 opacity-60 transition-transform ${expertiseMenuOpen ? "rotate-180" : ""}`}
+                      aria-hidden
+                    />
+                  </button>
+                  {expertiseMenuOpen && (
+                    <div
+                      role="menu"
+                      className="absolute left-0 top-full z-50 mt-3 min-w-[15.5rem] border border-black/10 bg-[var(--page-cream)] py-2 shadow-[0_12px_40px_rgba(0,0,0,0.08)]"
+                    >
+                      {l.children.map((child) => (
+                        <a
+                          key={child.href}
+                          href={child.href}
+                          role="menuitem"
+                          className="block px-4 py-2.5 hover:bg-black/[0.04] transition-colors"
+                          onClick={() => setExpertiseMenuOpen(false)}
+                        >
+                          <span className="block text-sm font-medium text-[#1a1a1a]">{child.label}</span>
+                          {child.hint && (
+                            <span className="mt-0.5 block text-xs font-normal text-slate-500">{child.hint}</span>
+                          )}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : l.href.startsWith("/") ? (
                 <Link key={l.href} to={l.href} className="hover:opacity-55 transition-opacity">
                   {l.label}
                 </Link>
@@ -136,9 +216,9 @@ export default function App() {
             </Link>
             <Link
               to="/portal/sign-in"
-              className="px-4 py-2 rounded-full border border-black/20 transition-colors text-[15px] font-medium text-[#1a1a1a] hover:border-black/50 hover:bg-black/[0.04]"
+              className="text-[14px] font-medium text-slate-500 hover:text-black transition-colors"
             >
-              Portal
+              Portal sign in
             </Link>
           </div>
 
@@ -187,7 +267,39 @@ export default function App() {
             <div className="rounded-3xl border border-black/10 bg-white px-6 py-8 shadow-[0_20px_80px_rgba(0,0,0,0.12)]">
               <div className="flex flex-col gap-4 text-[17px] font-medium">
                 {navLinks.map((l) =>
-                  l.href.startsWith("/") ? (
+                  l.children ? (
+                    <div key={l.href} className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-between gap-3 hover:opacity-60 transition-opacity text-left"
+                        aria-expanded={mobileExpertiseOpen}
+                        onClick={() => setMobileExpertiseOpen((v) => !v)}
+                      >
+                        {l.label}
+                        <ChevronDown
+                          className={`size-4 opacity-50 transition-transform ${mobileExpertiseOpen ? "rotate-180" : ""}`}
+                          aria-hidden
+                        />
+                      </button>
+                      {mobileExpertiseOpen && (
+                        <div className="ml-1 flex flex-col gap-3 border-l border-black/10 pl-4 py-1">
+                          {l.children.map((child) => (
+                            <a
+                              key={child.href}
+                              href={child.href}
+                              className="hover:opacity-60 transition-opacity"
+                              onClick={() => setMobileNavOpen(false)}
+                            >
+                              <span className="block text-[15px]">{child.label}</span>
+                              {child.hint && (
+                                <span className="mt-0.5 block text-xs font-normal text-slate-500">{child.hint}</span>
+                              )}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : l.href.startsWith("/") ? (
                     <Link
                       key={l.href}
                       to={l.href}
@@ -253,7 +365,8 @@ export default function App() {
             <div className="relative z-0 mt-10 sm:mt-12 grid lg:grid-cols-12 gap-8 lg:gap-12 items-end min-w-0">
               <div className="min-w-0 lg:col-span-7">
                 <p className="text-base sm:text-lg lg:text-xl text-slate-600 leading-relaxed max-w-2xl">
-                  Independent software architecture for enterprises that require mission-critical reliability and senior-level accountability.
+                  Mission-critical software for plants and enterprises where downtime has a cost — with the same rigor
+                  applied to the business systems that keep operations moving.
                 </p>
               </div>
               <div className="min-w-0 lg:col-span-5 flex flex-col items-start lg:items-end gap-3">
@@ -265,7 +378,7 @@ export default function App() {
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
                 <p className="text-sm text-slate-500 max-w-xs lg:text-right">
-                  Pick a time on the calendar. No account needed to start.
+                  {SITE.consultationOfferLine}
                 </p>
               </div>
             </div>
@@ -345,6 +458,42 @@ export default function App() {
                     <Plus className="w-4 h-4 text-slate-300 group-hover:rotate-90 group-hover:text-black transition-all duration-300" />
                   </div>
                   <h4 className="text-xl font-semibold tracking-tight leading-snug">{item.title}</h4>
+                  <p className="text-base text-slate-600 leading-relaxed">{item.description}</p>
+                </div>
+              ))}
+            </div>
+
+            <p className="mt-10 sm:mt-12 max-w-3xl text-base sm:text-lg text-slate-600 leading-relaxed border-t border-black/10 pt-8">
+              The same engineering that keeps factory floors online also builds the commercial systems below — so
+              operations software gets industrial rigor, not agency theater.{" "}
+              <a href="#services" className="font-medium text-[#1a1a1a] underline underline-offset-4 hover:opacity-70">
+                See what we build
+              </a>
+              .
+            </p>
+          </div>
+        </section>
+
+        {/* Services offer — outcomes */}
+        <section id="services" className="section-y px-[var(--page-gutter)] overflow-x-hidden border-t border-black/10">
+          <div className="max-w-[var(--page-max)] mx-auto">
+            <div className="mb-10 sm:mb-14 max-w-3xl">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 mb-5">Services</h2>
+              <h3 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-semibold tracking-tight leading-[1.05]">
+                What we <span className="italic text-slate-400">build.</span>
+              </h3>
+              <p className="mt-5 text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl">
+                Built for operators who outgrew spreadsheets and off-the-shelf tools — each engagement shaped around how
+                your team already works.
+              </p>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-x-10 lg:gap-x-16 gap-y-10 border-t border-black/10 pt-10">
+              {SERVICE_OFFERS.map((item) => (
+                <div key={item.title} className="min-w-0 space-y-2">
+                  <h4 className="font-serif text-xl sm:text-2xl font-semibold tracking-tight leading-snug">
+                    {item.title}
+                  </h4>
                   <p className="text-base text-slate-600 leading-relaxed">{item.description}</p>
                 </div>
               ))}
@@ -435,23 +584,59 @@ export default function App() {
 
         <FaqSection />
 
+        {/* How engagements work — after proof, immediately before the ask */}
+        <section
+          id="engagement"
+          className="section-y px-[var(--page-gutter)] overflow-x-hidden bg-[var(--page-cream)] text-[#1a1a1a]"
+        >
+          <div className="max-w-[var(--page-max)] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+            <div className="lg:col-span-5 min-w-0">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 mb-5">Engagement</h2>
+              <h3 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-semibold tracking-tight leading-[1.1]">
+                One engineer, <span className="italic text-slate-400">start to finish.</span>
+              </h3>
+              <p className="mt-5 text-base sm:text-lg text-slate-600 leading-relaxed">
+                You work directly with me, not an account manager. Enterprise software and factory-floor integration
+                experience — applied to the system you actually need.
+              </p>
+            </div>
+            <ol className="lg:col-span-7 space-y-0 rounded-2xl bg-[#e4e9f1] px-6 py-7 sm:px-8 sm:py-8">
+              {ENGAGEMENT_STEPS.map((step, index) => (
+                <li
+                  key={step.title}
+                  className={`flex gap-4 sm:gap-5 ${index > 0 ? "mt-5 pt-5 border-t border-black/10" : ""}`}
+                >
+                  <span className="text-sm font-semibold text-slate-500 shrink-0 tabular-nums pt-0.5">
+                    {index + 1}.
+                  </span>
+                  <p className="text-base sm:text-lg font-semibold tracking-tight text-[#1a1a1a]">
+                    {step.title}{" "}
+                    <span className="font-normal text-slate-600">{step.body}</span>
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
         {/* Contact / book section */}
         <section id="contact" className="overflow-x-hidden bg-[#1a1a1a] text-white section-y px-[var(--page-gutter)]">
           <div className="max-w-[var(--page-max)] mx-auto min-w-0">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 min-w-0 items-end">
               <div className="min-w-0 lg:col-span-6 space-y-6">
                 <h2 className="max-w-full text-4xl sm:text-5xl lg:text-6xl font-serif font-semibold tracking-tight leading-[1.05] break-words">
-                  Book a <br />
-                  <span className="italic">consultation.</span>
+                  Tell me what’s slowing your business <br />
+                  <span className="italic text-slate-400">down.</span>
                 </h2>
                 <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-xl">
-                  Open the calendar, share what you want to discuss, and leave your email. Exploratory consultation is ₱
-                  {SITE.exploratoryConsultationHourlyRatePhp.toLocaleString("en-US")} per hour, settled when you book —
-                  then you can create a portal account if you want to follow the work.
+                  In one focused hour we’ll map the problem and what I would build to solve it. You leave with clear next
+                  steps whether or not we work together.
                 </p>
-                <p className="text-sm sm:text-base text-slate-400 leading-relaxed max-w-xl">
-                  The client portal is separate: milestones, quotations, purchase orders, invoices, and remittances once
-                  an engagement is underway.
+                <p className="rounded-2xl bg-white/10 px-5 py-4 text-sm sm:text-base text-slate-200 leading-relaxed max-w-xl">
+                  {SITE.consultationOfferLine}
+                </p>
+                <p className="text-sm text-slate-500">
+                  Best for operators ready to replace a broken process — not for browsing quotes with no problem in mind.
                 </p>
               </div>
 
@@ -467,7 +652,7 @@ export default function App() {
                     {
                       step: "03",
                       title: "Settle the hour",
-                      body: `₱${SITE.exploratoryConsultationHourlyRatePhp.toLocaleString("en-US")}/hr via PayMongo. Register for the portal afterwards if you like.`,
+                      body: SITE.consultationOfferLine,
                     },
                   ].map((item) => (
                     <li key={item.step} className="flex gap-5 min-w-0">
@@ -486,14 +671,14 @@ export default function App() {
                     to="/book"
                     className="group inline-flex items-center gap-2.5 rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#1a1a1a] hover:bg-slate-200 transition-colors"
                   >
-                    Open the calendar
+                    Book a consultation
                     <ArrowRight className="size-4 shrink-0 group-hover:translate-x-1 transition-transform" aria-hidden />
                   </Link>
                   <Link
                     to="/portal/sign-in"
-                    className="text-sm font-medium text-slate-400 underline underline-offset-4 hover:text-white transition-colors"
+                    className="text-sm font-medium text-slate-500 underline underline-offset-4 hover:text-white transition-colors"
                   >
-                    Client portal sign in
+                    Already a client? Portal sign in
                   </Link>
                 </div>
               </div>
@@ -520,6 +705,8 @@ export default function App() {
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 mb-4">Site</p>
             <nav className="flex flex-col gap-2 text-sm font-medium text-slate-300">
               <a href="#expertise" className="hover:text-white transition-colors w-fit">Expertise</a>
+              <a href="#services" className="hover:text-white transition-colors w-fit">What we build</a>
+              <a href="#engagement" className="hover:text-white transition-colors w-fit">How we work</a>
               <a href="#work" className="hover:text-white transition-colors w-fit">Case Studies</a>
               <a href="#studio-concepts" className="hover:text-white transition-colors w-fit">Studio concepts</a>
               <a href="#apps-for-everyone" className="hover:text-white transition-colors w-fit">R&D</a>
@@ -547,7 +734,12 @@ export default function App() {
         </div>
       </footer>
 
-      <StickyMobileCta hidden={mobileNavOpen} to="/book" label="Book a consultation" />
+      <StickyMobileCta
+        hidden={mobileNavOpen}
+        to="/book"
+        label="Book a consultation"
+        sublabel={SITE.consultationOfferLine}
+      />
     </div>
   );
 }

@@ -16,8 +16,64 @@ export const SITE = {
   exploratoryConsultationHourlyRatePhp: 1000,
   /** Shown near booking CTAs */
   responseTimePromise: "Book a time on the calendar — no portal account required to start.",
+  /** Exploratory consult price line for homepage CTAs */
+  consultationOfferLine:
+    "₱1,000 for one hour — waived if you move forward with a project.",
   ogImagePath: "/og-image.jpg",
 } as const;
+
+/** Public homepage — what CasinWorks builds (services offer). */
+export type ServiceOffer = {
+  title: string;
+  description: string;
+};
+
+export const SERVICE_OFFERS: ServiceOffer[] = [
+  {
+    title: "Websites and e-commerce",
+    description: "A front door that looks professional and takes orders — without chasing customers in chat.",
+  },
+  {
+    title: "Manufacturing systems",
+    description: "Line issues visible in seconds, so downtime gets handled before the shift ends.",
+  },
+  {
+    title: "Warehouse management",
+    description: "Stock counts that match the shelf, so picking and replenishment stop guessing.",
+  },
+  {
+    title: "CRM and sales tracking",
+    description: "Leads and follow-ups in one place — fewer deals lost because a spreadsheet went stale.",
+  },
+  {
+    title: "Attendance management",
+    description: "Timekeeping managers can trust, without chasing timesheets every payroll.",
+  },
+  {
+    title: "Custom systems",
+    description: "Portals, dashboards, and tools shaped around the workflow your team already runs.",
+  },
+];
+
+/** Engagement path shown on the homepage (consultation → build). */
+export const ENGAGEMENT_STEPS: { title: string; body: string }[] = [
+  {
+    title: "A 1-hour consultation.",
+    body: "We map your process and pain points.",
+  },
+  {
+    title: "A written proposal.",
+    body: "Clear scope, timeline and price.",
+  },
+  {
+    title: "Build and launch.",
+    body: "You test it, we go live together.",
+  },
+  {
+    title: "Handover and support.",
+    body: "Documentation, training, and I stay reachable.",
+  },
+];
 
 export type FaqItem = {
   question: string;
@@ -28,7 +84,7 @@ export const FAQS: FaqItem[] = [
   {
     question: "What kinds of projects do you take on?",
     answer:
-      "Mission-critical software for manufacturing, industrial operations, and enterprises that need senior engineering accountability — SCADA-adjacent systems, factory-floor tooling, operational dashboards, and custom architecture where downtime or weak delivery has real cost.",
+      "Mission-critical software for manufacturing, industrial operations, and enterprises that need senior engineering accountability — SCADA-adjacent systems, factory-floor tooling, operational dashboards, and custom architecture where downtime or weak delivery has real cost. That also includes websites and e-commerce, warehouse and attendance systems, CRM, client portals, and other custom business tools.",
   },
   {
     question: "Do you work under NDA?",
@@ -53,7 +109,7 @@ export const FAQS: FaqItem[] = [
   {
     question: "How is consulting billed?",
     answer:
-      "Exploratory and initial consultation is ₱1,000 per hour, settled when you book. Larger builds are quoted as a fixed scope after we agree what the work is.",
+      "Exploratory and initial consultation is ₱1,000 per hour, settled when you book — waived if you move forward with a project. Larger builds are quoted as a fixed scope after we agree what the work is.",
   },
   {
     question: "How quickly is a consultation confirmed?",

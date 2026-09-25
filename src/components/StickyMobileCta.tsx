@@ -7,6 +7,7 @@ type StickyMobileCtaProps = {
   hidden?: boolean;
   to?: string;
   label?: string;
+  sublabel?: string;
 };
 
 /** Persistent mobile consultation CTA — hides near the contact section. */
@@ -14,6 +15,7 @@ export function StickyMobileCta({
   hidden = false,
   to = "/book",
   label = "Book a consultation",
+  sublabel,
 }: StickyMobileCtaProps) {
   const [nearContact, setNearContact] = useState(false);
 
@@ -40,9 +42,16 @@ export function StickyMobileCta({
     >
       <Link
         to={to}
-        className="flex items-center justify-between gap-4 rounded-full bg-[#1a1a1a] text-white px-6 py-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)]"
+        className="flex items-center justify-between gap-4 rounded-full bg-[#1a1a1a] text-white px-6 py-3.5 shadow-[0_12px_40px_rgba(0,0,0,0.28)]"
       >
-        <span className="text-[10px] font-black uppercase tracking-[0.35em]">{label}</span>
+        <span className="min-w-0">
+          <span className="block text-[10px] font-black uppercase tracking-[0.35em]">{label}</span>
+          {sublabel && (
+            <span className="mt-1 block text-[11px] font-medium normal-case tracking-normal text-white/70 truncate">
+              {sublabel}
+            </span>
+          )}
+        </span>
         <ArrowRight className="size-5 shrink-0" aria-hidden />
       </Link>
     </div>
