@@ -1,4 +1,5 @@
-apps/
+# Root Flutter app only — do not use bare "apps/" (that also drops public/apps logos).
+/apps/
 casinworks/
 casin-works-—-apps-for-everyone-2/
 node_modules/
