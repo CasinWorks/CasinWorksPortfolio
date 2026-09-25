@@ -121,7 +121,7 @@ export const APPS_DATA: AppItem[] = [
     description:
       "Philippine trucking and fleet management — dispatch, trips, and operations in one live web product.",
     url: "https://www.casinfreight.com",
-    image: "/apps/casinfreight.png",
+    image: "/apps/casinfreight.jpg",
     platforms: "Web",
     technologies: ["Fleet dispatch", "Trip tracking", "Operations"],
   },
